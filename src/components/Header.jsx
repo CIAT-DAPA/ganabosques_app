@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Header() {
   const [isOpen, setIsOpen] = useState(false);
@@ -13,17 +13,17 @@ export default function Header() {
   const { userInfo, login, logout, token } = useAuth();
 
   const navItems = [
-    { name: "Home", path: "/" },
-    { name: "About", path: "/about" },
+    { name: "Inicio", path: "/" },
+    { name: "Riesgo de predios", path: "/riesgopredios" },
+    { name: "Riesgo de empresas", path: "/riesgoempresas" },
   ];
-console.log(token)
+  console.log(token);
   useEffect(() => {
     function handleClickOutside(event) {
-  if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-    setDropdownOpen(false);
-  }
-}
-
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    }
 
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -61,20 +61,32 @@ console.log(token)
           </svg>
         </button>
 
-        <div className={`${isOpen ? 'block' : 'hidden'} w-full md:block md:w-auto`} id="navbar-default">
+        <div
+          className={`${isOpen ? "block" : "hidden"} w-full md:block md:w-auto`}
+          id="navbar-default"
+        >
           <ul className="font-medium flex flex-col md:flex-row md:space-x-6 lg:space-x-8 mt-4 md:mt-0 items-center">
             {navItems.map(({ name, path }) => (
               <li key={path}>
-                <Link
-                  href={path}
-                  className={`block py-2 px-3 rounded md:p-0 ${
-                    pathname === path
-                      ? 'text-green-700 font-semibold'
-                      : 'text-gray-900 hover:text-green-700'
-                  }`}
-                >
-                  {name}
-                </Link>
+                {token || path === "/" ? (
+                  <Link
+                    href={path}
+                    className={`block py-2 px-3 rounded md:p-0 ${
+                      pathname === path
+                        ? "text-green-700 font-semibold"
+                        : "text-gray-900 hover:text-green-700"
+                    }`}
+                  >
+                    {name}
+                  </Link>
+                ) : (
+                  <span
+                    className="block py-2 px-3 rounded md:p-0 text-gray-400 cursor-not-allowed"
+                    title="Inicia sesión para acceder"
+                  >
+                    {name}
+                  </span>
+                )}
               </li>
             ))}
 
@@ -85,12 +97,12 @@ console.log(token)
                     onClick={() => setDropdownOpen(!dropdownOpen)}
                     className="w-9 h-9 bg-green-600 text-white rounded-full flex items-center justify-center text-sm font-semibold hover:bg-green-700 cursor-pointer focus:outline-none"
                   >
-                    {userInfo.preferred_username?.charAt(0).toUpperCase() || "U"}
+                    {userInfo.preferred_username?.charAt(0).toUpperCase() ||
+                      "U"}
                   </button>
 
                   {dropdownOpen && (
-                   <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-36 bg-white border border-gray-200 rounded shadow-md z-50">
-
+                    <div className="absolute left-1/2 transform -translate-x-1/2 mt-2 w-36 bg-white border border-gray-200 rounded shadow-md z-50">
                       <button
                         onClick={logout}
                         className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

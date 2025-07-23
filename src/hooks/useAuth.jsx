@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef, useContext } from "react";
 import Keycloak from "keycloak-js";
+import { validateToken } from "@/services/tokenService";
 
 const AuthContext = React.createContext();
 
@@ -10,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [tokenParsed, setTokenParsed] = useState(null);
   const isRun = useRef(false);
   const keycloak = useRef(null);
-
+  const [validatedPayload, setValidatedPayload] = useState(null);
   useEffect(() => {
     if (isRun.current) return;
     isRun.current = true;
@@ -28,6 +29,16 @@ export const AuthProvider = ({ children }) => {
           setToken(keycloak.current.token);
           setTokenParsed(keycloak.current.tokenParsed);
           keycloak.current.loadUserInfo().then(setUserInfo);
+          const validate = async () => {
+  const validation = await validateToken(keycloak.current.token);
+
+  if (validation.valid) {
+    setValidatedPayload(validation.payload);
+  }
+};
+
+
+          validate();
         }
       })
       .catch((error) => {
@@ -39,7 +50,7 @@ export const AuthProvider = ({ children }) => {
     const interval = setInterval(() => {
       if (keycloak.current) {
         keycloak.current
-          .updateToken(60) 
+          .updateToken(60)
           .then((refreshed) => {
             if (refreshed) {
               setToken(keycloak.current.token);
@@ -48,10 +59,9 @@ export const AuthProvider = ({ children }) => {
           })
           .catch(() => {
             console.warn("No se pudo actualizar el token, cerrando sesión");
-            logout();
           });
       }
-    }, 30000); 
+    }, 30000);
 
     return () => clearInterval(interval);
   }, []);
@@ -73,12 +83,11 @@ export const AuthProvider = ({ children }) => {
     tokenParsed,
     login,
     logout,
+    validatedPayload
   };
 
   return (
-    <AuthContext.Provider value={contextValue}>
-      {children}
-    </AuthContext.Provider>
+    <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>
   );
 };
 

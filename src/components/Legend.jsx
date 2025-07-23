@@ -13,8 +13,6 @@ export default function RiskLegend({ enterpriseRisk = false, farmRisk = false })
     { label: 'Movilización de Salida', color: 'text-orange-500' },
     { label: 'Movilización Mixta', color: 'text-black' }
   ];
-console.log('enterpriseRisk:', enterpriseRisk);
-console.log('farmRisk:', farmRisk);
   return (
     <div className="absolute bottom-4 left-4 z-[1000] flex flex-col gap-2">
       <div className="bg-white rounded-xl shadow-md px-4 py-3 space-y-2">

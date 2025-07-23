@@ -19,12 +19,18 @@ export default function LeafletMap({ enterpriseRisk, farmRisk }) {
   const [year, setYear] = useState("");
   const [source, setSource] = useState("");
   const [search, setSearch] = useState("");
+  const [selectedEnterprise, setSelectedEnterprise] = useState(null);
+  const [foundFarms, setFoundFarms] = useState([]);
 
   useEffect(() => {
     import("leaflet");
   }, []);
-
-  console.log(source);
+ console.log(year)
+ console.log(risk)
+ console.log(source)
+ console.log(search)
+ console.log(selectedEnterprise)
+ console.log(foundFarms)
 
   return (
     <div className="relative">
@@ -39,11 +45,15 @@ export default function LeafletMap({ enterpriseRisk, farmRisk }) {
         setSearch={setSearch}
         onSearch={(e) => {
           e.preventDefault();
-          console.log("Searching:", search);
         }}
         enterpriseRisk={enterpriseRisk}
         farmRisk={farmRisk}
+        selectedEnterprise={selectedEnterprise}
+        setSelectedEnterprise={setSelectedEnterprise}
+        foundFarms={foundFarms}
+        setFoundFarms={setFoundFarms}
       />
+
       <RiskLegend enterpriseRisk={enterpriseRisk} farmRisk={farmRisk} />
       <MapContainer
         center={[4.5709, -74.2973]}

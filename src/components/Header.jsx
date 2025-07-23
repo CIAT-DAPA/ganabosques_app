@@ -17,7 +17,6 @@ export default function Header() {
     { name: "Riesgo de predios", path: "/riesgopredios" },
     { name: "Riesgo de empresas", path: "/riesgoempresas" },
   ];
-  console.log(token);
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {

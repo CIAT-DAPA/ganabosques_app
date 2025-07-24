@@ -19,7 +19,7 @@ export const AuthProvider = ({ children }) => {
     keycloak.current = new Keycloak({
       url: "http://localhost:8080",
       realm: "GanaBosques",
-      clientId: "GanabosquesWeb",
+      clientId: "GanaBosquesWeb",
     });
 
     keycloak.current

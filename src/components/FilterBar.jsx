@@ -20,6 +20,10 @@ export default function FilterBar({
   onSearch,
   enterpriseRisk = false,
   farmRisk = false,
+  nationalRisk = false,
+  admLevel,
+  setAdmLevel,
+  onAdmSearch,
   selectedEnterprise,
   setSelectedEnterprise,
   foundFarms,
@@ -29,6 +33,7 @@ export default function FilterBar({
   const [toast, setToast] = useState(null);
   const [enterpriseList, setEnterpriseList] = useState([]);
   const [filteredEnterprises, setFilteredEnterprises] = useState([]);
+
 
   useEffect(() => {
     if (!enterpriseRisk) return;
@@ -121,6 +126,11 @@ export default function FilterBar({
 
     if (enterpriseRisk) return;
 
+    if (nationalRisk) {
+      onAdmSearch(search.trim(), admLevel);
+      return;
+    }
+
     onSearch(e);
   };
 
@@ -187,6 +197,22 @@ export default function FilterBar({
         {icon}
       </div>
 
+      {nationalRisk && (
+        <div className="relative">
+          <select
+            value={admLevel}
+            onChange={(e) => setAdmLevel(e.target.value)}
+            className={selectStyle}
+          >
+            <option value="">Nivel administrativo</option>
+            <option value="adm1">Departamento</option>
+            <option value="adm2">Municipio</option>
+            <option value="adm3">Vereda</option>
+          </select>
+          {icon}
+        </div>
+      )}
+
       <form onSubmit={handleSearch} className="flex flex-col gap-2 flex-grow min-w-[200px]">
         <div className="relative w-full">
           <div className="flex items-center bg-white rounded-full shadow-md overflow-hidden border border-gray-300">
@@ -197,6 +223,15 @@ export default function FilterBar({
                   ? "Buscar SIT CODE"
                   : enterpriseRisk
                   ? "Buscar empresa"
+                  : nationalRisk
+                  ? `Buscar ${admLevel === "adm1"
+                      ? "departamento"
+                      : admLevel === "adm2"
+                      ? "municipio"
+                      : admLevel === "adm3"
+                      ? "vereda"
+                      : "nivel administrativo"
+                    }`
                   : "Buscar"
               }
               value={search}

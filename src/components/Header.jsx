@@ -14,6 +14,7 @@ export default function Header() {
 
   const navItems = [
     { name: "Inicio", path: "/" },
+    { name: "Riesgos nacionales", path: "/riesgosnacionales" },
     { name: "Riesgo de predios", path: "/riesgopredios" },
     { name: "Riesgo de empresas", path: "/riesgoempresas" },
   ];

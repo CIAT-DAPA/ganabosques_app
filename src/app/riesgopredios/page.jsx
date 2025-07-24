@@ -11,7 +11,7 @@ const Map = dynamic(() => import('@/components/Map'), {
 
 export default function RiesgosPredios() {
   const { validatedPayload } = useAuth();
-    if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
+    if (!validatedPayload || !validatedPayload?.client_roles?.includes('admin')) {
     return <UnauthorizedPage />;
   }
   return (

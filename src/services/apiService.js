@@ -18,3 +18,10 @@ export async function fetchFarmBySITCode(code) {
   if (!res.ok) throw new Error("Error de red al buscar el SIT CODE");
   return res.json();
 }
+
+export async function searchAdmByName(name, level) {
+  const url = `http://127.0.0.1:8000/${level}/by-name?name=${encodeURIComponent(name)}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Error al buscar en ${level}`);
+  return res.json();
+}

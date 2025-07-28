@@ -8,6 +8,8 @@ import {
   fetchFarmBySITCode,
 } from "@/services/apiService";
 
+import { searchAdmByName } from "@/services/apiService";
+
 export default function FilterBar({
   risk,
   setRisk,
@@ -33,7 +35,7 @@ export default function FilterBar({
   const [toast, setToast] = useState(null);
   const [enterpriseList, setEnterpriseList] = useState([]);
   const [filteredEnterprises, setFilteredEnterprises] = useState([]);
-
+  const [admSuggestions, setAdmSuggestions] = useState([]);
 
   useEffect(() => {
     if (!enterpriseRisk) return;
@@ -79,6 +81,21 @@ export default function FilterBar({
       );
   }, []);
 
+  useEffect(() => {
+    if (!nationalRisk || !search || !admLevel) return;
+
+    const delay = setTimeout(async () => {
+      try {
+        const results = await searchAdmByName(search, admLevel);
+        setAdmSuggestions(results);
+      } catch (error) {
+        console.error("Error al buscar sugerencias ADM:", error);
+      }
+    }, 400);
+
+    return () => clearTimeout(delay);
+  }, [search, admLevel, nationalRisk]);
+
   const handleSearch = async (e) => {
     e.preventDefault();
 
@@ -106,10 +123,7 @@ export default function FilterBar({
         )?.ext_code;
 
         if (!foundFarms.find((f) => f.id === data[0].id)) {
-          setFoundFarms((prev) => [
-            ...prev,
-            { id: data[0].id, code: sitCode },
-          ]);
+          setFoundFarms((prev) => [...prev, { id: data[0].id, code: sitCode }]);
         }
 
         setSearch("");
@@ -213,7 +227,10 @@ export default function FilterBar({
         </div>
       )}
 
-      <form onSubmit={handleSearch} className="flex flex-col gap-2 flex-grow min-w-[200px]">
+      <form
+        onSubmit={handleSearch}
+        className="flex flex-col gap-2 flex-grow min-w-[200px]"
+      >
         <div className="relative w-full">
           <div className="flex items-center bg-white rounded-full shadow-md overflow-hidden border border-gray-300">
             <input
@@ -224,13 +241,14 @@ export default function FilterBar({
                   : enterpriseRisk
                   ? "Buscar empresa"
                   : nationalRisk
-                  ? `Buscar ${admLevel === "adm1"
-                      ? "departamento"
-                      : admLevel === "adm2"
-                      ? "municipio"
-                      : admLevel === "adm3"
-                      ? "vereda"
-                      : "nivel administrativo"
+                  ? `Buscar ${
+                      admLevel === "adm1"
+                        ? "departamento"
+                        : admLevel === "adm2"
+                        ? "municipio"
+                        : admLevel === "adm3"
+                        ? "vereda"
+                        : ""
                     }`
                   : "Buscar"
               }
@@ -258,39 +276,52 @@ export default function FilterBar({
             </button>
           </div>
 
-          {enterpriseRisk &&
-            filteredEnterprises.length > 0 &&
-            !selectedEnterprise && (
-              <ul className="absolute top-full mt-1 left-0 right-0 bg-white rounded-md shadow border border-gray-300 max-h-48 overflow-y-auto z-[1000]">
-                {filteredEnterprises.map((ent) => (
-                  <li
-                    key={ent.id}
-                    onClick={() => {
-                      setSelectedEnterprise(ent);
-                      setSearch("");
-                      setFilteredEnterprises([]);
-                    }}
-                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
-                  >
-                    {ent.name}
-                  </li>
-                ))}
-              </ul>
-            )}
+          {/* SUGERENCIAS */}
+          {nationalRisk && admSuggestions.length > 0 && (
+            <ul className="absolute top-full mt-1 left-0 right-0 bg-white rounded-md shadow border border-gray-300 max-h-48 overflow-y-auto z-[2000]">
+              {admSuggestions.map((item) => (
+                <li
+                  key={item.id}
+                  onClick={() => {
+                    if (foundFarms.length >= 5) {
+                      setToast({
+                        type: "warning",
+                        message: "Máximo 5 elementos permitidos",
+                      });
+                      return;
+                    }
+                    if (!foundFarms.find((adm) => adm.id === item.id)) {
+                      setFoundFarms((prev) => [
+                        ...prev,
+                        { id: item.id, code: item.name },
+                      ]);
+                    }
+                    setSearch("");
+                    setAdmSuggestions([]);
+                    onAdmSearch(item.name, admLevel);
+                  }}
+                  className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                >
+                  {item.name}
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
 
-        {farmRisk && foundFarms.length > 0 && (
+        {/* MOSTRAR ADM SELECCIONADOS COMO CHIPS */}
+        {nationalRisk && foundFarms.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {foundFarms.map((farm) => (
+            {foundFarms.map((adm) => (
               <span
-                key={farm.id}
+                key={adm.id}
                 className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center"
               >
-                {farm.code}
+                {adm.code}
                 <button
                   type="button"
                   onClick={() =>
-                    setFoundFarms((prev) => prev.filter((f) => f.id !== farm.id))
+                    setFoundFarms((prev) => prev.filter((a) => a.id !== adm.id))
                   }
                   className="ml-2 text-red-500 hover:text-red-700 font-bold"
                 >
@@ -298,19 +329,6 @@ export default function FilterBar({
                 </button>
               </span>
             ))}
-          </div>
-        )}
-
-        {enterpriseRisk && selectedEnterprise && (
-          <div className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center w-fit">
-            {selectedEnterprise.name}
-            <button
-              type="button"
-              onClick={() => setSelectedEnterprise(null)}
-              className="ml-2 text-red-500 hover:text-red-700 font-bold"
-            >
-              ×
-            </button>
           </div>
         )}
       </form>

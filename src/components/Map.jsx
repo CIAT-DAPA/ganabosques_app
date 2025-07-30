@@ -24,6 +24,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [search, setSearch] = useState("");
   const [selectedEnterprise, setSelectedEnterprise] = useState(null);
   const [foundFarms, setFoundFarms] = useState([]);
+  const [foundAdms, setFoundAdms] = useState([]);
   const [admLevel, setAdmLevel] = useState("adm1");
   const [admResults, setAdmResults] = useState([]);
   const mapRef = useRef(); // ← permite centrar el mapa después de buscar
@@ -86,6 +87,8 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         admLevel={admLevel}
         setAdmLevel={setAdmLevel}
         onAdmSearch={handleAdmSearch}
+        foundAdms={foundAdms}
+        setFoundAdms={setFoundAdms}
       />
 
       <RiskLegend enterpriseRisk={enterpriseRisk} farmRisk={farmRisk} nationalRisk={nationalRisk}/>

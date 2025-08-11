@@ -10,10 +10,10 @@ const Map = dynamic(() => import('@/components/Map'), {
 });
 
 export default function RiesgosPredios() {
-  const { validatedPayload } = useAuth();
-    if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
-    return <UnauthorizedPage />;
-  }
+  //const { validatedPayload } = useAuth();
+   // if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
+   // return <UnauthorizedPage />;
+ // }
   return (
     <>
     <Banner

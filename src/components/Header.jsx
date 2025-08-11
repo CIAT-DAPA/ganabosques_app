@@ -13,11 +13,18 @@ export default function Header() {
   const { userInfo, login, logout, token } = useAuth();
 
   const navItems = [
-    { name: "Inicio", path: "/" },
-    { name: "Riesgo de predios", path: "/riesgopredios" },
-    { name: "Riesgo de empresas", path: "/riesgoempresas" },
-  ];
-  console.log(token);
+  { name: "Inicio", path: "/" },
+  { name: "Riesgos nacionales", path: "/riesgosnacionales" },
+  { name: "Riesgo de predios", path: "/riesgopredios" },
+  { name: "Riesgo de empresas", path: "/riesgoempresas" },
+  {
+    name: "Metodología",
+    path: "https://cerodeforestacioncolombia.co/tfa/protocolo-de-monitoreo-reporte-y-verificacion-mrv-de-la-no-deforestacion-asociada-a-predios-de-cadenas-de-suministro-agropecuario-cacao-cafe-leche-carne-palma/",
+    external: true, // <- Indica que es un enlace externo
+  },
+  { name: "Acerca de", path: "/acercade" },
+];
+
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -66,29 +73,39 @@ export default function Header() {
           id="navbar-default"
         >
           <ul className="font-medium flex flex-col md:flex-row md:space-x-6 lg:space-x-8 mt-4 md:mt-0 items-center">
-            {navItems.map(({ name, path }) => (
-              <li key={path}>
-                {token || path === "/" ? (
-                  <Link
-                    href={path}
-                    className={`block py-2 px-3 rounded md:p-0 ${
-                      pathname === path
-                        ? "text-green-700 font-semibold"
-                        : "text-gray-900 hover:text-green-700"
-                    }`}
-                  >
-                    {name}
-                  </Link>
-                ) : (
-                  <span
-                    className="block py-2 px-3 rounded md:p-0 text-gray-400 cursor-not-allowed"
-                    title="Inicia sesión para acceder"
-                  >
-                    {name}
-                  </span>
-                )}
-              </li>
-            ))}
+            {navItems.map(({ name, path, external }) => (
+  <li key={path}>
+    {external ? (
+      <a
+        href={path}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="block py-2 px-3 rounded md:p-0 text-gray-900 hover:text-green-700"
+      >
+        {name}
+      </a>
+    ) : token || path === "/" ? (
+      <Link
+        href={path}
+        className={`block py-2 px-3 rounded md:p-0 ${
+          pathname === path
+            ? "text-green-700 font-semibold"
+            : "text-gray-900 hover:text-green-700"
+        }`}
+      >
+        {name}
+      </Link>
+    ) : (
+      <span
+        className="block py-2 px-3 rounded md:p-0 text-gray-400 cursor-not-allowed"
+        title="Inicia sesión para acceder"
+      >
+        {name}
+      </span>
+    )}
+  </li>
+))}
+
 
             <li className="mt-2 md:mt-0 relative" ref={dropdownRef}>
               {userInfo ? (

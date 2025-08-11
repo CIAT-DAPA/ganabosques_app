@@ -31,12 +31,14 @@ export default function FilterBar({
   setFoundFarms,
   foundAdms,
   setFoundAdms,
+  onYearStartEndChange,
 }) {
   const [yearRanges, setYearRanges] = useState([]);
   const [toast, setToast] = useState(null);
   const [enterpriseList, setEnterpriseList] = useState([]);
   const [filteredEnterprises, setFilteredEnterprises] = useState([]);
   const [admSuggestions, setAdmSuggestions] = useState([]);
+  const [yearStartEndList, setYearStartEndList] = useState([]);
 
   useEffect(() => {
     if (!enterpriseRisk) return;
@@ -61,11 +63,23 @@ export default function FilterBar({
 
   useEffect(() => {
     fetchYearRanges()
-      .then(setYearRanges)
+      .then((data) => {
+        setYearRanges(data);
+        const yearsOnly = data.map((item) => ({
+          start: item.year_start,
+          end: item.year_end,
+        }));
+        setYearStartEndList(yearsOnly);
+      })
       .catch(() =>
-        setToast({ type: "alert", message: "No se encontraron años disponibles" })
+        setToast({
+          type: "alert",
+          message: "No se encontraron años disponibles",
+        })
       );
   }, []);
+
+  console.log("Todos los rangos:", yearStartEndList);
 
   useEffect(() => {
     if (!nationalRisk || !search || !admLevel) return;
@@ -81,44 +95,100 @@ export default function FilterBar({
 
     return () => clearTimeout(delay);
   }, [search, admLevel, nationalRisk]);
+  // 🔄 Limpiar sugerencias si el campo se vacía
+  useEffect(() => {
+    if (search.trim() === "") {
+      setAdmSuggestions([]);
+    }
+  }, [search]);
 
-  const handleSearch = async (e) => {
-    e.preventDefault();
-    const trimmed = search.trim();
-    if (!trimmed) return;
+  // Lógica de búsqueda diferida para farmRisk
+  useEffect(() => {
+    if (!farmRisk || foundFarms.length === 0) return;
 
-    if (farmRisk) {
-      if (foundFarms.length >= 5) {
-        setToast({ type: "warning", message: "Máximo 5 SIT CODE permitidos" });
-        return;
-      }
+    const delay = setTimeout(async () => {
+      const pendingCodes = foundFarms
+        .filter((f) => !f.id && f.code)
+        .map((f) => f.code)
+        .join(",");
+
+      if (!pendingCodes) return;
 
       try {
-        const data = await fetchFarmBySITCode(trimmed);
-        if (data.length === 0) {
-          setToast({ type: "alert", message: "No se encontró el SIT CODE" });
+        const data = await fetchFarmBySITCode(pendingCodes);
+
+        if (!data || data.length === 0) {
+          setToast({
+            type: "alert",
+            message: `No se encontraron fincas para: ${pendingCodes}`,
+          });
+
+          // 🔴 Eliminar los SIT CODE no válidos
+          setFoundFarms((prev) =>
+            prev.filter((f) => !pendingCodes.split(",").includes(f.code))
+          );
+
           return;
         }
 
-        const sitCode = data[0].ext_id.find(
-          (ext) => ext.source === "SIT_CODE"
-        )?.ext_code;
+        const updatedFarms = data.map((f) => {
+          const code = f.ext_id.find(
+            (ext) => ext.source === "SIT_CODE"
+          )?.ext_code;
+          return { id: f.id, code };
+        });
 
-        if (!foundFarms.find((f) => f.id === data[0].id)) {
-          setFoundFarms((prev) => [...prev, { id: data[0].id, code: sitCode }]);
-        }
+        setFoundFarms((prev) => {
+          const confirmed = prev.filter((f) => f.id);
+          const combined = [...confirmed];
 
-        setSearch("");
+          updatedFarms.forEach((newFarm) => {
+            if (!combined.find((f) => f.id === newFarm.id)) {
+              combined.push(newFarm);
+            }
+          });
+
+          return combined;
+        });
       } catch (error) {
         console.error("Error fetching SIT_CODE:", error);
         setToast({
           type: "alert",
-          message: "Error de red al buscar el SIT CODE",
+          message: "Error de red al buscar los SIT CODE",
         });
       }
+    }, 4000);
 
+    return () => clearTimeout(delay);
+  }, [foundFarms, farmRisk]);
+
+  const handleSearch = (e) => {
+  e.preventDefault();
+  const trimmed = search.trim();
+  if (!trimmed) return;
+
+  if (farmRisk) {
+    if (!risk || !year || !source) {
+      setToast({
+        type: "warning",
+        message: "Debes seleccionar Riesgo, Año y Fuente antes de buscar",
+      });
       return;
     }
+
+    if (foundFarms.length >= 5) {
+      setToast({ type: "warning", message: "Máximo 5 SIT CODE permitidos" });
+      return;
+    }
+
+    if (!foundFarms.find((f) => f.code === trimmed)) {
+      setFoundFarms((prev) => [...prev, { id: null, code: trimmed }]);
+    }
+
+    setSearch("");
+    return;
+  }
+
 
     if (enterpriseRisk) return;
 
@@ -135,7 +205,13 @@ export default function FilterBar({
 
   const icon = (
     <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-gray-500">
-      <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+      <svg
+        className="w-4 h-4"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        viewBox="0 0 24 24"
+      >
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
       </svg>
     </div>
@@ -159,27 +235,56 @@ export default function FilterBar({
     <div className="absolute top-4 left-[88px] right-4 z-[1000] flex gap-4 items-center">
       {/* Selects */}
       <div className="relative">
-        <select value={risk} onChange={(e) => setRisk(e.target.value)} className={selectStyle}>
+        <select
+          value={risk}
+          onChange={(e) => setRisk(e.target.value)}
+          className={selectStyle}
+        >
           <option value="">{getRiskLabel()}</option>
           {getRiskOptions().map((opt) => (
-            <option key={opt.value} value={opt.value}>{opt.label}</option>
+            <option key={opt.value} value={opt.value}>
+              {opt.label}
+            </option>
           ))}
         </select>
         {icon}
       </div>
 
       <div className="relative">
-        <select value={year} onChange={(e) => setYear(e.target.value)} className={selectStyle}>
+        <select
+          value={year}
+          onChange={(e) => {
+            const selectedId = e.target.value;
+            setYear(selectedId);
+
+            const selected = yearRanges.find(
+              (y) => y.id.toString() === selectedId
+            );
+            if (selected) {
+              onYearStartEndChange?.(selected.year_start, selected.year_end); // ✅ aquí se notifica al padre
+            } else {
+              onYearStartEndChange?.(null, null);
+            }
+          }}
+          className={selectStyle}
+        >
           <option value="">Año</option>
           {yearRanges.map((item) => (
-            <option key={item.id} value={item.id}>{item.year_start} - {item.year_end}</option>
+            <option key={item.id} value={item.id}>
+              {item.year_start} - {item.year_end}
+            </option>
           ))}
         </select>
         {icon}
       </div>
+      {/* Suggestions */}
 
       <div className="relative">
-        <select value={source} onChange={(e) => setSource(e.target.value)} className={selectStyle}>
+        <select
+          value={source}
+          onChange={(e) => setSource(e.target.value)}
+          className={selectStyle}
+        >
           <option value="">Fuente</option>
           <option value="smbyc">SMBYC</option>
         </select>
@@ -188,7 +293,11 @@ export default function FilterBar({
 
       {nationalRisk && (
         <div className="relative">
-          <select value={admLevel} onChange={(e) => setAdmLevel(e.target.value)} className={selectStyle}>
+          <select
+            value={admLevel}
+            onChange={(e) => setAdmLevel(e.target.value)}
+            className={selectStyle}
+          >
             <option value="">Nivel administrativo</option>
             <option value="adm1">Departamento</option>
             <option value="adm2">Municipio</option>
@@ -199,8 +308,12 @@ export default function FilterBar({
       )}
 
       {/* Search input */}
-      <form onSubmit={handleSearch} className="flex flex-col gap-2 flex-grow min-w-[200px]">
-        <div className="relative w-full">
+      <form
+        onSubmit={handleSearch}
+        className="flex flex-col gap-2 flex-grow min-w-[200px]"
+      >
+        {/* 🔍 Campo de búsqueda + sugerencias */}
+        <div className="relative w-full max-w-md">
           <div className="flex items-center bg-white rounded-full shadow-md overflow-hidden border border-gray-300">
             <input
               type="text"
@@ -210,7 +323,15 @@ export default function FilterBar({
                   : enterpriseRisk
                   ? "Buscar empresa"
                   : nationalRisk
-                  ? `Buscar ${admLevel === "adm1" ? "departamento" : admLevel === "adm2" ? "municipio" : admLevel === "adm3" ? "vereda" : ""}`
+                  ? `Buscar ${
+                      admLevel === "adm1"
+                        ? "departamento"
+                        : admLevel === "adm2"
+                        ? "municipio"
+                        : admLevel === "adm3"
+                        ? "vereda"
+                        : ""
+                    }`
                   : "Buscar"
               }
               value={search}
@@ -221,43 +342,62 @@ export default function FilterBar({
               type="submit"
               className="bg-green-700 hover:bg-green-800 text-white p-2 rounded-full m-1"
             >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z" />
+              <svg
+                className="w-4 h-4"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M21 21l-4.35-4.35M10 18a8 8 0 1 1 0-16 8 8 0 0 1 0 16z"
+                />
               </svg>
             </button>
           </div>
 
-          {/* Suggestions */}
-          {enterpriseRisk && filteredEnterprises.length > 0 && !selectedEnterprise && (
-            <ul className="absolute top-full mt-1 left-0 right-0 bg-white rounded-md shadow border border-gray-300 max-h-48 overflow-y-auto z-[1000]">
-              {filteredEnterprises.map((ent) => (
-                <li
-                  key={ent.id}
-                  onClick={() => {
-                    setSelectedEnterprise(ent);
-                    setSearch("");
-                    setFilteredEnterprises([]);
-                  }}
-                  className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
-                >
-                  {ent.name}
-                </li>
-              ))}
-            </ul>
-          )}
+          {/* 🔽 Sugerencias empresa */}
 
+          {enterpriseRisk &&
+            filteredEnterprises.length > 0 &&
+            !selectedEnterprise && (
+              <ul className="absolute left-0 right-0 top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-[1000] max-h-48 overflow-y-auto">
+                {filteredEnterprises.map((ent) => (
+                  <li
+                    key={ent.id}
+                    onClick={() => {
+                      setSelectedEnterprise(ent);
+                      setSearch("");
+                      setFilteredEnterprises([]);
+                    }}
+                    className="px-4 py-2 text-sm hover:bg-gray-100 cursor-pointer"
+                  >
+                    {ent.name}
+                  </li>
+                ))}
+              </ul>
+            )}
+          {/* 🔽 Sugerencias ADM */}
           {nationalRisk && admSuggestions.length > 0 && (
-            <ul className="absolute top-full mt-1 left-0 right-0 bg-white rounded-md shadow border border-gray-300 max-h-48 overflow-y-auto z-[2000]">
+            <ul className="absolute left-0 right-0 top-full mt-1 w-full bg-white border border-gray-300 rounded-md shadow-lg z-[1000] max-h-48 overflow-y-auto">
               {admSuggestions.map((item) => (
                 <li
                   key={item.id}
                   onClick={() => {
                     if (foundAdms.length >= 5) {
-                      setToast({ type: "warning", message: "Máximo 5 elementos permitidos" });
+                      setToast({
+                        type: "warning",
+                        message: "Máximo 5 elementos permitidos",
+                      });
                       return;
                     }
                     if (!foundAdms.find((adm) => adm.id === item.id)) {
-                      setFoundAdms((prev) => [...prev, { id: item.id, code: item.name }]);
+                      setFoundAdms((prev) => [
+                        ...prev,
+                        { id: item.id, code: item.name },
+                      ]);
                     }
                     setSearch("");
                     setAdmSuggestions([]);
@@ -272,17 +412,26 @@ export default function FilterBar({
           )}
         </div>
 
-        {/* Chips */}
+        {/* 🧩 Chips visuales */}
         {farmRisk && foundFarms.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {foundFarms.map((farm) => (
-              <span key={farm.id} className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center">
+              <span
+                key={farm.id || farm.code}
+                className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center"
+              >
                 {farm.code}
                 <button
                   type="button"
-                  onClick={() => setFoundFarms((prev) => prev.filter((f) => f.id !== farm.id))}
+                  onClick={() =>
+                    setFoundFarms((prev) =>
+                      prev.filter((f) => f.code !== farm.code)
+                    )
+                  }
                   className="ml-2 text-red-500 hover:text-red-700 font-bold"
-                >×</button>
+                >
+                  ×
+                </button>
               </span>
             ))}
           </div>
@@ -295,20 +444,29 @@ export default function FilterBar({
               type="button"
               onClick={() => setSelectedEnterprise(null)}
               className="ml-2 text-red-500 hover:text-red-700 font-bold"
-            >×</button>
+            >
+              ×
+            </button>
           </div>
         )}
 
         {nationalRisk && foundAdms.length > 0 && (
           <div className="flex flex-wrap gap-2">
             {foundAdms.map((adm) => (
-              <span key={adm.id} className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center">
+              <span
+                key={adm.id}
+                className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center"
+              >
                 {adm.code}
                 <button
                   type="button"
-                  onClick={() => setFoundAdms((prev) => prev.filter((a) => a.id !== adm.id))}
+                  onClick={() =>
+                    setFoundAdms((prev) => prev.filter((a) => a.id !== adm.id))
+                  }
                   className="ml-2 text-red-500 hover:text-red-700 font-bold"
-                >×</button>
+                >
+                  ×
+                </button>
               </span>
             ))}
           </div>

@@ -7,7 +7,7 @@ pipeline {
     environment {
         server_name = credentials('ganabosques_name')
         server_host = credentials('ganabosques_host')
-        ssh_key     = credentials('ganabosques_devops')
+        ssh_key     = credentials('ganabosques')
     }
 
     stages {

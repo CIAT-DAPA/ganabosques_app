@@ -11,6 +11,20 @@ pipeline {
     }
 
     stages {
+        stage('Verificar variables de entorno') {
+            steps {
+                script {
+                    echo "📌 server_name: ${server_name}"
+                    echo "📌 server_host: ${server_host}"
+                    echo "📌 Usuario SSH: ${ganabosques_USR ?: 'No definido'}"
+
+                    // Mostrar solo primeros 20 caracteres de la llave para confirmar que está cargada
+                    def keyPreview = ssh_key?.substring(0, Math.min(ssh_key.length(), 20))
+                    echo "📌 ssh_key (preview): ${keyPreview}..."
+                }
+            }
+        }
+
         stage('Configurar conexión SSH') {
             steps {
                 script {

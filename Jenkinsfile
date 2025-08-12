@@ -41,7 +41,6 @@ pipeline {
             steps {
                 script {
                     sshCommand remote: remote, command: '''
-                        echo "Listado de archivos en el directorio actual:"
                         ls -la
                     '''
                 }
@@ -52,7 +51,6 @@ pipeline {
             steps {
                 script {
                     sshCommand remote: remote, command: '''
-                        echo "Directorio actual:"
                         pwd
                     '''
                 }

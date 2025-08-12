@@ -1,78 +1,32 @@
-// Define an empty map for storing remote SSH connection parameters
-def remote = [:]
-
 pipeline {
-    agent any
+  agent any
 
-    environment {
-        server_name = credentials('ganabosques_name')
-        server_host = credentials('ganabosques_host')
-        ssh_key = credentials('ganabosques')
-        }
+  environment {
+    SERVER_HOST = credentials('ganabosques_host') // secreto con host/IP del server
+  }
 
-    stages {
-        stage('Connection to AWS server') {
-            steps {
-                script {
-                    // Set up remote SSH connection parameterss
-                    remote.allowAnyHosts = true
-                    remote.identityFile = ssh_key
-                    remote.user = ssh_key_USR
-                    remote.name = server_name
-                    remote.host = server_host
-                    
-                }
-            }
+  stages {
+    stage('Probar conexión y comandos') {
+      steps {
+        // Usa la credencial SSH con ID 'ganabosques'
+        sshagent(credentials: ['ganabosques']) {
+          sh '''
+            set -euxo pipefail
+            # Ejecuta los comandos en el remoto
+            ssh -o StrictHostKeyChecking=no -o BatchMode=yes "${SSH_USERNAME}@${SERVER_HOST}" '
+              set -e
+              cd /opt
+              ls -la
+              pwd
+            '
+          '''
         }
-        stage('Verify webapp folder and environment') {
-            steps {
-                script {
-                    
-                    sshCommand remote: remote, command: '''
-                        # Verify and create the wepapp_folder folder if it does not exist
-                        cd /opt
-                    '''
-                    
-                }
-            }
-        }
-        
-       
-        stage('Download latest release') {
-            steps {
-                script {
-                    sshCommand remote: remote, command: '''
-                        # Download the latest release f1081419031Nasa@rom GitHub
-                        ls
-                    '''
-                }
-            }
-        }
-
-
-        stage('Verify and control PM2 service') {
-            steps {
-                script {
-                    sshCommand remote: remote, command: '''
-                        # Verify and control PM2 service
-                        pwd
-                    '''
-                }
-            }
-        }
+      }
     }
+  }
 
-    post {
-        failure {
-            script {
-                echo 'fail :c'
-            }
-        }
-
-        success {
-            script {
-                echo 'everything went very well!!'
-            }
-        }
-    }
+  post {
+    success { echo '✅ Conexión SSH OK y comandos ejecutados' }
+    failure { echo '❌ Falló la conexión o algún comando' }
+  }
 }

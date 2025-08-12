@@ -30,7 +30,7 @@ pipeline {
                 script {
                     remote.allowAnyHosts = true
                     remote.identityFile  = ssh_key
-                    remote.user          = ganabosques_USR
+                    remote.user          = ssh_key_USR
                     remote.name          = server_name
                     remote.host          = server_host
                 }

@@ -1,4 +1,4 @@
-// Define un mapa vacío para los parámetros de conexión SSH
+// Define an empty map for storing remote SSH connection parameters
 def remote = [:]
 
 pipeline {
@@ -7,50 +7,54 @@ pipeline {
     environment {
         server_name = credentials('ganabosques_name')
         server_host = credentials('ganabosques_host')
-        ssh_key     = credentials('ganabosques')
-    }
+        ssh_key = credentials('ganabosques')
+        }
 
     stages {
-        stage('Verificar variables de entorno') {
+        stage('Connection to AWS server') {
             steps {
                 script {
-                    echo "📌 server_name: ${server_name}"
-                    echo "📌 server_host: ${server_host}"
-                    echo "📌 Usuario SSH: ${ssh_key_USR ?: 'No definido'}"
-
-                    // Mostrar solo primeros 20 caracteres de la llave para confirmar que está cargada
-                    def keyPreview = ssh_key?.substring(0, Math.min(ssh_key.length(), 20))
-                    echo "📌 ssh_key (preview): ${keyPreview}..."
-                }
-            }
-        }
-
-        stage('Configurar conexión SSH') {
-            steps {
-                script {
+                    // Set up remote SSH connection parameterss
                     remote.allowAnyHosts = true
-                    remote.identityFile  = ssh_key
-                    remote.user          = ssh_key_USR
-                    remote.name          = server_name
-                    remote.host          = server_host
+                    remote.identityFile = ssh_key
+                    remote.user = ssh_key_USR
+                    remote.name = server_name
+                    remote.host = server_host
+                    
                 }
             }
         }
-
-        stage('Probar conexión - ls') {
+        stage('Verify webapp folder and environment') {
+            steps {
+                script {
+                    
+                    sshCommand remote: remote, command: '''
+                        # Verify and create the wepapp_folder folder if it does not exist
+                        cd /opt
+                    '''
+                    
+                }
+            }
+        }
+        
+       
+        stage('Download latest release') {
             steps {
                 script {
                     sshCommand remote: remote, command: '''
-                        ls -la
+                        # Download the latest release f1081419031Nasa@rom GitHub
+                        ls
                     '''
                 }
             }
         }
 
-        stage('Probar conexión - pwd') {
+
+        stage('Verify and control PM2 service') {
             steps {
                 script {
                     sshCommand remote: remote, command: '''
+                        # Verify and control PM2 service
                         pwd
                     '''
                 }
@@ -61,12 +65,13 @@ pipeline {
     post {
         failure {
             script {
-                echo '❌ Falló la conexión o el comando'
+                echo 'fail :c'
             }
         }
+
         success {
             script {
-                echo '✅ Conexión SSH y comandos ejecutados correctamente'
+                echo 'everything went very well!!'
             }
         }
     }

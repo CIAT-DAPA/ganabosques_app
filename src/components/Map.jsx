@@ -9,6 +9,7 @@ import {
   useMap,
   WMSTileLayer,
   LayersControl,
+  useMapEvent,
 } from "react-leaflet";
 import L from "leaflet";
 import { useEffect, useRef, useState } from "react";
@@ -18,6 +19,7 @@ import RiskLegend from "@/components/Legend";
 import { searchAdmByName } from "@/services/apiService";
 import MovementCharts from "@/components/MovementChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
+import RiskPopup from "@/components/Adm3Risk";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -47,13 +49,16 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [pendingTasks, setPendingTasks] = useState(0);
   const [analysis, setAnalysis] = useState(null);
   const [riskFarm, setRiskFarm] = useState(null);
+  const [adm3Risk, setAdm3Risk] = useState(null);
+  const [adm3Details, setAdm3Details] = useState([]);
+  const [popupData, setPopupData] = useState(null);
 
   useEffect(() => {
     import("leaflet");
   }, []);
-useEffect(() => {
-  setLoading(pendingTasks > 0);
-}, [pendingTasks]);
+  useEffect(() => {
+    setLoading(pendingTasks > 0);
+  }, [pendingTasks]);
 
   const handleAdmSearch = async (searchText, level) => {
     try {
@@ -75,23 +80,21 @@ useEffect(() => {
   };
   useEffect(() => {
     if (!foundFarms || foundFarms.length === 0) {
-    setFarmPolygons([]); 
-    return;
-  }
+      setFarmPolygons([]);
+      return;
+    }
     const fetchFarmPolygons = async () => {
-      const ids = foundFarms
-        .map((farm) => farm.id)
-        .filter((id) => id) 
+      const ids = foundFarms.map((farm) => farm.id).filter((id) => id);
 
       if (!ids || ids.length === 0) return;
 
       try {
-        setPendingTasks((prev) => prev + 1); 
+        setPendingTasks((prev) => prev + 1);
         const response = await fetch(
-          `http://localhost:8000/farmpolygons/by-farm?ids=${ids}`
+          `https://ganaapi.alliance.cgiar.org/farmpolygons/by-farm?ids=${ids}`
         );
         const data = await response.json();
-        setFarmPolygons(data); 
+        setFarmPolygons(data);
       } catch (err) {
         console.error("Error obteniendo polígonos de fincas:", err);
       } finally {
@@ -114,12 +117,12 @@ useEffect(() => {
       try {
         setPendingTasks((prev) => prev + 1);
         const response = await fetch(
-          `http://localhost:8000/movement/statistics-by-farmid?ids=${ids}`
+          `https://ganaapi.alliance.cgiar.org/movement/statistics-by-farmid?ids=${ids}`
         );
         const data = await response.json();
 
-        setOriginalMovement(data); 
-        setMovement(data); 
+        setOriginalMovement(data);
+        setMovement(data);
       } catch (err) {
         console.error("Error obteniendo estadísticas de movimiento:", err);
       } finally {
@@ -158,14 +161,14 @@ useEffect(() => {
 
     setMovement(filtered);
   }, [yearStart, originalMovement]);
-useEffect(() => {
-  if (!foundFarms || foundFarms.length === 0) {
-    setFarmPolygons([]);    
-    setMovement({});         
-    setOriginalMovement({}); 
-    return;
-  }
-}, [foundFarms]);
+  useEffect(() => {
+    if (!foundFarms || foundFarms.length === 0) {
+      setFarmPolygons([]);
+      setMovement({});
+      setOriginalMovement({});
+      return;
+    }
+  }, [foundFarms]);
 
   useEffect(() => {
     if (!yearStart || !originalMovement) return;
@@ -233,8 +236,6 @@ useEffect(() => {
     setMovement(filtered);
   }, [yearStart, originalMovement]);
 
-
-
   const FlyToFarmPolygons = ({ polygons }) => {
     const map = useMap();
 
@@ -294,77 +295,132 @@ useEffect(() => {
   ]);
 
   const renderGeoJsons = (entries, color) =>
-  entries
-    .filter((e) => e.destination?.geojson)
-    .map((entry, idx) => {
-      try {
-        const data = JSON.parse(entry.destination.geojson);
+    entries
+      .filter((e) => e.destination?.geojson)
+      .map((entry, idx) => {
+        try {
+          const data = JSON.parse(entry.destination.geojson);
 
-        return (
-          <GeoJSON
-            key={`geojson-${color}-${idx}`}
-            data={data}
-            style={{ color, weight: 2, fillOpacity: 0.3 }}
-          >
-            <Popup>
-              <strong>Codigo SIT de la finca:</strong> {entry.sit_code || entry.destination.id}
-            </Popup>
-          </GeoJSON>
-        );
-      } catch (err) {
-        console.warn("❌ Error parsing geojson:", entry.destination.geojson);
-        return null;
-      }
-    });
-
+          return (
+            <GeoJSON
+              key={`geojson-${color}-${idx}`}
+              data={data}
+              style={{ color, weight: 2, fillOpacity: 0.3 }}
+            >
+              <Popup>
+                <strong>Codigo SIT de la finca:</strong>{" "}
+                {entry.sit_code || entry.destination.id}
+              </Popup>
+            </GeoJSON>
+          );
+        } catch (err) {
+          console.warn("❌ Error parsing geojson:", entry.destination.geojson);
+          return null;
+        }
+      });
 
   const renderMarkers = (movements, color) => {
-  return movements
-    ?.filter(
-      (m) =>
-        m.destination?.latitude &&
-        m.destination?.longitud &&
-        !m.destination?.farm_id // ⛔️ Excluye fincas
-    )
-    .map((m, idx) => {
-      const dest = m.destination;
-      const lat = dest.latitude;
-      const lon = dest.longitud;
-      const name = dest.name || "Sin nombre";
-      const id = dest._id || "Sin ID";
-      const type = "Empresa";
+    return movements
+      ?.filter(
+        (m) =>
+          m.destination?.latitude &&
+          m.destination?.longitud &&
+          !m.destination?.farm_id // ⛔️ Excluye fincas
+      )
+      .map((m, idx) => {
+        const dest = m.destination;
+        const lat = dest.latitude;
+        const lon = dest.longitud;
+        const name = dest.name || "Sin nombre";
+        const id = dest._id || "Sin ID";
+        const type = "Empresa";
 
-      return (
-        <Marker
-          key={`marker-${idx}`}
-          position={[lat, lon]}
-          icon={L.divIcon({
-            className: "custom-marker",
-            html: `<div style="background:${color};width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>`,
-          })}
-        >
-          <Popup>
-            <strong>Tipo:</strong> {type}
-            <br />
-            <strong>ID:</strong> {id}
-            <br />
-            <strong>Nombre:</strong> {name}
-          </Popup>
-        </Marker>
+        return (
+          <Marker
+            key={`marker-${idx}`}
+            position={[lat, lon]}
+            icon={L.divIcon({
+              className: "custom-marker",
+              html: `<div style="background:${color};width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>`,
+            })}
+          >
+            <Popup>
+              <strong>Tipo:</strong> {type}
+              <br />
+              <strong>ID:</strong> {id}
+              <br />
+              <strong>Nombre:</strong> {name}
+            </Popup>
+          </Marker>
+        );
+      });
+  };
+  useEffect(() => {
+    // Logs de entrada para validar condiciones
+    console.log("👀 analysis recibido:", analysis);
+    console.log("👀 foundAdms recibido:", foundAdms);
+
+    // Validación de condiciones
+    if (
+      !Array.isArray(analysis) ||
+      analysis.length === 0 ||
+      !Array.isArray(foundAdms) ||
+      foundAdms.length === 0
+    ) {
+      console.warn(
+        "🚫 Condiciones no cumplidas para ejecutar fetch de adm3risks"
       );
-    });
-};
+      return;
+    }
 
-console.log(foundFarms)
+    const analysisId = analysis[0]?.id;
+    const adm3Ids = foundAdms.map((adm) => adm.id).filter(Boolean);
+
+
+    const fetchAdm3Risks = async () => {
+      try {
+        setPendingTasks((prev) => prev + 1);
+
+        const response = await fetch(
+          "https://ganaapi.alliance.cgiar.org/adm3risk/by-analysis-and-adm3",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              analysis_ids: [analysisId],
+              adm3_ids: adm3Ids,
+            }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error("Error al obtener adm3 risks");
+        }
+
+        const data = await response.json();
+        console.log("✅ adm3risks recibidos:", data);
+        setAdm3Risk(data);
+      } catch (err) {
+        console.error("❌ Error al hacer fetch de adm3 risks:", err);
+      } finally {
+        setPendingTasks((prev) => prev - 1);
+      }
+    };
+
+    fetchAdm3Risks();
+  }, [analysis, foundAdms]);
+
 
   useEffect(() => {
-    if (!year) return; 
+    if (!year) return;
 
     const fetchAnalysisByDeforestation = async () => {
       try {
-        setPendingTasks((prev) => prev + 1); 
+        setPendingTasks((prev) => prev + 1);
         const response = await fetch(
-          `http://localhost:8000/farmrisk/by-analysis-and-farm?deforestation_id=${year}`
+          `https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm?deforestation_id=${year}`
         );
 
         if (!response.ok) {
@@ -396,7 +452,7 @@ console.log(foundFarms)
         setPendingTasks((prev) => prev + 1);
 
         const response = await fetch(
-          "http://localhost:8000/farmrisk/by-analysis-and-farm",
+          "https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm",
           {
             method: "POST",
             headers: {
@@ -425,65 +481,155 @@ console.log(foundFarms)
     fetchFarmRisk();
   }, [analysis, foundFarms]);
   const renderFarmRiskPolygons = (polygons, farmRisk, foundFarms = []) => {
-  if (!farmRisk) return null;
+    if (!farmRisk) return null;
 
-  return polygons.map((farm, idx) => {
-    let geojson;
-    try {
-      geojson =
-        typeof farm.geojson === "string" ? JSON.parse(farm.geojson) : farm.geojson;
-    } catch (err) {
-      console.error("❌ Error parsing geojson:", farm.geojson);
-      return null;
-    }
+    return polygons.map((farm, idx) => {
+      let geojson;
+      try {
+        geojson =
+          typeof farm.geojson === "string"
+            ? JSON.parse(farm.geojson)
+            : farm.geojson;
+      } catch (err) {
+        console.error("❌ Error parsing geojson:", farm.geojson);
+        return null;
+      }
 
-    const farmId = farm.farm_id || farm.id;
+      const farmId = farm.farm_id || farm.id;
 
-    // Buscar riesgo asociado
-    const riskObject = Object.values(farmRisk)
-      .flat()
-      .find((r) => r.farm_id === farmId);
+      // Buscar riesgo asociado
+      const riskObject = Object.values(farmRisk)
+        .flat()
+        .find((r) => r.farm_id === farmId);
 
-    const risk = riskObject?.risk_total ?? 0;
+      const risk = riskObject?.risk_total ?? 0;
 
-    // Obtener sit_code
-    const matchedFarm = foundFarms.find((f) => f.id === farmId);
-    const sitCode = matchedFarm?.code || "Sin código";
+      // Obtener sit_code
+      const matchedFarm = foundFarms.find((f) => f.id === farmId);
+      const sitCode = matchedFarm?.code || "Sin código";
 
-    
-    let color = "green";
-    if (risk > 2.5) {
-      color = "#B60205"; 
-    } else if (risk > 1.5) {
-      color = "#FBCA04";
-    } else if (risk > 0) {
-      color = "#F9D0C4"; 
-    }
+      let color = "#00C853"; // Verde por defecto (sin riesgo)
+      if (risk > 2.5) color = "#D50000"; // Rojo - Alto
+      else if (risk > 1.5) color = "#FF6D00"; // Naranja - Medio
+      else if (risk > 0) color = "#FFD600"; // Amarillo - Bajo
 
-    return (
-      <GeoJSON
-        key={`farmrisk-${idx}`}
-        data={geojson}
-        style={{
-          color,
-          weight: 2,
-          fillColor: color,
-          fillOpacity: 0.3,
-        }}
-      >
-        <Popup>
-          <strong>Finca</strong>
-          <br />
-          Código SIT: {sitCode}
-          <br />
-          Riesgo total: {risk}
-        </Popup>
-      </GeoJSON>
-    );
-  });
-};
+      return (
+        <GeoJSON
+          key={`farmrisk-${idx}`}
+          data={geojson}
+          style={{
+            color,
+            weight: 2,
+            fillColor: color,
+            fillOpacity: 0.3,
+          }}
+        >
+          <Popup>
+            <strong>Finca</strong>
+            <br />
+            Código SIT: {sitCode}
+            <br />
+            Riesgo total: {risk}
+          </Popup>
+        </GeoJSON>
+      );
+    });
+  };
+  useEffect(() => {
+    if (!adm3Risk) return;
 
-console.log(movement)
+    // Extrae los adm3_ids de todos los riesgos
+    const flatRisks = Object.values(adm3Risk).flat();
+    const adm3Ids = [
+      ...new Set(flatRisks.map((risk) => risk.adm3_id).filter(Boolean)),
+    ];
+
+    if (adm3Ids.length === 0) return;
+
+    const fetchAdm3Details = async () => {
+      try {
+        setPendingTasks((prev) => prev + 1);
+
+        const response = await fetch(
+          `https://ganaapi.alliance.cgiar.org/adm3/by-ids?ids=${adm3Ids.join(",")}`
+        );
+
+        if (!response.ok) {
+          throw new Error("Error al obtener detalles de adm3");
+        }
+
+        const data = await response.json();
+        setAdm3Details(data);
+      } catch (err) {
+        console.error("❌ Error al consultar adm3 details:", err);
+      } finally {
+        setPendingTasks((prev) => prev - 1);
+      }
+    };
+
+    fetchAdm3Details();
+  }, [adm3Risk]);
+
+  function WMSRiskClickHandler({ adm3Risk, adm3Details, showPopup }) {
+    const [clickLatLng, setClickLatLng] = useState(null);
+
+    const map = useMapEvent("click", async (e) => {
+      const { lat, lng } = e.latlng;
+      setClickLatLng([lat, lng]);
+
+      const bbox = map.getBounds().toBBoxString();
+      const size = map.getSize();
+      const point = map.latLngToContainerPoint(e.latlng);
+
+      const params = new URLSearchParams({
+        SERVICE: "WMS",
+        VERSION: "1.1.1",
+        REQUEST: "GetFeatureInfo",
+        FORMAT: "image/png",
+        TRANSPARENT: "true",
+        QUERY_LAYERS: "administrative:admin_3",
+        LAYERS: "administrative:admin_3",
+        STYLES: "",
+        SRS: "EPSG:4326",
+        BBOX: bbox,
+        WIDTH: size.x,
+        HEIGHT: size.y,
+        X: Math.floor(point.x),
+        Y: Math.floor(point.y),
+        INFO_FORMAT: "application/json",
+      });
+
+      // ✅ Aplica proxy para evitar CORS (sin cambiar nada más)
+      const rawUrl = `https://ganageo.alliance.cgiar.org/geoserver/administrative/wms?${params.toString()}`;
+      const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
+
+      try {
+        const response = await fetch(proxiedUrl);
+        const data = await response.json();
+
+        const cod_ver = data?.features?.[0]?.properties?.cod_ver;
+        if (!cod_ver) return;
+
+        const detail = adm3Details.find((d) => d.ext_id === cod_ver);
+        if (!detail) return;
+
+        const riskArray = Object.values(adm3Risk).flat();
+        const riskData = riskArray.find((r) => r.adm3_id === detail.id);
+        if (!riskData) return;
+
+        showPopup({
+          lat,
+          lng,
+          detail,
+          riskData,
+        });
+      } catch (err) {
+        console.error("Error al hacer GetFeatureInfo:", err.message);
+      }
+    });
+
+    return null;
+  }
 
   return (
     <>
@@ -539,7 +685,7 @@ console.log(movement)
             <LayersControl position="bottomleft">
               <LayersControl.Overlay name="Ver niveles administrativos" checked>
                 <WMSTileLayer
-                  url="http://localhost:8600/geoserver/administrative/wms"
+                  url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
                   layers="administrative:admin_2"
                   format="image/png"
                   transparent={true}
@@ -549,7 +695,9 @@ console.log(movement)
               </LayersControl.Overlay>
             </LayersControl>
           )}
-{loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
+          {loading && (
+            <LoadingSpinner message="Cargando datos y polígonos..." />
+          )}
           <FlyToFarmPolygons polygons={farmPolygons} />
           {renderMarkers(allInputs, "#8B4513")}
           {renderGeoJsons(allInputs, "#8B4513")}
@@ -557,16 +705,57 @@ console.log(movement)
           {renderMarkers(allOutputs, "purple")}
           {renderGeoJsons(allOutputs, "purple")}
           {renderFarmRiskPolygons(farmPolygons, riskFarm, foundFarms)}
+          {adm3Details.map((detail) => {
+            const riskArray = Object.values(adm3Risk).flat();
+            const riskData = riskArray.find((r) => r.adm3_id === detail.id);
+            if (!riskData) return null;
+            const risk = riskData.risk_total; // ← asegúrate de obtener el valor real
+            let styleName = "norisk"; // sin riesgo
+
+            if (risk > 2.5) styleName = "hightrisk";
+            else if (risk > 1.5) styleName = "mediumrisk";
+            else if (risk > 0) styleName = "lowrisk";
+
+            return (
+              <>
+                <WMSTileLayer
+                  key={detail.ext_id}
+                  url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+                  layers="administrative:admin_3"
+                  format="image/png"
+                  transparent={true}
+                  cql_filter={`cod_ver='${detail.ext_id}'`}
+                  styles={styleName}
+                  zIndex={1000}
+                />
+                <WMSRiskClickHandler
+                  adm3Risk={adm3Risk}
+                  adm3Details={adm3Details}
+                  showPopup={setPopupData}
+                />
+
+                {/* Renderizas el popup si hay datos */}
+                {popupData && (
+                  <Popup position={[popupData.lat, popupData.lng]}>
+                    <RiskPopup
+                      detail={popupData.detail}
+                      riskData={popupData.riskData}
+                      yearStart={yearStart}
+                    />
+                  </Popup>
+                )}
+              </>
+            );
+          })}
         </MapContainer>
       </div>
 
-    
-        <MovementCharts
-          summary={movement}
-          foundFarms={foundFarms}
-          riskFarm={riskFarm}
-        />
-    
+      <MovementCharts
+        summary={movement}
+        foundFarms={foundFarms}
+        riskFarm={riskFarm}
+        yearStart={yearStart}
+      />
     </>
   );
 }

@@ -395,7 +395,7 @@ export default function FilterBar({
                     if (!foundAdms.find((adm) => adm.id === item.id)) {
                       setFoundAdms((prev) => [
                         ...prev,
-                        { id: item.id, code: item.name },
+                        { id: item.id, adm3name: item.name },
                       ]);
                     }
                     setSearch("");
@@ -456,7 +456,7 @@ export default function FilterBar({
                 key={adm.id}
                 className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center"
               >
-                {adm.code}
+                {adm.adm3name}
                 <button
                   type="button"
                   onClick={() =>

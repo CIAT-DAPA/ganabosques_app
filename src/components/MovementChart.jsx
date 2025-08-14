@@ -100,9 +100,7 @@ export default function MovementCharts({
     return { options, series };
   };
 
-  if (!Array.isArray(foundFarms) || foundFarms.length === 0) {
-    return <p className="text-gray-500 p-4">No hay predios seleccionados.</p>;
-  }
+  
 
   return (
     <>
@@ -270,7 +268,7 @@ export default function MovementCharts({
                   </div>
 
                   <div>
-                    {hasSalida ? (
+                    {hasSalida && riskFarm ? (
                       <>
                         <Chart
                           options={salidaChart.options}

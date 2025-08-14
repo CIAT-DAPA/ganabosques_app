@@ -31,7 +31,9 @@ pipeline {
                     
                     sshCommand remote: remote, command: '''
                         # Verify and create the wepapp_folder folder if it does not exist
-                        cd /opt
+                        pm2 stop gana
+                        cd /opt/ganabosques/front/ganabosques_app
+                        git pull origin main
                     '''
                     
                 }
@@ -39,24 +41,15 @@ pipeline {
         }
         
        
-        stage('Download latest release') {
+        stage('Run the build') {
             steps {
                 script {
                     sshCommand remote: remote, command: '''
                         # Download the latest release f1081419031Nasa@rom GitHub
-                        ls
-                    '''
-                }
-            }
-        }
-
-
-        stage('Verify and control PM2 service') {
-            steps {
-                script {
-                    sshCommand remote: remote, command: '''
-                        # Verify and control PM2 service
-                        pwd
+                        cd /opt/ganabosques/front/ganabosques_app
+                        npm install
+                        npm run build
+                        pm2 serve out  5000 --name gana --spa
                     '''
                 }
             }

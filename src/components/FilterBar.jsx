@@ -79,7 +79,6 @@ export default function FilterBar({
       );
   }, []);
 
-  console.log("Todos los rangos:", yearStartEndList);
 
   useEffect(() => {
     if (!nationalRisk || !search || !admLevel) return;
@@ -222,12 +221,12 @@ export default function FilterBar({
     if (enterpriseRisk) return [{ value: "risk_total", label: "Riesgo Total" }];
     if (farmRisk)
       return [
-        { value: "risk_direct", label: "Riesgo Directo" },
+        { value: "risk_direct", label: "Riesgo Acumulado" },
         { value: "risk_total", label: "Riesgo Total" },
       ];
     return [
       { value: "total", label: "Riesgo Total" },
-      { value: "parcial", label: "Riesgo Directo" },
+      { value: "parcial", label: "Riesgo Acumulado" },
     ];
   };
 

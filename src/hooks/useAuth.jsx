@@ -17,7 +17,7 @@ export const AuthProvider = ({ children }) => {
     isRun.current = true;
 
     keycloak.current = new Keycloak({
-      url: "http://localhost:8080",
+      url: "https://ganausers.alliance.cgiar.org",
       realm: "GanaBosques",
       clientId: "GanabosquesWeb",
     });

@@ -2,9 +2,9 @@
 
 export default function RiskLegend({ enterpriseRisk = false, farmRisk = false }) {
   const riskLevels = [
-    { label: 'Sin Riesgo', color: 'bg-gray-400' },
-    { label: 'Riesgo Bajo', color: 'bg-green-600' },
-    { label: 'Riesgo Medio', color: 'bg-yellow-400' },
+    { label: 'Sin Riesgo', color: 'bg-green-600' },
+    { label: 'Riesgo Bajo', color: 'bg-yellow-400' },
+    { label: 'Riesgo Medio', color: 'bg-orange-400' },
     { label: 'Riesgo Alto', color: 'bg-red-600' }
   ];
 

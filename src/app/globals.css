@@ -23,3 +23,16 @@ body {
   padding: 0;
   line-height: 1.6;
 }
+.leaflet-popup-content-wrapper {
+  max-width: none !important;
+  width: auto !important;
+  padding: 0 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  width: auto !important;
+  padding: 0 !important;
+}

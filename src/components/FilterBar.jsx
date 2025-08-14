@@ -79,7 +79,6 @@ export default function FilterBar({
       );
   }, []);
 
-  console.log("Todos los rangos:", yearStartEndList);
 
   useEffect(() => {
     if (!nationalRisk || !search || !admLevel) return;
@@ -222,12 +221,12 @@ export default function FilterBar({
     if (enterpriseRisk) return [{ value: "risk_total", label: "Riesgo Total" }];
     if (farmRisk)
       return [
-        { value: "risk_direct", label: "Riesgo Directo" },
+        { value: "risk_direct", label: "Riesgo Acumulado" },
         { value: "risk_total", label: "Riesgo Total" },
       ];
     return [
       { value: "total", label: "Riesgo Total" },
-      { value: "parcial", label: "Riesgo Directo" },
+      { value: "parcial", label: "Riesgo Acumulado" },
     ];
   };
 
@@ -396,7 +395,7 @@ export default function FilterBar({
                     if (!foundAdms.find((adm) => adm.id === item.id)) {
                       setFoundAdms((prev) => [
                         ...prev,
-                        { id: item.id, code: item.name },
+                        { id: item.id, adm3name: item.name },
                       ]);
                     }
                     setSearch("");
@@ -457,7 +456,7 @@ export default function FilterBar({
                 key={adm.id}
                 className="bg-gray-200 text-gray-800 px-3 py-1 rounded-full text-sm flex items-center"
               >
-                {adm.code}
+                {adm.adm3name}
                 <button
                   type="button"
                   onClick={() =>

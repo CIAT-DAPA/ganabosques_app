@@ -59,7 +59,7 @@ pipeline {
     post {
         failure {
             script {
-                echo 'fail :c'
+                echo 'fail :C'
             }
         }
 

@@ -10,21 +10,31 @@ import {
   WMSTileLayer,
   LayersControl,
   useMapEvent,
-  Polyline
+  Polyline,
 } from "react-leaflet";
 import L from "leaflet";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
-import { searchAdmByName } from "@/services/apiService";
+import {
+  searchAdmByName,
+  fetchFarmPolygonsByIds,
+  fetchMovementStatisticsByFarmIds,
+  fetchAdm3RisksByAnalysisAndAdm3,
+  fetchFarmRiskByDeforestationId,
+  fetchAdm3DetailsByIds,
+  fetchFarmRiskByAnalysisAndFarm
+  
+} from "@/services/apiService";
 import MovementCharts from "@/components/MovementChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import RiskPopup from "@/components/Adm3Risk";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+  iconRetinaUrl:
+    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
 });
@@ -32,8 +42,7 @@ L.Icon.Default.mergeOptions({
 export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   // Opciones de riesgo memorizadas
   const riskOptions = useMemo(() => {
-    if (enterpriseRisk)
-      return [{ value: "risk_total", label: "Riesgo Total" }];
+    if (enterpriseRisk) return [{ value: "risk_total", label: "Riesgo Total" }];
     /*if (farmRisk)
       return [
         { value: "risk_total", label: "Riesgo anual" },
@@ -102,16 +111,14 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       setFarmPolygons([]);
       return;
     }
-    const fetchFarmPolygons = async () => {
-      const ids = foundFarms.map((farm) => farm.id).filter((id) => id);
-      if (!ids || ids.length === 0) return;
+
+    const loadPolygons = async () => {
+      const ids = foundFarms.map((farm) => farm.id).filter(Boolean);
+      if (ids.length === 0) return;
 
       try {
         setPendingTasks((prev) => prev + 1);
-        const response = await fetch(
-          `https://ganaapi.alliance.cgiar.org/farmpolygons/by-farm?ids=${ids}`
-        );
-        const data = await response.json();
+        const data = await fetchFarmPolygonsByIds(ids);
         setFarmPolygons(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -122,25 +129,17 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       }
     };
 
-    fetchFarmPolygons();
+    loadPolygons();
   }, [foundFarms]);
 
   useEffect(() => {
-    const fetchMovementStatistics = async () => {
-      const ids = foundFarms
-        .map((farm) => farm.id)
-        .filter((id) => id)
-        .join(",");
-
-      if (!ids || ids.length === 0) return;
+    const loadMovementStats = async () => {
+      const ids = foundFarms.map((farm) => farm.id).filter(Boolean);
+      if (ids.length === 0) return;
 
       try {
         setPendingTasks((prev) => prev + 1);
-        const response = await fetch(
-          `https://ganaapi.alliance.cgiar.org/movement/statistics-by-farmid?ids=${ids}`
-        );
-        const data = await response.json();
-
+        const data = await fetchMovementStatisticsByFarmIds(ids);
         setOriginalMovement(data);
         setMovement(data);
       } catch (err) {
@@ -152,7 +151,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       }
     };
 
-    fetchMovementStatistics();
+    loadMovementStats();
   }, [foundFarms]);
 
   // Filtro por año simple
@@ -390,27 +389,14 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       return;
     }
 
-    const analysisId = analysis[0]?.id;
-    const adm3Ids = foundAdms.map((adm) => adm.id).filter(Boolean);
+    const loadAdm3Risks = async () => {
+      const analysisId = analysis[0]?.id;
+      const adm3Ids = foundAdms.map((adm) => adm.id).filter(Boolean);
+      if (!analysisId || adm3Ids.length === 0) return;
 
-    const fetchAdm3Risks = async () => {
       try {
         setPendingTasks((prev) => prev + 1);
-
-        const response = await fetch(
-          "https://ganaapi.alliance.cgiar.org/adm3risk/by-analysis-and-adm3",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              analysis_ids: [analysisId],
-              adm3_ids: adm3Ids,
-            }),
-          }
-        );
-
-        if (!response.ok) throw new Error("Error al obtener adm3 risks");
-        const data = await response.json();
+        const data = await fetchAdm3RisksByAnalysisAndAdm3(analysisId, adm3Ids);
         setAdm3Risk(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -421,25 +407,17 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       }
     };
 
-    fetchAdm3Risks();
+    loadAdm3Risks();
   }, [analysis, foundAdms]);
 
   // Cargar análisis por deforestación cuando cambie `year`
   useEffect(() => {
     if (!year) return;
 
-    const fetchAnalysisByDeforestation = async () => {
+    const loadFarmRisk = async () => {
       try {
         setPendingTasks((prev) => prev + 1);
-        const response = await fetch(
-          `https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm?deforestation_id=${year}`
-        );
-
-        if (!response.ok) {
-          throw new Error("Error en la respuesta del servidor");
-        }
-
-        const data = await response.json();
+        const data = await fetchFarmRiskByDeforestationId(year);
         setAnalysis(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -450,53 +428,39 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       }
     };
 
-    fetchAnalysisByDeforestation();
+    loadFarmRisk();
   }, [year]);
 
-  useEffect(() => {
-    if (!analysis || !Array.isArray(analysis) || analysis.length === 0) return;
-    if (!foundFarms || foundFarms.length === 0) return;
+useEffect(() => {
+  if (!Array.isArray(analysis) || analysis.length === 0) return;
+  if (!Array.isArray(foundFarms) || foundFarms.length === 0) return;
 
-    const analysisId = analysis[0]?.id;
-    const farmIds = foundFarms.map((f) => f.id).filter(Boolean);
+  const analysisId = analysis[0]?.id;
+  const farmIds = foundFarms.map((f) => f.id).filter(Boolean);
+  if (!analysisId || farmIds.length === 0) return;
 
-    if (!analysisId || farmIds.length === 0) return;
-
-    const fetchFarmRisk = async () => {
-      try {
-        setPendingTasks((prev) => prev + 1);
-
-        const response = await fetch(
-          "https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm",
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              analysis_ids: [analysisId],
-              farm_ids: farmIds,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Error al consultar riesgo de fincas");
-        }
-
-        const data = await response.json();
-        setRiskFarm(data);
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error al obtener farmRisk:", err);
-        }
-      } finally {
-        setPendingTasks((prev) => prev - 1);
+  const loadFarmRisk = async () => {
+    try {
+      setPendingTasks((prev) => prev + 1);
+      const data = await fetchFarmRiskByAnalysisAndFarm(analysisId, farmIds);
+      setRiskFarm(data);
+    } catch (err) {
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error al obtener farmRisk:", err);
       }
-    };
+    } finally {
+      setPendingTasks((prev) => prev - 1);
+    }
+  };
 
-    fetchFarmRisk();
-  }, [analysis, foundFarms]);
+  loadFarmRisk();
+}, [analysis, foundFarms]);
 
-  const renderFarmRiskPolygons = (polygons, farmRiskData, foundFarmsList = []) => {
+  const renderFarmRiskPolygons = (
+    polygons,
+    farmRiskData,
+    foundFarmsList = []
+  ) => {
     if (!farmRiskData) return null;
 
     return polygons.map((farm, idx) => {
@@ -549,7 +513,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   useEffect(() => {
     if (!adm3Risk) return;
 
-    // Extrae los adm3_ids de todos los riesgos
     const flatRisks = Object.values(adm3Risk).flat();
     const adm3Ids = [
       ...new Set(flatRisks.map((risk) => risk.adm3_id).filter(Boolean)),
@@ -557,16 +520,10 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 
     if (adm3Ids.length === 0) return;
 
-    const fetchAdm3Details = async () => {
+    const loadAdm3Details = async () => {
       try {
         setPendingTasks((prev) => prev + 1);
-
-        const response = await fetch(
-          `https://ganaapi.alliance.cgiar.org/adm3/by-ids?ids=${adm3Ids.join(",")}`
-        );
-
-        if (!response.ok) throw new Error("Error al obtener detalles de adm3");
-        const data = await response.json();
+        const data = await fetchAdm3DetailsByIds(adm3Ids);
         setAdm3Details(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -577,7 +534,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       }
     };
 
-    fetchAdm3Details();
+    loadAdm3Details();
   }, [adm3Risk]);
 
   // Callback estable para año inicio/fin
@@ -589,10 +546,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   function WMSRiskClickHandler({ adm3Risk, adm3Details, showPopup }) {
     const [clickLatLng, setClickLatLng] = useState(null);
 
-    useMapEvent("click", async (e) => {
-      const map = mapRef.current;
-      if (!map) return;
-
+    const map = useMapEvent("click", async (e) => {
       const { lat, lng } = e.latlng;
       setClickLatLng([lat, lng]);
 
@@ -618,6 +572,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         INFO_FORMAT: "application/json",
       });
 
+      // ✅ Aplica proxy para evitar CORS (sin cambiar nada más)
       const rawUrl = `https://ganageo.alliance.cgiar.org/geoserver/administrative/wms?${params.toString()}`;
       const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
 
@@ -642,9 +597,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           riskData,
         });
       } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error al hacer GetFeatureInfo:", err?.message);
-        }
+        console.error("Error al hacer GetFeatureInfo:", err.message);
       }
     });
 
@@ -705,7 +658,10 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           />
 
           <LayersControl position="bottomleft">
-            <LayersControl.Overlay name={`Deforestación ${String(year)}-${period.year_end}`} checked>
+            <LayersControl.Overlay
+              name={`Deforestación ${String(year)}-${period.year_end}`}
+              checked
+            >
               <WMSTileLayer
                 url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
                 layers={`${source}_deforestation_${risk}`}
@@ -717,15 +673,15 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
               />
             </LayersControl.Overlay>
             <LayersControl.Overlay name="Ver niveles administrativos" checked>
-                <WMSTileLayer
-                  url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
-                  layers="administrative:admin_2"
-                  format="image/png"
-                  transparent={true}
-                  attribution="IDEAM"
-                  zIndex={1000}
-                />
-              </LayersControl.Overlay>
+              <WMSTileLayer
+                url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+                layers="administrative:admin_2"
+                format="image/png"
+                transparent={true}
+                attribution="IDEAM"
+                zIndex={1000}
+              />
+            </LayersControl.Overlay>
           </LayersControl>
 
           {farmRisk && (
@@ -743,7 +699,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             </LayersControl>
           )}
 
-          {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
+          {loading && (
+            <LoadingSpinner message="Cargando datos y polígonos..." />
+          )}
 
           <FlyToFarmPolygons polygons={farmPolygons} />
 
@@ -756,16 +714,15 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           {renderFarmRiskPolygons(farmPolygons, riskFarm, foundFarms)}
 
           {adm3Details.map((detail) => {
-            if (!adm3Risk) return null;
             const riskArray = Object.values(adm3Risk).flat();
             const riskData = riskArray.find((r) => r.adm3_id === detail.id);
             if (!riskData) return null;
-            const riskVal = riskData.risk_total;
-            let styleName = "norisk";
+            const risk = riskData.risk_total; 
+            let styleName = "norisk"; 
 
-            if (riskVal > 2.5) styleName = "hightrisk";
-            else if (riskVal > 1.5) styleName = "mediumrisk";
-            else if (riskVal > 0) styleName = "lowrisk";
+            if (risk > 2.5) styleName = "hightrisk";
+            else if (risk > 1.5) styleName = "mediumrisk";
+            else if (risk > 0) styleName = "lowrisk";
 
             return (
               <>
@@ -777,7 +734,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
                   transparent={true}
                   cql_filter={`cod_ver='${detail.ext_id}'`}
                   styles={styleName}
-                  zIndex={1000}
+                  zIndex={10000}
                 />
                 <WMSRiskClickHandler
                   adm3Risk={adm3Risk}
@@ -785,6 +742,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
                   showPopup={setPopupData}
                 />
 
+                {/* Renderizas el popup si hay datos */}
                 {popupData && (
                   <Popup position={[popupData.lat, popupData.lng]}>
                     <RiskPopup

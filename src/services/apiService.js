@@ -53,3 +53,75 @@ export async function searchAdmByName(name, level) {
   if (!res.ok) throw new Error(`Error al buscar en sitios`);
   return res.json();
 }
+export async function fetchFarmPolygonsByIds(ids) {
+  if (!ids || ids.length === 0) return [];
+
+  const url = `https://ganaapi.alliance.cgiar.org/farmpolygons/by-farm?ids=${ids}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Error al obtener polígonos de fincas");
+  return res.json();
+}
+export async function fetchMovementStatisticsByFarmIds(ids) {
+  if (!ids || ids.length === 0) return [];
+
+  const url = `https://ganaapi.alliance.cgiar.org/movement/statistics-by-farmid?ids=${ids.join(",")}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Error al obtener estadísticas de movimiento");
+  return res.json();
+}
+export async function fetchAdm3RisksByAnalysisAndAdm3(analysisId, adm3Ids) {
+  if (!analysisId || !Array.isArray(adm3Ids) || adm3Ids.length === 0) return [];
+
+  const url = "https://ganaapi.alliance.cgiar.org/adm3risk/by-analysis-and-adm3";
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      analysis_ids: [analysisId],
+      adm3_ids: adm3Ids,
+    }),
+  });
+
+  if (!res.ok) throw new Error("Error al obtener adm3 risks");
+  return res.json();
+}
+
+export async function fetchFarmRiskByDeforestationId(deforestationId) {
+  if (!deforestationId) return [];
+
+  const url = `https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm?deforestation_id=${deforestationId}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Error en la respuesta del servidor");
+
+  return res.json();
+}
+
+export async function fetchAdm3DetailsByIds(ids) {
+  if (!Array.isArray(ids) || ids.length === 0) return [];
+
+  const url = `https://ganaapi.alliance.cgiar.org/adm3/by-ids?ids=${ids.join(",")}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Error al obtener detalles de adm3");
+
+  return res.json();
+}
+
+export async function fetchFarmRiskByAnalysisAndFarm(analysisId, farmIds) {
+  if (!analysisId || !Array.isArray(farmIds) || farmIds.length === 0) return [];
+
+  const url = "https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm";
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      analysis_ids: [analysisId],
+      farm_ids: farmIds,
+    }),
+  });
+
+  if (!res.ok) throw new Error("Error al consultar riesgo de fincas");
+
+  return res.json();
+}

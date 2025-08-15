@@ -658,6 +658,7 @@ useEffect(() => {
           />
 
           <LayersControl position="bottomleft">
+            {console.log(period)}
             <LayersControl.Overlay
               name={`Deforestación ${period.deforestation_year_start}-${period.deforestation_year_end}`}
             >

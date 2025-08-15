@@ -632,7 +632,7 @@ useEffect(() => {
           onYearStartEndChange={handleYearStartEndChange}
           riskOptions={riskOptions}
           period={period}
-          setPeriod={setPeriod}
+          setPeriod={setPeriod/*handlePeriodChanged*/}
         />
 
         {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
@@ -659,8 +659,7 @@ useEffect(() => {
 
           <LayersControl position="bottomleft">
             <LayersControl.Overlay
-              name={`Deforestación ${String(year)}-${period.year_end}`}
-              checked
+              name={`Deforestación ${period.deforestation_year_start}-${period.deforestation_year_end}`}
             >
               <WMSTileLayer
                 url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
@@ -668,36 +667,33 @@ useEffect(() => {
                 format="image/png"
                 transparent
                 version="1.1.1"
-                time={`${period.year_start}-${period.year_end}`}
+                time={`${period.deforestation_year_start}-${period.deforestation_year_end}`}
                 zIndex={1000}
               />
             </LayersControl.Overlay>
-            <LayersControl.Overlay name="Ver niveles administrativos" checked>
+            <LayersControl.Overlay name="Áreas protegidas">
               <WMSTileLayer
                 url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
-                layers="administrative:admin_2"
+                layers="administrative:upra_boundaries"
                 format="image/png"
                 transparent={true}
                 attribution="IDEAM"
-                zIndex={1000}
+                zIndex={1001}
               />
             </LayersControl.Overlay>
-          </LayersControl>
-
-          {farmRisk && (
-            <LayersControl position="bottomleft">
-              <LayersControl.Overlay name="Ver niveles administrativos" checked>
+            {farmRisk && (
+              <LayersControl.Overlay name="Ver niveles administrativos">
                 <WMSTileLayer
                   url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
                   layers="administrative:admin_2"
                   format="image/png"
                   transparent={true}
                   attribution="IDEAM"
-                  zIndex={1000}
+                  zIndex={1002}
                 />
               </LayersControl.Overlay>
-            </LayersControl>
           )}
+          </LayersControl>
 
           {loading && (
             <LoadingSpinner message="Cargando datos y polígonos..." />

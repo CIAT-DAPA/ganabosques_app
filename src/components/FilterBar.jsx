@@ -5,7 +5,6 @@ import Toast from "@/components/Toast";
 import {
   fetchEnterprises,
   fetchAnalysisYearRanges,
-  fetchYearRanges,
   fetchFarmBySITCode,
   searchAdmByName,
 } from "@/services/apiService";
@@ -74,7 +73,7 @@ export default function FilterBar({
 
     async function loadYears() {
       try {
-        const data = await fetchYearRanges(source, risk);
+        const data = await fetchAnalysisYearRanges(source, risk);
         if (aborted) return;
 
         const arr = Array.isArray(data) ? data : [];
@@ -292,7 +291,7 @@ export default function FilterBar({
             const selected = yearRanges.find((y) => asId(y.id) === selectedId);
             setPeriod(selected);
             if (selected) {
-              onYearStartEndChange?.(selected.year_start, selected.year_end);
+              onYearStartEndChange?.(selected.deforestation_year_start, selected.deforestation_year_end);
             } else {
               onYearStartEndChange?.(null, null);
             }
@@ -301,7 +300,7 @@ export default function FilterBar({
         >
           {yearRanges.map((item) => (
             <option key={item.id} value={asId(item.id)}>
-              {item.year_start} - {item.year_end}
+              {item.deforestation_year_start} - {item.deforestation_year_end}
             </option>
           ))}
         </select>

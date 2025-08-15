@@ -9,6 +9,6 @@ const Map = dynamic(() => import('@/components/Map'), {
 
 export default function RiesgosNacionales() {
   return (
-    <Map nationalRisk />
+    <Map nationalRisk={true} />
   );
 }

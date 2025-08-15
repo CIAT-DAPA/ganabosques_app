@@ -10,9 +10,10 @@ import {
   WMSTileLayer,
   LayersControl,
   useMapEvent,
+  Polyline
 } from "react-leaflet";
 import L from "leaflet";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
@@ -23,16 +24,32 @@ import RiskPopup from "@/components/Adm3Risk";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
-  iconRetinaUrl:
-    "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
+  iconRetinaUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png",
   iconUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png",
   shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
 });
 
 export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
-  const [risk, setRisk] = useState("");
+  // Opciones de riesgo memorizadas
+  const riskOptions = useMemo(() => {
+    if (enterpriseRisk)
+      return [{ value: "risk_total", label: "Riesgo Total" }];
+    /*if (farmRisk)
+      return [
+        { value: "risk_total", label: "Riesgo anual" },
+        { value: "risk_direct", label: "Riesgo acumulado" },
+      ];*/
+    return [
+      { value: "annual", label: "Riesgo anual" },
+      { value: "cumulative", label: "Riesgo acumulado" },
+    ];
+  }, [enterpriseRisk, farmRisk]);
+
+  // Estado centralizado (fuente de la verdad)
+  const [risk, setRisk] = useState(() => riskOptions[0]?.value || "");
   const [year, setYear] = useState("");
-  const [source, setSource] = useState("");
+  const [period, setPeriod] = useState("");
+  const [source, setSource] = useState("smbyc");
   const [search, setSearch] = useState("");
   const [selectedEnterprise, setSelectedEnterprise] = useState(null);
   const [foundFarms, setFoundFarms] = useState([]);
@@ -42,8 +59,8 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [farmPolygons, setFarmPolygons] = useState([]);
   const mapRef = useRef();
   const [movement, setMovement] = useState([]);
-  const [yearStart, setYearStart] = useState(null);
-  const [yearEnd, setYearEnd] = useState(null);
+  const [yearStart, setYearStart] = useState(2023);
+  const [yearEnd, setYearEnd] = useState(2024);
   const [originalMovement, setOriginalMovement] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pendingTasks, setPendingTasks] = useState(0);
@@ -56,17 +73,16 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   useEffect(() => {
     import("leaflet");
   }, []);
+
   useEffect(() => {
     setLoading(pendingTasks > 0);
   }, [pendingTasks]);
 
-  const handleAdmSearch = async (searchText, level) => {
+  // Buscar ADM memorizado
+  const handleAdmSearch = useCallback(async (searchText, level) => {
     try {
       const results = await searchAdmByName(searchText, level);
-      if (!results || results.length === 0) {
-        console.warn("No se encontraron resultados");
-        return;
-      }
+      if (!results || results.length === 0) return;
 
       setAdmResults(results);
       const geometry = results[0]?.geometry;
@@ -75,9 +91,12 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         mapRef.current.fitBounds(layer.getBounds());
       }
     } catch (err) {
-      console.error("Error al buscar nivel administrativo:", err);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error al buscar nivel administrativo:", err);
+      }
     }
-  };
+  }, []);
+
   useEffect(() => {
     if (!foundFarms || foundFarms.length === 0) {
       setFarmPolygons([]);
@@ -85,7 +104,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     }
     const fetchFarmPolygons = async () => {
       const ids = foundFarms.map((farm) => farm.id).filter((id) => id);
-
       if (!ids || ids.length === 0) return;
 
       try {
@@ -96,7 +114,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         const data = await response.json();
         setFarmPolygons(data);
       } catch (err) {
-        console.error("Error obteniendo polígonos de fincas:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error obteniendo polígonos de fincas:", err);
+        }
       } finally {
         setPendingTasks((prev) => prev - 1);
       }
@@ -124,7 +144,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         setOriginalMovement(data);
         setMovement(data);
       } catch (err) {
-        console.error("Error obteniendo estadísticas de movimiento:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error obteniendo estadísticas de movimiento:", err);
+        }
       } finally {
         setPendingTasks((prev) => prev - 1);
       }
@@ -132,6 +154,8 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 
     fetchMovementStatistics();
   }, [foundFarms]);
+
+  // Filtro por año simple
   useEffect(() => {
     if (!yearStart || !originalMovement) return;
 
@@ -161,6 +185,8 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 
     setMovement(filtered);
   }, [yearStart, originalMovement]);
+
+  // Limpiar si no hay fincas
   useEffect(() => {
     if (!foundFarms || foundFarms.length === 0) {
       setFarmPolygons([]);
@@ -170,6 +196,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     }
   }, [foundFarms]);
 
+  // Filtro por año avanzado (con farms/enterprises involucrados)
   useEffect(() => {
     if (!yearStart || !originalMovement) return;
 
@@ -252,8 +279,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             typeof item.geojson === "string"
               ? JSON.parse(item.geojson)
               : item.geojson;
-        } catch (err) {
-          console.error("❌ Error al parsear geojson:", item.geojson);
+        } catch {
           return;
         }
 
@@ -277,13 +303,12 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       if (allCoords.length > 0) {
         const bounds = L.latLngBounds(allCoords);
         map.flyToBounds(bounds, { padding: [50, 50], duration: 2 });
-      } else {
-        console.warn("⚠️ No se encontraron coordenadas válidas");
       }
     }, [polygons, map]);
 
     return null;
   };
+
   const allInputs = Object.values(movement || {}).flatMap((m) => [
     ...(m.inputs?.farms || []),
     ...(m.inputs?.enterprises || []),
@@ -313,8 +338,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
               </Popup>
             </GeoJSON>
           );
-        } catch (err) {
-          console.warn("❌ Error parsing geojson:", entry.destination.geojson);
+        } catch {
           return null;
         }
       });
@@ -355,27 +379,19 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         );
       });
   };
-  useEffect(() => {
-    // Logs de entrada para validar condiciones
-    console.log("👀 analysis recibido:", analysis);
-    console.log("👀 foundAdms recibido:", foundAdms);
 
-    // Validación de condiciones
+  useEffect(() => {
     if (
       !Array.isArray(analysis) ||
       analysis.length === 0 ||
       !Array.isArray(foundAdms) ||
       foundAdms.length === 0
     ) {
-      console.warn(
-        "🚫 Condiciones no cumplidas para ejecutar fetch de adm3risks"
-      );
       return;
     }
 
     const analysisId = analysis[0]?.id;
     const adm3Ids = foundAdms.map((adm) => adm.id).filter(Boolean);
-
 
     const fetchAdm3Risks = async () => {
       try {
@@ -385,9 +401,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           "https://ganaapi.alliance.cgiar.org/adm3risk/by-analysis-and-adm3",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               analysis_ids: [analysisId],
               adm3_ids: adm3Ids,
@@ -395,15 +409,13 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           }
         );
 
-        if (!response.ok) {
-          throw new Error("Error al obtener adm3 risks");
-        }
-
+        if (!response.ok) throw new Error("Error al obtener adm3 risks");
         const data = await response.json();
-        console.log("✅ adm3risks recibidos:", data);
         setAdm3Risk(data);
       } catch (err) {
-        console.error("❌ Error al hacer fetch de adm3 risks:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error adm3 risks:", err);
+        }
       } finally {
         setPendingTasks((prev) => prev - 1);
       }
@@ -412,7 +424,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     fetchAdm3Risks();
   }, [analysis, foundAdms]);
 
-
+  // Cargar análisis por deforestación cuando cambie `year`
   useEffect(() => {
     if (!year) return;
 
@@ -430,7 +442,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         const data = await response.json();
         setAnalysis(data);
       } catch (err) {
-        console.error("❌ Error obteniendo análisis por deforestación:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error obteniendo análisis por deforestación:", err);
+        }
       } finally {
         setPendingTasks((prev) => prev - 1);
       }
@@ -438,6 +452,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 
     fetchAnalysisByDeforestation();
   }, [year]);
+
   useEffect(() => {
     if (!analysis || !Array.isArray(analysis) || analysis.length === 0) return;
     if (!foundFarms || foundFarms.length === 0) return;
@@ -455,9 +470,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           "https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm",
           {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               analysis_ids: [analysisId],
               farm_ids: farmIds,
@@ -472,7 +485,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         const data = await response.json();
         setRiskFarm(data);
       } catch (err) {
-        console.error("❌ Error al obtener farmRisk:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error al obtener farmRisk:", err);
+        }
       } finally {
         setPendingTasks((prev) => prev - 1);
       }
@@ -480,8 +495,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 
     fetchFarmRisk();
   }, [analysis, foundFarms]);
-  const renderFarmRiskPolygons = (polygons, farmRisk, foundFarms = []) => {
-    if (!farmRisk) return null;
+
+  const renderFarmRiskPolygons = (polygons, farmRiskData, foundFarmsList = []) => {
+    if (!farmRiskData) return null;
 
     return polygons.map((farm, idx) => {
       let geojson;
@@ -490,51 +506,46 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           typeof farm.geojson === "string"
             ? JSON.parse(farm.geojson)
             : farm.geojson;
-      } catch (err) {
-        console.error("❌ Error parsing geojson:", farm.geojson);
+      } catch {
         return null;
       }
 
       const farmId = farm.farm_id || farm.id;
 
       // Buscar riesgo asociado
-      const riskObject = Object.values(farmRisk)
+      const riskObject = Object.values(farmRiskData)
         .flat()
         .find((r) => r.farm_id === farmId);
 
-      const risk = riskObject?.risk_total ?? 0;
+      const riskVal = riskObject?.risk_total ?? 0;
 
       // Obtener sit_code
-      const matchedFarm = foundFarms.find((f) => f.id === farmId);
+      const matchedFarm = foundFarmsList.find((f) => f.id === farmId);
       const sitCode = matchedFarm?.code || "Sin código";
 
       let color = "#00C853"; // Verde por defecto (sin riesgo)
-      if (risk > 2.5) color = "#D50000"; // Rojo - Alto
-      else if (risk > 1.5) color = "#FF6D00"; // Naranja - Medio
-      else if (risk > 0) color = "#FFD600"; // Amarillo - Bajo
+      if (riskVal > 2.5) color = "#D50000"; // Rojo - Alto
+      else if (riskVal > 1.5) color = "#FF6D00"; // Naranja - Medio
+      else if (riskVal > 0) color = "#FFD600"; // Amarillo - Bajo
 
       return (
         <GeoJSON
           key={`farmrisk-${idx}`}
           data={geojson}
-          style={{
-            color,
-            weight: 2,
-            fillColor: color,
-            fillOpacity: 0.3,
-          }}
+          style={{ color, weight: 2, fillColor: color, fillOpacity: 0.3 }}
         >
           <Popup>
             <strong>Finca</strong>
             <br />
             Código SIT: {sitCode}
             <br />
-            Riesgo total: {risk}
+            Riesgo total: {riskVal}
           </Popup>
         </GeoJSON>
       );
     });
   };
+
   useEffect(() => {
     if (!adm3Risk) return;
 
@@ -554,14 +565,13 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           `https://ganaapi.alliance.cgiar.org/adm3/by-ids?ids=${adm3Ids.join(",")}`
         );
 
-        if (!response.ok) {
-          throw new Error("Error al obtener detalles de adm3");
-        }
-
+        if (!response.ok) throw new Error("Error al obtener detalles de adm3");
         const data = await response.json();
         setAdm3Details(data);
       } catch (err) {
-        console.error("❌ Error al consultar adm3 details:", err);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error al consultar adm3 details:", err);
+        }
       } finally {
         setPendingTasks((prev) => prev - 1);
       }
@@ -570,10 +580,19 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     fetchAdm3Details();
   }, [adm3Risk]);
 
+  // Callback estable para año inicio/fin
+  const handleYearStartEndChange = useCallback((start, end) => {
+    setYearStart(start);
+    setYearEnd(end);
+  }, []);
+
   function WMSRiskClickHandler({ adm3Risk, adm3Details, showPopup }) {
     const [clickLatLng, setClickLatLng] = useState(null);
 
-    const map = useMapEvent("click", async (e) => {
+    useMapEvent("click", async (e) => {
+      const map = mapRef.current;
+      if (!map) return;
+
       const { lat, lng } = e.latlng;
       setClickLatLng([lat, lng]);
 
@@ -599,7 +618,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         INFO_FORMAT: "application/json",
       });
 
-      // ✅ Aplica proxy para evitar CORS (sin cambiar nada más)
       const rawUrl = `https://ganageo.alliance.cgiar.org/geoserver/administrative/wms?${params.toString()}`;
       const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
 
@@ -624,7 +642,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           riskData,
         });
       } catch (err) {
-        console.error("Error al hacer GetFeatureInfo:", err.message);
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error al hacer GetFeatureInfo:", err?.message);
+        }
       }
     });
 
@@ -656,11 +676,12 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           onAdmSearch={handleAdmSearch}
           foundAdms={foundAdms}
           setFoundAdms={setFoundAdms}
-          onYearStartEndChange={(start, end) => {
-            setYearStart(start);
-            setYearEnd(end);
-          }}
+          onYearStartEndChange={handleYearStartEndChange}
+          riskOptions={riskOptions}
+          period={period}
+          setPeriod={setPeriod}
         />
+
         {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
 
         <RiskLegend
@@ -668,6 +689,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           farmRisk={farmRisk}
           nationalRisk={nationalRisk}
         />
+
         <MapContainer
           center={[4.5709, -74.2973]}
           zoom={6}
@@ -681,6 +703,31 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
+
+          <LayersControl position="bottomleft">
+            <LayersControl.Overlay name={`Deforestación ${String(year)}-${period.year_end}`} checked>
+              <WMSTileLayer
+                url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
+                layers={`${source}_deforestation_${risk}`}
+                format="image/png"
+                transparent
+                version="1.1.1"
+                time={`${period.year_start}-${period.year_end}`}
+                zIndex={1000}
+              />
+            </LayersControl.Overlay>
+            <LayersControl.Overlay name="Ver niveles administrativos" checked>
+                <WMSTileLayer
+                  url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+                  layers="administrative:admin_2"
+                  format="image/png"
+                  transparent={true}
+                  attribution="IDEAM"
+                  zIndex={1000}
+                />
+              </LayersControl.Overlay>
+          </LayersControl>
+
           {farmRisk && (
             <LayersControl position="bottomleft">
               <LayersControl.Overlay name="Ver niveles administrativos" checked>
@@ -695,26 +742,30 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
               </LayersControl.Overlay>
             </LayersControl>
           )}
-          {loading && (
-            <LoadingSpinner message="Cargando datos y polígonos..." />
-          )}
+
+          {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
+
           <FlyToFarmPolygons polygons={farmPolygons} />
+
           {renderMarkers(allInputs, "#8B4513")}
           {renderGeoJsons(allInputs, "#8B4513")}
 
           {renderMarkers(allOutputs, "purple")}
           {renderGeoJsons(allOutputs, "purple")}
+
           {renderFarmRiskPolygons(farmPolygons, riskFarm, foundFarms)}
+
           {adm3Details.map((detail) => {
+            if (!adm3Risk) return null;
             const riskArray = Object.values(adm3Risk).flat();
             const riskData = riskArray.find((r) => r.adm3_id === detail.id);
             if (!riskData) return null;
-            const risk = riskData.risk_total; // ← asegúrate de obtener el valor real
-            let styleName = "norisk"; // sin riesgo
+            const riskVal = riskData.risk_total;
+            let styleName = "norisk";
 
-            if (risk > 2.5) styleName = "hightrisk";
-            else if (risk > 1.5) styleName = "mediumrisk";
-            else if (risk > 0) styleName = "lowrisk";
+            if (riskVal > 2.5) styleName = "hightrisk";
+            else if (riskVal > 1.5) styleName = "mediumrisk";
+            else if (riskVal > 0) styleName = "lowrisk";
 
             return (
               <>
@@ -734,7 +785,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
                   showPopup={setPopupData}
                 />
 
-                {/* Renderizas el popup si hay datos */}
                 {popupData && (
                   <Popup position={[popupData.lat, popupData.lng]}>
                     <RiskPopup

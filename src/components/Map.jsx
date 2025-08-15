@@ -674,6 +674,16 @@ useEffect(() => {
             <LayersControl.Overlay name="Áreas protegidas">
               <WMSTileLayer
                 url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+                layers="administrative:pnn_areas"
+                format="image/png"
+                transparent={true}
+                attribution="IDEAM"
+                zIndex={1001}
+              />
+            </LayersControl.Overlay>
+            <LayersControl.Overlay name="Frontera agrícola">
+              <WMSTileLayer
+                url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
                 layers="administrative:upra_boundaries"
                 format="image/png"
                 transparent={true}
@@ -682,10 +692,10 @@ useEffect(() => {
               />
             </LayersControl.Overlay>
             {farmRisk && (
-              <LayersControl.Overlay name="Ver niveles administrativos">
+              <LayersControl.Overlay name="Veredas">
                 <WMSTileLayer
                   url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
-                  layers="administrative:admin_2"
+                  layers="administrative:admin_3"
                   format="image/png"
                   transparent={true}
                   attribution="IDEAM"

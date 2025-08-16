@@ -36,3 +36,17 @@ body {
   width: auto !important;
   padding: 0 !important;
 }
+.leaflet-popup-content {
+  padding: 12px !important;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #1f2937;
+}
+
+.leaflet-popup-content .popup-card {
+  background-color: white;
+  border-radius: 0.5rem;
+  padding: 12px;
+  width: 220px;
+}

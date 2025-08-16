@@ -11,6 +11,7 @@ export default function RiskLegend({ enterpriseRisk = false, farmRisk = false })
   const mobilityTypes = [
   { label: 'Movilización de Entrada', color: '#8B4513' }, // café oscuro
   { label: 'Movilización de Salida', color: '#6B21A8' }, // morado fuerte
+  { label: 'Movilización Mixta', color: '#e91e63' }, // amarillo fuerte
 ];
 
 

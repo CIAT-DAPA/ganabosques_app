@@ -10,16 +10,27 @@ import {
   WMSTileLayer,
   LayersControl,
   useMapEvent,
+  Polyline,
 } from "react-leaflet";
 import L from "leaflet";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
-import { searchAdmByName } from "@/services/apiService";
+import {
+  searchAdmByName,
+} from "@/services/apiService";
 import MovementCharts from "@/components/MovementChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import RiskPopup from "@/components/Adm3Risk";
+import { all } from "axios";
+import { useFilteredMovement } from "@/hooks/useFilteredMovement";
+import { useMovementStats } from "@/hooks/useMovementStats";
+import { useFarmPolygons } from "@/hooks/useFarmPolygons";
+import { useFarmRisk } from "@/hooks/useFarmRisk";
+import { useAdm3Risk } from "@/hooks/useAdm3Risk";
+import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
+import { useAdm3Details } from "@/hooks/useAdm3Details";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -30,9 +41,20 @@ L.Icon.Default.mergeOptions({
 });
 
 export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
-  const [risk, setRisk] = useState("");
+  // Opciones de riesgo memorizadas
+  const riskOptions = useMemo(() => {
+    if (enterpriseRisk) return [{ value: "risk_total", label: "Riesgo Total" }];
+    return [
+      { value: "annual", label: "Riesgo anual" },
+      { value: "cumulative", label: "Riesgo acumulado" },
+    ];
+  }, [enterpriseRisk, farmRisk]);
+
+  // Estado centralizado (fuente de la verdad)
+  const [risk, setRisk] = useState(() => riskOptions[0]?.value || "");
   const [year, setYear] = useState("");
-  const [source, setSource] = useState("");
+  const [period, setPeriod] = useState("");
+  const [source, setSource] = useState("smbyc");
   const [search, setSearch] = useState("");
   const [selectedEnterprise, setSelectedEnterprise] = useState(null);
   const [foundFarms, setFoundFarms] = useState([]);
@@ -41,9 +63,8 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [admResults, setAdmResults] = useState([]);
   const [farmPolygons, setFarmPolygons] = useState([]);
   const mapRef = useRef();
-  const [movement, setMovement] = useState([]);
-  const [yearStart, setYearStart] = useState(null);
-  const [yearEnd, setYearEnd] = useState(null);
+  const [yearStart, setYearStart] = useState(2023);
+  const [yearEnd, setYearEnd] = useState(2024);
   const [originalMovement, setOriginalMovement] = useState(null);
   const [loading, setLoading] = useState(false);
   const [pendingTasks, setPendingTasks] = useState(0);
@@ -52,21 +73,31 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [adm3Risk, setAdm3Risk] = useState(null);
   const [adm3Details, setAdm3Details] = useState([]);
   const [popupData, setPopupData] = useState(null);
-
+  const movement = useFilteredMovement(originalMovement, yearStart);
+  useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
+  useFarmPolygons(
+    foundFarms,
+    setFarmPolygons,
+    setPendingTasks,
+    setOriginalMovement
+  );
+  useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
+  useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
+  useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks);
+  useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
+  useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks);
   useEffect(() => {
     import("leaflet");
   }, []);
+
   useEffect(() => {
     setLoading(pendingTasks > 0);
   }, [pendingTasks]);
 
-  const handleAdmSearch = async (searchText, level) => {
+  const handleAdmSearch = useCallback(async (searchText, level) => {
     try {
       const results = await searchAdmByName(searchText, level);
-      if (!results || results.length === 0) {
-        console.warn("No se encontraron resultados");
-        return;
-      }
+      if (!results || results.length === 0) return;
 
       setAdmResults(results);
       const geometry = results[0]?.geometry;
@@ -75,166 +106,11 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         mapRef.current.fitBounds(layer.getBounds());
       }
     } catch (err) {
-      console.error("Error al buscar nivel administrativo:", err);
-    }
-  };
-  useEffect(() => {
-    if (!foundFarms || foundFarms.length === 0) {
-      setFarmPolygons([]);
-      return;
-    }
-    const fetchFarmPolygons = async () => {
-      const ids = foundFarms.map((farm) => farm.id).filter((id) => id);
-
-      if (!ids || ids.length === 0) return;
-
-      try {
-        setPendingTasks((prev) => prev + 1);
-        const response = await fetch(
-          `https://ganaapi.alliance.cgiar.org/farmpolygons/by-farm?ids=${ids}`
-        );
-        const data = await response.json();
-        setFarmPolygons(data);
-      } catch (err) {
-        console.error("Error obteniendo polígonos de fincas:", err);
-      } finally {
-        setPendingTasks((prev) => prev - 1);
+      if (process.env.NODE_ENV !== "production") {
+        console.error("Error al buscar nivel administrativo:", err);
       }
-    };
-
-    fetchFarmPolygons();
-  }, [foundFarms]);
-
-  useEffect(() => {
-    const fetchMovementStatistics = async () => {
-      const ids = foundFarms
-        .map((farm) => farm.id)
-        .filter((id) => id)
-        .join(",");
-
-      if (!ids || ids.length === 0) return;
-
-      try {
-        setPendingTasks((prev) => prev + 1);
-        const response = await fetch(
-          `https://ganaapi.alliance.cgiar.org/movement/statistics-by-farmid?ids=${ids}`
-        );
-        const data = await response.json();
-
-        setOriginalMovement(data);
-        setMovement(data);
-      } catch (err) {
-        console.error("Error obteniendo estadísticas de movimiento:", err);
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    fetchMovementStatistics();
-  }, [foundFarms]);
-  useEffect(() => {
-    if (!yearStart || !originalMovement) return;
-
-    const filtered = {};
-
-    Object.entries(originalMovement).forEach(([farmId, data]) => {
-      const filteredInputs = {
-        ...data.inputs,
-        statistics: {
-          [yearStart]: data.inputs.statistics?.[yearStart] || {},
-        },
-      };
-
-      const filteredOutputs = {
-        ...data.outputs,
-        statistics: {
-          [yearStart]: data.outputs.statistics?.[yearStart] || {},
-        },
-      };
-
-      filtered[farmId] = {
-        ...data,
-        inputs: filteredInputs,
-        outputs: filteredOutputs,
-      };
-    });
-
-    setMovement(filtered);
-  }, [yearStart, originalMovement]);
-  useEffect(() => {
-    if (!foundFarms || foundFarms.length === 0) {
-      setFarmPolygons([]);
-      setMovement({});
-      setOriginalMovement({});
-      return;
     }
-  }, [foundFarms]);
-
-  useEffect(() => {
-    if (!yearStart || !originalMovement) return;
-
-    const filtered = {};
-    const yearKey = String(yearStart);
-
-    Object.entries(originalMovement).forEach(([farmId, data]) => {
-      const inputStats = data.inputs.statistics?.[yearKey];
-      const outputStats = data.outputs.statistics?.[yearKey];
-
-      const involvedInputFarms = inputStats?.farms?.map(String) || [];
-      const involvedInputEnterprises =
-        inputStats?.enterprises?.map(String) || [];
-
-      const involvedOutputFarms = outputStats?.farms?.map(String) || [];
-      const involvedOutputEnterprises =
-        outputStats?.enterprises?.map(String) || [];
-
-      const filteredInputs = {
-        ...data.inputs,
-        statistics: {
-          [yearKey]: inputStats,
-        },
-        farms:
-          data.inputs.farms
-            ?.filter(Boolean)
-            .filter((f) =>
-              involvedInputFarms.includes(String(f.destination?.farm_id))
-            ) || [],
-        enterprises:
-          data.inputs.enterprises
-            ?.filter(Boolean)
-            .filter((e) =>
-              involvedInputEnterprises.includes(String(e.destination?._id))
-            ) || [],
-      };
-
-      const filteredOutputs = {
-        ...data.outputs,
-        statistics: {
-          [yearKey]: outputStats,
-        },
-        farms:
-          data.outputs.farms
-            ?.filter(Boolean)
-            .filter((f) =>
-              involvedOutputFarms.includes(String(f.destination?.farm_id))
-            ) || [],
-        enterprises:
-          data.outputs.enterprises
-            ?.filter(Boolean)
-            .filter((e) =>
-              involvedOutputEnterprises.includes(String(e.destination?._id))
-            ) || [],
-      };
-
-      filtered[farmId] = {
-        ...data,
-        inputs: filteredInputs,
-        outputs: filteredOutputs,
-      };
-    });
-
-    setMovement(filtered);
-  }, [yearStart, originalMovement]);
+  }, []);
 
   const FlyToFarmPolygons = ({ polygons }) => {
     const map = useMap();
@@ -252,8 +128,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             typeof item.geojson === "string"
               ? JSON.parse(item.geojson)
               : item.geojson;
-        } catch (err) {
-          console.error("❌ Error al parsear geojson:", item.geojson);
+        } catch {
           return;
         }
 
@@ -277,211 +152,141 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       if (allCoords.length > 0) {
         const bounds = L.latLngBounds(allCoords);
         map.flyToBounds(bounds, { padding: [50, 50], duration: 2 });
-      } else {
-        console.warn("⚠️ No se encontraron coordenadas válidas");
       }
     }, [polygons, map]);
 
     return null;
   };
-  const allInputs = Object.values(movement || {}).flatMap((m) => [
-    ...(m.inputs?.farms || []),
-    ...(m.inputs?.enterprises || []),
+
+  const allInputs = Object.entries(movement || {}).flatMap(([farmId, m]) => [
+    ...(m.inputs?.farms || []).map((entry) => ({ ...entry, __farmId: farmId })),
+    ...(m.inputs?.enterprises || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
   ]);
 
-  const allOutputs = Object.values(movement || {}).flatMap((m) => [
-    ...(m.outputs?.farms || []),
-    ...(m.outputs?.enterprises || []),
+  const allOutputs = Object.entries(movement || {}).flatMap(([farmId, m]) => [
+    ...(m.outputs?.farms || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
+    ...(m.outputs?.enterprises || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
   ]);
 
   const renderGeoJsons = (entries, color) =>
-    entries
-      .filter((e) => e.destination?.geojson)
+    (entries || [])
+      .filter((e) => e?.destination?.geojson) // solo los que tienen polígono
       .map((entry, idx) => {
         try {
           const data = JSON.parse(entry.destination.geojson);
+          console.log(JSON.stringify(entry, null, 2));
+          const originFarmId = String(entry.__farmId ?? "");
+          const targetFarmId = String(entry.destination?.farm_id ?? "");
+          const yearKey = String(yearStart);
+
+          // Lista de farms mixed del origen (año actual)
+          const farmsMixed = (
+            movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []
+          ).map(String);
+
+          // marcar rosado si está en mixed y NO es self
+          const isMixed =
+            !!originFarmId &&
+            !!targetFarmId &&
+            originFarmId !== targetFarmId &&
+            farmsMixed.includes(targetFarmId);
+
+          const finalColor = isMixed ? "#e91e63" : color;
 
           return (
             <GeoJSON
-              key={`geojson-${color}-${idx}`}
+              key={`geojson-${idx}-${targetFarmId || "noid"}`}
               data={data}
-              style={{ color, weight: 2, fillOpacity: 0.3 }}
+              style={{ color: finalColor, weight: 2, fillOpacity: 0.3 }}
             >
               <Popup>
-                <strong>Codigo SIT de la finca:</strong>{" "}
-                {entry.sit_code || entry.destination.id}
+                <div className="p-3  bg-white text-sm space-y-1">
+
+                  
+                  <div>
+                    <span className="font-semibold">Código SIT:</span>{" "}
+                    {entry.sit_code || "N/A"}
+                  </div>
+                  
+              
+                </div>
               </Popup>
             </GeoJSON>
           );
-        } catch (err) {
-          console.warn("❌ Error parsing geojson:", entry.destination.geojson);
+        } catch (error) {
+          console.warn("Error al parsear geojson:", error);
           return null;
         }
       });
 
   const renderMarkers = (movements, color) => {
-    return movements
-      ?.filter(
+    return (movements || [])
+      .filter(
         (m) =>
-          m.destination?.latitude &&
-          m.destination?.longitud &&
-          !m.destination?.farm_id // ⛔️ Excluye fincas
+          m?.destination?.latitude &&
+          m?.destination?.longitud &&
+          !m?.destination?.farm_id // ⛔️ Solo empresas
       )
       .map((m, idx) => {
         const dest = m.destination;
         const lat = dest.latitude;
         const lon = dest.longitud;
         const name = dest.name || "Sin nombre";
-        const id = dest._id || "Sin ID";
+        const id = String(dest._id ?? ""); // ✅ ID real de la empresa
         const type = "Empresa";
+
+        // 🧭 finca origen: usa __farmId si existe; si no, source.farm_id
+        const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
+        const yearKey = String(yearStart);
+
+        // 🧰 lista de enterprises mixed para esa finca y año (normalizada a string)
+        const enterprisesMixed = (
+          movement?.[originFarmId]?.mixed?.[yearKey]?.enterprises || []
+        ).map(String);
+
+        // 🎯 es mixed solo si tenemos origen e id válidos y está listado
+        const isMixed = !!originFarmId && !!id && enterprisesMixed.includes(id);
+
+        const finalColor = isMixed ? "#e91e63" : color;
 
         return (
           <Marker
-            key={`marker-${idx}`}
+            key={`marker-${idx}-${id || "noid"}`}
             position={[lat, lon]}
             icon={L.divIcon({
               className: "custom-marker",
-              html: `<div style="background:${color};width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>`,
+              html: `<div style="background:${finalColor};width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>`,
             })}
           >
             <Popup>
-              <strong>Tipo:</strong> {type}
-              <br />
-              <strong>ID:</strong> {id}
-              <br />
-              <strong>Nombre:</strong> {name}
+              <div className="p-3  bg-white text-sm space-y-2">
+                <div>
+                  <span className="font-semibold">Tipo:</span> {type}
+                </div>
+                <div>
+                  <span className="font-semibold">Nombre:</span> {name}
+                </div>
+              </div>
             </Popup>
           </Marker>
         );
       });
   };
-  useEffect(() => {
-    // Logs de entrada para validar condiciones
-    console.log("👀 analysis recibido:", analysis);
-    console.log("👀 foundAdms recibido:", foundAdms);
-
-    // Validación de condiciones
-    if (
-      !Array.isArray(analysis) ||
-      analysis.length === 0 ||
-      !Array.isArray(foundAdms) ||
-      foundAdms.length === 0
-    ) {
-      console.warn(
-        "🚫 Condiciones no cumplidas para ejecutar fetch de adm3risks"
-      );
-      return;
-    }
-
-    const analysisId = analysis[0]?.id;
-    const adm3Ids = foundAdms.map((adm) => adm.id).filter(Boolean);
-
-
-    const fetchAdm3Risks = async () => {
-      try {
-        setPendingTasks((prev) => prev + 1);
-
-        const response = await fetch(
-          "https://ganaapi.alliance.cgiar.org/adm3risk/by-analysis-and-adm3",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              analysis_ids: [analysisId],
-              adm3_ids: adm3Ids,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Error al obtener adm3 risks");
-        }
-
-        const data = await response.json();
-        console.log("✅ adm3risks recibidos:", data);
-        setAdm3Risk(data);
-      } catch (err) {
-        console.error("❌ Error al hacer fetch de adm3 risks:", err);
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    fetchAdm3Risks();
-  }, [analysis, foundAdms]);
-
-
-  useEffect(() => {
-    if (!year) return;
-
-    const fetchAnalysisByDeforestation = async () => {
-      try {
-        setPendingTasks((prev) => prev + 1);
-        const response = await fetch(
-          `https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm?deforestation_id=${year}`
-        );
-
-        if (!response.ok) {
-          throw new Error("Error en la respuesta del servidor");
-        }
-
-        const data = await response.json();
-        setAnalysis(data);
-      } catch (err) {
-        console.error("❌ Error obteniendo análisis por deforestación:", err);
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    fetchAnalysisByDeforestation();
-  }, [year]);
-  useEffect(() => {
-    if (!analysis || !Array.isArray(analysis) || analysis.length === 0) return;
-    if (!foundFarms || foundFarms.length === 0) return;
-
-    const analysisId = analysis[0]?.id;
-    const farmIds = foundFarms.map((f) => f.id).filter(Boolean);
-
-    if (!analysisId || farmIds.length === 0) return;
-
-    const fetchFarmRisk = async () => {
-      try {
-        setPendingTasks((prev) => prev + 1);
-
-        const response = await fetch(
-          "https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              analysis_ids: [analysisId],
-              farm_ids: farmIds,
-            }),
-          }
-        );
-
-        if (!response.ok) {
-          throw new Error("Error al consultar riesgo de fincas");
-        }
-
-        const data = await response.json();
-        setRiskFarm(data);
-      } catch (err) {
-        console.error("❌ Error al obtener farmRisk:", err);
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    fetchFarmRisk();
-  }, [analysis, foundFarms]);
-  const renderFarmRiskPolygons = (polygons, farmRisk, foundFarms = []) => {
-    if (!farmRisk) return null;
+  const renderFarmRiskPolygons = (
+    polygons,
+    farmRiskData,
+    foundFarmsList = []
+  ) => {
+    if (!farmRiskData) return null;
 
     return polygons.map((farm, idx) => {
       let geojson;
@@ -490,85 +295,55 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           typeof farm.geojson === "string"
             ? JSON.parse(farm.geojson)
             : farm.geojson;
-      } catch (err) {
-        console.error("❌ Error parsing geojson:", farm.geojson);
+      } catch {
         return null;
       }
 
       const farmId = farm.farm_id || farm.id;
 
       // Buscar riesgo asociado
-      const riskObject = Object.values(farmRisk)
+      const riskObject = Object.values(farmRiskData)
         .flat()
         .find((r) => r.farm_id === farmId);
 
-      const risk = riskObject?.risk_total ?? 0;
+      const riskVal = riskObject?.risk_total ?? 0;
 
       // Obtener sit_code
-      const matchedFarm = foundFarms.find((f) => f.id === farmId);
+      const matchedFarm = foundFarmsList.find((f) => f.id === farmId);
       const sitCode = matchedFarm?.code || "Sin código";
 
       let color = "#00C853"; // Verde por defecto (sin riesgo)
-      if (risk > 2.5) color = "#D50000"; // Rojo - Alto
-      else if (risk > 1.5) color = "#FF6D00"; // Naranja - Medio
-      else if (risk > 0) color = "#FFD600"; // Amarillo - Bajo
+      if (riskVal > 2.5) color = "#D50000"; // Rojo - Alto
+      else if (riskVal > 1.5) color = "#FF6D00"; // Naranja - Medio
+      else if (riskVal > 0) color = "#FFD600"; // Amarillo - Bajo
 
       return (
         <GeoJSON
           key={`farmrisk-${idx}`}
           data={geojson}
-          style={{
-            color,
-            weight: 2,
-            fillColor: color,
-            fillOpacity: 0.3,
-          }}
+          style={{ color, weight: 2, fillColor: color, fillOpacity: 0.3 }}
         >
           <Popup>
-            <strong>Finca</strong>
-            <br />
-            Código SIT: {sitCode}
-            <br />
-            Riesgo total: {risk}
-          </Popup>
+  <div className="p-3  bg-white text-sm space-y-1">
+    <div className="font-semibold text-green-700">Finca</div>
+    <div>
+      <span className="font-medium">Código SIT:</span> {sitCode || "N/A"}
+    </div>
+    <div>
+      <span className="font-medium">Riesgo total:</span> {riskVal ?? "N/A"}
+    </div>
+  </div>
+</Popup>
+
         </GeoJSON>
       );
     });
   };
-  useEffect(() => {
-    if (!adm3Risk) return;
-
-    // Extrae los adm3_ids de todos los riesgos
-    const flatRisks = Object.values(adm3Risk).flat();
-    const adm3Ids = [
-      ...new Set(flatRisks.map((risk) => risk.adm3_id).filter(Boolean)),
-    ];
-
-    if (adm3Ids.length === 0) return;
-
-    const fetchAdm3Details = async () => {
-      try {
-        setPendingTasks((prev) => prev + 1);
-
-        const response = await fetch(
-          `https://ganaapi.alliance.cgiar.org/adm3/by-ids?ids=${adm3Ids.join(",")}`
-        );
-
-        if (!response.ok) {
-          throw new Error("Error al obtener detalles de adm3");
-        }
-
-        const data = await response.json();
-        setAdm3Details(data);
-      } catch (err) {
-        console.error("❌ Error al consultar adm3 details:", err);
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    fetchAdm3Details();
-  }, [adm3Risk]);
+  // Callback estable para año inicio/fin
+  const handleYearStartEndChange = useCallback((start, end) => {
+    setYearStart(start);
+    setYearEnd(end);
+  }, []);
 
   function WMSRiskClickHandler({ adm3Risk, adm3Details, showPopup }) {
     const [clickLatLng, setClickLatLng] = useState(null);
@@ -631,6 +406,14 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     return null;
   }
 
+  const start = period?.deforestation_year_start ?? null;
+  const end = period?.deforestation_year_end ?? null;
+  const hasPeriod = start != null && end != null;
+
+  const defLabel = hasPeriod
+    ? `Deforestación ${start}-${end}`
+    : "Deforestación";
+
   return (
     <>
       <div className="relative">
@@ -656,11 +439,12 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           onAdmSearch={handleAdmSearch}
           foundAdms={foundAdms}
           setFoundAdms={setFoundAdms}
-          onYearStartEndChange={(start, end) => {
-            setYearStart(start);
-            setYearEnd(end);
-          }}
+          onYearStartEndChange={handleYearStartEndChange}
+          riskOptions={riskOptions}
+          period={period}
+          setPeriod={setPeriod /*handlePeriodChanged*/}
         />
+
         {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
 
         <RiskLegend
@@ -668,6 +452,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           farmRisk={farmRisk}
           nationalRisk={nationalRisk}
         />
+
         <MapContainer
           center={[4.5709, -74.2973]}
           zoom={6}
@@ -681,36 +466,77 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
-          {farmRisk && (
-            <LayersControl position="bottomleft">
-              <LayersControl.Overlay name="Ver niveles administrativos" checked>
+
+          <LayersControl position="bottomleft">
+            <LayersControl.Overlay
+              key={`def-${start ?? 'na'}-${end ?? 'na'}-${source}-${risk}`}
+              name={defLabel}
+            >
+              <WMSTileLayer
+                key={`wms-${start ?? 'na'}-${end ?? 'na'}-${source}-${risk}`}
+                url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
+                layers={`${source}_deforestation_${risk}`}
+                format="image/png"
+                transparent
+                version="1.1.1"
+                {...(hasPeriod ? { time: `${start}-${end}` } : {})}
+                zIndex={1000}
+              />
+            </LayersControl.Overlay>
+            <LayersControl.Overlay name="Áreas protegidas">
+              <WMSTileLayer
+                url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+                layers="administrative:pnn_areas"
+                format="image/png"
+                transparent={true}
+                attribution="IDEAM"
+                zIndex={1001}
+              />
+            </LayersControl.Overlay>
+            <LayersControl.Overlay name="Frontera agrícola">
+              <WMSTileLayer
+                url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+                layers="administrative:upra_boundaries"
+                format="image/png"
+                transparent={true}
+                attribution="IDEAM"
+                zIndex={1001}
+              />
+            </LayersControl.Overlay>
+            {farmRisk && (
+              <LayersControl.Overlay name="Veredas">
                 <WMSTileLayer
                   url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
-                  layers="administrative:admin_2"
+                  layers="administrative:admin_3"
                   format="image/png"
                   transparent={true}
                   attribution="IDEAM"
-                  zIndex={1000}
+                  zIndex={1002}
                 />
               </LayersControl.Overlay>
-            </LayersControl>
-          )}
+            )}
+          </LayersControl>
+
           {loading && (
             <LoadingSpinner message="Cargando datos y polígonos..." />
           )}
+
           <FlyToFarmPolygons polygons={farmPolygons} />
+
           {renderMarkers(allInputs, "#8B4513")}
           {renderGeoJsons(allInputs, "#8B4513")}
 
           {renderMarkers(allOutputs, "purple")}
           {renderGeoJsons(allOutputs, "purple")}
+
           {renderFarmRiskPolygons(farmPolygons, riskFarm, foundFarms)}
+
           {adm3Details.map((detail) => {
             const riskArray = Object.values(adm3Risk).flat();
             const riskData = riskArray.find((r) => r.adm3_id === detail.id);
             if (!riskData) return null;
-            const risk = riskData.risk_total; // ← asegúrate de obtener el valor real
-            let styleName = "norisk"; // sin riesgo
+            const risk = riskData.risk_total;
+            let styleName = "norisk";
 
             if (risk > 2.5) styleName = "hightrisk";
             else if (risk > 1.5) styleName = "mediumrisk";
@@ -726,8 +552,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
                   transparent={true}
                   cql_filter={`cod_ver='${detail.ext_id}'`}
                   styles={styleName}
-                  zIndex={1000}
+                  zIndex={10000}
                 />
+
                 <WMSRiskClickHandler
                   adm3Risk={adm3Risk}
                   adm3Details={adm3Details}

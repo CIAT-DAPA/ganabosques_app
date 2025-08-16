@@ -2,7 +2,7 @@
 
 export const validateToken = async (token) => {
   try {
-    const response = await fetch('http://127.0.0.1:8000/auth/token/validate', {
+    const response = await fetch('https://ganaapi.alliance.cgiar.org/auth/token/validate', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

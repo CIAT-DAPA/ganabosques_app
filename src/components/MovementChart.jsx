@@ -12,9 +12,6 @@ export default function MovementCharts({
 
   const [legendEntradaMap, setLegendEntradaMap] = useState({});
   const [legendSalidaMap, setLegendSalidaMap] = useState({});
-console.log("Resumen de movimientos:", summary);
-  console.log("Fincas encontradas:", foundFarms);
-  console.log("Riesgo de fincas:", riskFarm);
   const toggleLegendEntrada = (id, year) => {
     setLegendEntradaMap((prev) => ({ ...prev, [`${id}-${year}`]: !prev[`${id}-${year}`] }));
   };
@@ -84,11 +81,11 @@ console.log("Resumen de movimientos:", summary);
           const showLegendSalida = legendSalidaMap[`${farm.id}-${year}`] || false;
 
           const entradaChart = statsEntrada
-            ? buildChartData({ [year]: statsEntrada.species }, `Entradas (${year})`, showLegendEntrada)
+            ? buildChartData({ [year]: statsEntrada.species }, `Entradas`, showLegendEntrada)
             : null;
 
           const salidaChart = statsSalida
-            ? buildChartData({ [year]: statsSalida.species }, `Salidas (${year})`, showLegendSalida)
+            ? buildChartData({ [year]: statsSalida.species }, `Salidas`, showLegendSalida)
             : null;
 
           const label = farm?.sit_code || farm.code || farm.id;

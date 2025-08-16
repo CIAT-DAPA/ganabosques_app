@@ -19,17 +19,18 @@ import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
 import {
   searchAdmByName,
-  fetchFarmPolygonsByIds,
-  fetchMovementStatisticsByFarmIds,
-  fetchAdm3RisksByAnalysisAndAdm3,
-  fetchFarmRiskByDeforestationId,
-  fetchAdm3DetailsByIds,
-  fetchFarmRiskByAnalysisAndFarm
-  
 } from "@/services/apiService";
 import MovementCharts from "@/components/MovementChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import RiskPopup from "@/components/Adm3Risk";
+import { all } from "axios";
+import { useFilteredMovement } from "@/hooks/useFilteredMovement";
+import { useMovementStats } from "@/hooks/useMovementStats";
+import { useFarmPolygons } from "@/hooks/useFarmPolygons";
+import { useFarmRisk } from "@/hooks/useFarmRisk";
+import { useAdm3Risk } from "@/hooks/useAdm3Risk";
+import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
+import { useAdm3Details } from "@/hooks/useAdm3Details";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -43,11 +44,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   // Opciones de riesgo memorizadas
   const riskOptions = useMemo(() => {
     if (enterpriseRisk) return [{ value: "risk_total", label: "Riesgo Total" }];
-    /*if (farmRisk)
-      return [
-        { value: "risk_total", label: "Riesgo anual" },
-        { value: "risk_direct", label: "Riesgo acumulado" },
-      ];*/
     return [
       { value: "annual", label: "Riesgo anual" },
       { value: "cumulative", label: "Riesgo acumulado" },
@@ -67,7 +63,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [admResults, setAdmResults] = useState([]);
   const [farmPolygons, setFarmPolygons] = useState([]);
   const mapRef = useRef();
-  const [movement, setMovement] = useState([]);
   const [yearStart, setYearStart] = useState(2023);
   const [yearEnd, setYearEnd] = useState(2024);
   const [originalMovement, setOriginalMovement] = useState(null);
@@ -78,7 +73,19 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [adm3Risk, setAdm3Risk] = useState(null);
   const [adm3Details, setAdm3Details] = useState([]);
   const [popupData, setPopupData] = useState(null);
-
+  const movement = useFilteredMovement(originalMovement, yearStart);
+  useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
+  useFarmPolygons(
+    foundFarms,
+    setFarmPolygons,
+    setPendingTasks,
+    setOriginalMovement
+  );
+  useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
+  useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
+  useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks);
+  useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
+  useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks);
   useEffect(() => {
     import("leaflet");
   }, []);
@@ -87,7 +94,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     setLoading(pendingTasks > 0);
   }, [pendingTasks]);
 
-  // Buscar ADM memorizado
   const handleAdmSearch = useCallback(async (searchText, level) => {
     try {
       const results = await searchAdmByName(searchText, level);
@@ -105,162 +111,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       }
     }
   }, []);
-
-  useEffect(() => {
-    if (!foundFarms || foundFarms.length === 0) {
-      setFarmPolygons([]);
-      return;
-    }
-
-    const loadPolygons = async () => {
-      const ids = foundFarms.map((farm) => farm.id).filter(Boolean);
-      if (ids.length === 0) return;
-
-      try {
-        setPendingTasks((prev) => prev + 1);
-        const data = await fetchFarmPolygonsByIds(ids);
-        setFarmPolygons(data);
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error obteniendo polígonos de fincas:", err);
-        }
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    loadPolygons();
-  }, [foundFarms]);
-
-  useEffect(() => {
-    const loadMovementStats = async () => {
-      const ids = foundFarms.map((farm) => farm.id).filter(Boolean);
-      if (ids.length === 0) return;
-
-      try {
-        setPendingTasks((prev) => prev + 1);
-        const data = await fetchMovementStatisticsByFarmIds(ids);
-        setOriginalMovement(data);
-        setMovement(data);
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error obteniendo estadísticas de movimiento:", err);
-        }
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    loadMovementStats();
-  }, [foundFarms]);
-
-  // Filtro por año simple
-  useEffect(() => {
-    if (!yearStart || !originalMovement) return;
-
-    const filtered = {};
-
-    Object.entries(originalMovement).forEach(([farmId, data]) => {
-      const filteredInputs = {
-        ...data.inputs,
-        statistics: {
-          [yearStart]: data.inputs.statistics?.[yearStart] || {},
-        },
-      };
-
-      const filteredOutputs = {
-        ...data.outputs,
-        statistics: {
-          [yearStart]: data.outputs.statistics?.[yearStart] || {},
-        },
-      };
-
-      filtered[farmId] = {
-        ...data,
-        inputs: filteredInputs,
-        outputs: filteredOutputs,
-      };
-    });
-
-    setMovement(filtered);
-  }, [yearStart, originalMovement]);
-
-  // Limpiar si no hay fincas
-  useEffect(() => {
-    if (!foundFarms || foundFarms.length === 0) {
-      setFarmPolygons([]);
-      setMovement({});
-      setOriginalMovement({});
-      return;
-    }
-  }, [foundFarms]);
-
-  // Filtro por año avanzado (con farms/enterprises involucrados)
-  useEffect(() => {
-    if (!yearStart || !originalMovement) return;
-
-    const filtered = {};
-    const yearKey = String(yearStart);
-
-    Object.entries(originalMovement).forEach(([farmId, data]) => {
-      const inputStats = data.inputs.statistics?.[yearKey];
-      const outputStats = data.outputs.statistics?.[yearKey];
-
-      const involvedInputFarms = inputStats?.farms?.map(String) || [];
-      const involvedInputEnterprises =
-        inputStats?.enterprises?.map(String) || [];
-
-      const involvedOutputFarms = outputStats?.farms?.map(String) || [];
-      const involvedOutputEnterprises =
-        outputStats?.enterprises?.map(String) || [];
-
-      const filteredInputs = {
-        ...data.inputs,
-        statistics: {
-          [yearKey]: inputStats,
-        },
-        farms:
-          data.inputs.farms
-            ?.filter(Boolean)
-            .filter((f) =>
-              involvedInputFarms.includes(String(f.destination?.farm_id))
-            ) || [],
-        enterprises:
-          data.inputs.enterprises
-            ?.filter(Boolean)
-            .filter((e) =>
-              involvedInputEnterprises.includes(String(e.destination?._id))
-            ) || [],
-      };
-
-      const filteredOutputs = {
-        ...data.outputs,
-        statistics: {
-          [yearKey]: outputStats,
-        },
-        farms:
-          data.outputs.farms
-            ?.filter(Boolean)
-            .filter((f) =>
-              involvedOutputFarms.includes(String(f.destination?.farm_id))
-            ) || [],
-        enterprises:
-          data.outputs.enterprises
-            ?.filter(Boolean)
-            .filter((e) =>
-              involvedOutputEnterprises.includes(String(e.destination?._id))
-            ) || [],
-      };
-
-      filtered[farmId] = {
-        ...data,
-        inputs: filteredInputs,
-        outputs: filteredOutputs,
-      };
-    });
-
-    setMovement(filtered);
-  }, [yearStart, originalMovement]);
 
   const FlyToFarmPolygons = ({ polygons }) => {
     const map = useMap();
@@ -308,157 +158,129 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     return null;
   };
 
-  const allInputs = Object.values(movement || {}).flatMap((m) => [
-    ...(m.inputs?.farms || []),
-    ...(m.inputs?.enterprises || []),
+  const allInputs = Object.entries(movement || {}).flatMap(([farmId, m]) => [
+    ...(m.inputs?.farms || []).map((entry) => ({ ...entry, __farmId: farmId })),
+    ...(m.inputs?.enterprises || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
   ]);
 
-  const allOutputs = Object.values(movement || {}).flatMap((m) => [
-    ...(m.outputs?.farms || []),
-    ...(m.outputs?.enterprises || []),
+  const allOutputs = Object.entries(movement || {}).flatMap(([farmId, m]) => [
+    ...(m.outputs?.farms || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
+    ...(m.outputs?.enterprises || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
   ]);
 
   const renderGeoJsons = (entries, color) =>
-    entries
-      .filter((e) => e.destination?.geojson)
+    (entries || [])
+      .filter((e) => e?.destination?.geojson) // solo los que tienen polígono
       .map((entry, idx) => {
         try {
           const data = JSON.parse(entry.destination.geojson);
+          console.log(JSON.stringify(entry, null, 2));
+          const originFarmId = String(entry.__farmId ?? "");
+          const targetFarmId = String(entry.destination?.farm_id ?? "");
+          const yearKey = String(yearStart);
+
+          // Lista de farms mixed del origen (año actual)
+          const farmsMixed = (
+            movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []
+          ).map(String);
+
+          // marcar rosado si está en mixed y NO es self
+          const isMixed =
+            !!originFarmId &&
+            !!targetFarmId &&
+            originFarmId !== targetFarmId &&
+            farmsMixed.includes(targetFarmId);
+
+          const finalColor = isMixed ? "#e91e63" : color;
 
           return (
             <GeoJSON
-              key={`geojson-${color}-${idx}`}
+              key={`geojson-${idx}-${targetFarmId || "noid"}`}
               data={data}
-              style={{ color, weight: 2, fillOpacity: 0.3 }}
+              style={{ color: finalColor, weight: 2, fillOpacity: 0.3 }}
             >
-              Popup
+              <Popup>
+                <div className="p-3  bg-white text-sm space-y-1">
+
+                  
+                  <div>
+                    <span className="font-semibold">Código SIT:</span>{" "}
+                    {entry.sit_code || "N/A"}
+                  </div>
+                  
+              
+                </div>
+              </Popup>
             </GeoJSON>
           );
-        } catch {
+        } catch (error) {
+          console.warn("Error al parsear geojson:", error);
           return null;
         }
       });
 
   const renderMarkers = (movements, color) => {
-    return movements
-      ?.filter(
+    return (movements || [])
+      .filter(
         (m) =>
-          m.destination?.latitude &&
-          m.destination?.longitud &&
-          !m.destination?.farm_id // ⛔️ Excluye fincas
+          m?.destination?.latitude &&
+          m?.destination?.longitud &&
+          !m?.destination?.farm_id // ⛔️ Solo empresas
       )
       .map((m, idx) => {
         const dest = m.destination;
         const lat = dest.latitude;
         const lon = dest.longitud;
         const name = dest.name || "Sin nombre";
-        const id = dest._id || "Sin ID";
+        const id = String(dest._id ?? ""); // ✅ ID real de la empresa
         const type = "Empresa";
+
+        // 🧭 finca origen: usa __farmId si existe; si no, source.farm_id
+        const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
+        const yearKey = String(yearStart);
+
+        // 🧰 lista de enterprises mixed para esa finca y año (normalizada a string)
+        const enterprisesMixed = (
+          movement?.[originFarmId]?.mixed?.[yearKey]?.enterprises || []
+        ).map(String);
+
+        // 🎯 es mixed solo si tenemos origen e id válidos y está listado
+        const isMixed = !!originFarmId && !!id && enterprisesMixed.includes(id);
+
+        const finalColor = isMixed ? "#e91e63" : color;
 
         return (
           <Marker
-            key={`marker-${idx}`}
+            key={`marker-${idx}-${id || "noid"}`}
             position={[lat, lon]}
             icon={L.divIcon({
               className: "custom-marker",
-              html: `<div style="background:${color};width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>`,
+              html: `<div style="background:${finalColor};width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>`,
             })}
           >
             <Popup>
-  <div className="popup-card">
-    <div className="font-semibold text-green-700 mb-1">Entidad</div>
-    <div className="mb-1">
-      <span className="font-medium">Tipo:</span> {type}
-    </div>
-    <div>
-      <span className="font-medium">Nombre:</span> {name}
-    </div>
-  </div>
-</Popup>
-
-
+              <div className="p-3  bg-white text-sm space-y-2">
+                <div>
+                  <span className="font-semibold">Tipo:</span> {type}
+                </div>
+                <div>
+                  <span className="font-semibold">Nombre:</span> {name}
+                </div>
+              </div>
+            </Popup>
           </Marker>
         );
       });
   };
-
-  useEffect(() => {
-    if (
-      !Array.isArray(analysis) ||
-      analysis.length === 0 ||
-      !Array.isArray(foundAdms) ||
-      foundAdms.length === 0
-    ) {
-      return;
-    }
-
-    const loadAdm3Risks = async () => {
-      const analysisId = analysis[0]?.id;
-      const adm3Ids = foundAdms.map((adm) => adm.id).filter(Boolean);
-      if (!analysisId || adm3Ids.length === 0) return;
-
-      try {
-        setPendingTasks((prev) => prev + 1);
-        const data = await fetchAdm3RisksByAnalysisAndAdm3(analysisId, adm3Ids);
-        setAdm3Risk(data);
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error adm3 risks:", err);
-        }
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    loadAdm3Risks();
-  }, [analysis, foundAdms]);
-
-  // Cargar análisis por deforestación cuando cambie `year`
-  useEffect(() => {
-    if (!period) return;
-
-    const loadFarmRisk = async () => {
-      try {
-        setPendingTasks((prev) => prev + 1);
-        const data = await fetchFarmRiskByDeforestationId(period.deforestation_id);
-        setAnalysis(data);
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error obteniendo análisis por deforestación:", err);
-        }
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    loadFarmRisk();
-  }, [period]);
-
-useEffect(() => {
-  if (!Array.isArray(analysis) || analysis.length === 0) return;
-  if (!Array.isArray(foundFarms) || foundFarms.length === 0) return;
-
-  const analysisId = analysis[0]?.id;
-  const farmIds = foundFarms.map((f) => f.id).filter(Boolean);
-  if (!analysisId || farmIds.length === 0) return;
-
-  const loadFarmRisk = async () => {
-    try {
-      setPendingTasks((prev) => prev + 1);
-      const data = await fetchFarmRiskByAnalysisAndFarm(analysisId, farmIds);
-      setRiskFarm(data);
-    } catch (err) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Error al obtener farmRisk:", err);
-      }
-    } finally {
-      setPendingTasks((prev) => prev - 1);
-    }
-  };
-
-  loadFarmRisk();
-}, [analysis, foundFarms]);
-
   const renderFarmRiskPolygons = (
     polygons,
     farmRiskData,
@@ -502,48 +324,21 @@ useEffect(() => {
           style={{ color, weight: 2, fillColor: color, fillOpacity: 0.3 }}
         >
           <Popup>
-  <div className="popup-card">
-    <div className="font-semibold text-green-700 mb-1">Finca</div>
-    <div className="mb-1">
-      <span className="font-medium">Código SIT:</span> {sitCode}
+  <div className="p-3  bg-white text-sm space-y-1">
+    <div className="font-semibold text-green-700">Finca</div>
+    <div>
+      <span className="font-medium">Código SIT:</span> {sitCode || "N/A"}
     </div>
     <div>
-      <span className="font-medium">Riesgo total:</span> {riskVal}
+      <span className="font-medium">Riesgo total:</span> {riskVal ?? "N/A"}
     </div>
   </div>
 </Popup>
+
         </GeoJSON>
       );
     });
   };
-
-  useEffect(() => {
-    if (!adm3Risk) return;
-
-    const flatRisks = Object.values(adm3Risk).flat();
-    const adm3Ids = [
-      ...new Set(flatRisks.map((risk) => risk.adm3_id).filter(Boolean)),
-    ];
-
-    if (adm3Ids.length === 0) return;
-
-    const loadAdm3Details = async () => {
-      try {
-        setPendingTasks((prev) => prev + 1);
-        const data = await fetchAdm3DetailsByIds(adm3Ids);
-        setAdm3Details(data);
-      } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error al consultar adm3 details:", err);
-        }
-      } finally {
-        setPendingTasks((prev) => prev - 1);
-      }
-    };
-
-    loadAdm3Details();
-  }, [adm3Risk]);
-
   // Callback estable para año inicio/fin
   const handleYearStartEndChange = useCallback((start, end) => {
     setYearStart(start);
@@ -639,7 +434,7 @@ useEffect(() => {
           onYearStartEndChange={handleYearStartEndChange}
           riskOptions={riskOptions}
           period={period}
-          setPeriod={setPeriod/*handlePeriodChanged*/}
+          setPeriod={setPeriod /*handlePeriodChanged*/}
         />
 
         {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
@@ -665,7 +460,6 @@ useEffect(() => {
           />
 
           <LayersControl position="bottomleft">
-            {console.log(period)}
             <LayersControl.Overlay
               name={`Deforestación ${period.deforestation_year_start}-${period.deforestation_year_end}`}
             >
@@ -710,7 +504,7 @@ useEffect(() => {
                   zIndex={1002}
                 />
               </LayersControl.Overlay>
-          )}
+            )}
           </LayersControl>
 
           {loading && (
@@ -731,8 +525,8 @@ useEffect(() => {
             const riskArray = Object.values(adm3Risk).flat();
             const riskData = riskArray.find((r) => r.adm3_id === detail.id);
             if (!riskData) return null;
-            const risk = riskData.risk_total; 
-            let styleName = "norisk"; 
+            const risk = riskData.risk_total;
+            let styleName = "norisk";
 
             if (risk > 2.5) styleName = "hightrisk";
             else if (risk > 1.5) styleName = "mediumrisk";
@@ -750,6 +544,7 @@ useEffect(() => {
                   styles={styleName}
                   zIndex={10000}
                 />
+
                 <WMSRiskClickHandler
                   adm3Risk={adm3Risk}
                   adm3Details={adm3Details}
@@ -772,15 +567,12 @@ useEffect(() => {
         </MapContainer>
       </div>
 
-      {farmRisk && (
-        <MovementCharts
+      <MovementCharts
         summary={movement}
         foundFarms={foundFarms}
         riskFarm={riskFarm}
         yearStart={yearStart}
-      />)}
-
-    
+      />
     </>
   );
 }

@@ -228,7 +228,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         }
       });
 
-  const renderMarkers = (movements, color) => {
+  const renderMarkers = (movements, color, farm_main) => {
     return (movements || [])
       .filter(
         (m) =>
@@ -257,27 +257,34 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         const isMixed = !!originFarmId && !!id && enterprisesMixed.includes(id);
 
         const finalColor = isMixed ? "#e91e63" : color;
-
+        let farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
+        //console.log("dibujando");
+        //console.log(farm_tmp);
         return (
-          <Marker
-            key={`marker-${idx}-${id || "noid"}`}
-            position={[lat, lon]}
-            icon={L.divIcon({
-              className: "custom-marker",
-              html: `<div style="background:${finalColor};width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>`,
-            })}
-          >
-            <Popup>
-              <div className="p-3  bg-white text-sm space-y-2">
-                <div>
-                  <span className="font-semibold">Tipo:</span> {type}
+          <>
+            <Marker
+              key={`marker-${idx}-${id || "noid"}`}
+              position={[lat, lon]}
+              icon={L.divIcon({
+                className: "custom-marker",
+                html: `<div style="background:${finalColor};width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>`,
+              })}
+            >
+              <Popup>
+                <div className="p-3  bg-white text-sm space-y-2">
+                  <div>
+                    <span className="font-semibold">Tipo:</span> {type}
+                  </div>
+                  <div>
+                    <span className="font-semibold">Nombre:</span> {name}
+                  </div>
                 </div>
-                <div>
-                  <span className="font-semibold">Nombre:</span> {name}
-                </div>
-              </div>
-            </Popup>
-          </Marker>
+              </Popup>
+            </Marker>
+            {farm_tmp && (
+              <Polyline key={`line-${idx}-${id || "noid"}`} positions={[[farm_tmp.latitude, farm_tmp.longitud], [lat, lon]]} />)
+            }
+          </>
         );
       });
   };
@@ -523,10 +530,10 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 
           <FlyToFarmPolygons polygons={farmPolygons} />
 
-          {renderMarkers(allInputs, "#8B4513")}
+          {renderMarkers(allInputs, "#8B4513", farmPolygons)}
           {renderGeoJsons(allInputs, "#8B4513")}
 
-          {renderMarkers(allOutputs, "purple")}
+          {renderMarkers(allOutputs, "purple", farmPolygons)}
           {renderGeoJsons(allOutputs, "purple")}
 
           {renderFarmRiskPolygons(farmPolygons, riskFarm, foundFarms)}

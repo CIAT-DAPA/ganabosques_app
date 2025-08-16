@@ -22,9 +22,9 @@ export default function RiesgosPredios() {
             Riesgos de predios
           </h1>
           <p className="text-lg md:text-xl font-medium drop-shadow-sm">
-            Consulta el nivel de riesgo asociado a un predio específico mediante diferentes códigos. 
-            Este módulo te permite identificar focos de presión sobre los bosques vinculados a la actividad 
-            ganadera y evaluar patrones acumulados o anuales de riesgo por finca. 
+            Consulta el nivel de riesgo ambiental asociado a un predio específico mediante su código SIT.
+            Este módulo te permite identificar los niveles de riesgo y los indicadores ambientales correspondientes por finca.
+            También puedes visualizar la movilización de predios y las relaciones entre ellos.
           </p>
         </div>
       </article>

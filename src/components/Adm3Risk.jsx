@@ -26,6 +26,10 @@ console.log(yearStart)
     },
   ];
 
+  const get_departamento = () => {
+    return detail.label.split(",")[0].trim() || "Desconocido";
+  }
+
   const options = {
     chart: {
       type: "bar",
@@ -68,9 +72,10 @@ console.log(yearStart)
       }}
     >
       <div style={{ flex: 1, padding: "20px", borderRight: "1px solid #eee" }}>
+        <h3 style={{ marginBottom: 8 }}>Departamento: {get_departamento()}</h3>
         <h4 style={{ marginBottom: 8 }}>Municipio: {detail.adm2_name}</h4>
         <h2 style={{ margin: 0 }}>Vereda: {detail.name}</h2>
-        <p style={{ marginTop: 12 }}><strong>Riesgo Total {yearStart}</strong></p>
+        <p style={{ marginTop: 12, marginBottom: 6 }}><strong>Riesgo Total {yearStart}</strong></p>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div
             style={{
@@ -82,7 +87,11 @@ console.log(yearStart)
           />
           <span>{risk.label}</span>
         </div>
-        <p style={{ marginTop: 10 }}>{risk.desc}</p>
+        {/* <p style={{ marginTop: 10 }}>{risk.desc}</p> */}
+        <p style={{ margin: "6px 0" }}><strong>Area deforestada</strong></p>
+        <p style={{ margin: "6px 0" }}> {riskData.def_ha} (ha)</p>
+        <p style={{ margin: "6px 0" }}><strong>Cantidad de fincas</strong></p>
+        <p style={{ margin: "6px 0" }}>{riskData.farm_amount} Fincas</p>
       </div>
       <div style={{ flex: 1.2, padding: "20px" }}>
         <h4 style={{ marginBottom: 12 }}>Riesgos Históricos</h4>

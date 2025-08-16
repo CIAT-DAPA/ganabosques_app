@@ -406,6 +406,14 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     return null;
   }
 
+  const start = period?.deforestation_year_start ?? null;
+  const end = period?.deforestation_year_end ?? null;
+  const hasPeriod = start != null && end != null;
+
+  const defLabel = hasPeriod
+    ? `Deforestación ${start}-${end}`
+    : "Deforestación";
+
   return (
     <>
       <div className="relative">
@@ -461,15 +469,17 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 
           <LayersControl position="bottomleft">
             <LayersControl.Overlay
-              name={`Deforestación ${period.deforestation_year_start}-${period.deforestation_year_end}`}
+              key={`def-${start ?? 'na'}-${end ?? 'na'}-${source}-${risk}`}
+              name={defLabel}
             >
               <WMSTileLayer
+                key={`wms-${start ?? 'na'}-${end ?? 'na'}-${source}-${risk}`}
                 url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
                 layers={`${source}_deforestation_${risk}`}
                 format="image/png"
                 transparent
                 version="1.1.1"
-                time={`${period.deforestation_year_start}-${period.deforestation_year_end}`}
+                {...(hasPeriod ? { time: `${start}-${end}` } : {})}
                 zIndex={1000}
               />
             </LayersControl.Overlay>

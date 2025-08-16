@@ -16,7 +16,7 @@ export default function Header() {
     { name: "Inicio", path: "/" },
     { name: "Riesgos nacionales", path: "/riesgosnacionales" },
     { name: "Riesgo de predios", path: "/riesgopredios" },
-    { name: "Riesgo de empresas", path: "/riesgoempresas" },
+    //{ name: "Riesgo de empresas", path: "/riesgoempresas" },
     {
       name: "Metodología",
       path: "https://cerodeforestacioncolombia.co/tfa/protocolo-de-monitoreo-reporte-y-verificacion-mrv-de-la-no-deforestacion-asociada-a-predios-de-cadenas-de-suministro-agropecuario-cacao-cafe-leche-carne-palma/",

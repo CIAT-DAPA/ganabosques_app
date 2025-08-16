@@ -63,7 +63,7 @@ console.log(yearStart)
         background: "#fff",
         borderRadius: 12,
         overflow: "hidden",
-        boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+        
         fontSize: "15px",
       }}
     >

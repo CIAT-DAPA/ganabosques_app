@@ -331,10 +331,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
               data={data}
               style={{ color, weight: 2, fillOpacity: 0.3 }}
             >
-              <Popup>
-                <strong>Codigo SIT de la finca:</strong>{" "}
-                {entry.sit_code || entry.destination.id}
-              </Popup>
+              Popup
             </GeoJSON>
           );
         } catch {
@@ -368,12 +365,18 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             })}
           >
             <Popup>
-              <strong>Tipo:</strong> {type}
-              <br />
-              <strong>ID:</strong> {id}
-              <br />
-              <strong>Nombre:</strong> {name}
-            </Popup>
+  <div className="popup-card">
+    <div className="font-semibold text-green-700 mb-1">Entidad</div>
+    <div className="mb-1">
+      <span className="font-medium">Tipo:</span> {type}
+    </div>
+    <div>
+      <span className="font-medium">Nombre:</span> {name}
+    </div>
+  </div>
+</Popup>
+
+
           </Marker>
         );
       });
@@ -412,12 +415,12 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 
   // Cargar análisis por deforestación cuando cambie `year`
   useEffect(() => {
-    if (!year) return;
+    if (!period) return;
 
     const loadFarmRisk = async () => {
       try {
         setPendingTasks((prev) => prev + 1);
-        const data = await fetchFarmRiskByDeforestationId(year);
+        const data = await fetchFarmRiskByDeforestationId(period.deforestation_id);
         setAnalysis(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -429,7 +432,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     };
 
     loadFarmRisk();
-  }, [year]);
+  }, [period]);
 
 useEffect(() => {
   if (!Array.isArray(analysis) || analysis.length === 0) return;
@@ -499,12 +502,16 @@ useEffect(() => {
           style={{ color, weight: 2, fillColor: color, fillOpacity: 0.3 }}
         >
           <Popup>
-            <strong>Finca</strong>
-            <br />
-            Código SIT: {sitCode}
-            <br />
-            Riesgo total: {riskVal}
-          </Popup>
+  <div className="popup-card">
+    <div className="font-semibold text-green-700 mb-1">Finca</div>
+    <div className="mb-1">
+      <span className="font-medium">Código SIT:</span> {sitCode}
+    </div>
+    <div>
+      <span className="font-medium">Riesgo total:</span> {riskVal}
+    </div>
+  </div>
+</Popup>
         </GeoJSON>
       );
     });
@@ -765,12 +772,15 @@ useEffect(() => {
         </MapContainer>
       </div>
 
-      <MovementCharts
+      {farmRisk && (
+        <MovementCharts
         summary={movement}
         foundFarms={foundFarms}
         riskFarm={riskFarm}
         yearStart={yearStart}
-      />
+      />)}
+
+    
     </>
   );
 }

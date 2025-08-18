@@ -82,7 +82,6 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     setOriginalMovement
   );
   useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
-  useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
   useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
   useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks);
@@ -177,15 +176,26 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     })),
   ]);
 
-  const renderGeoJsons = (entries, color) =>
-    (entries || [])
+  const renderGeoJsons = (entries, color, farm_main) => {
+    console.log("entries", entries);
+
+    return (entries || [])
       .filter((e) => e?.destination?.geojson) // solo los que tienen polígono
       .map((entry, idx) => {
         try {
-          const data = JSON.parse(entry.destination.geojson);
-          console.log(JSON.stringify(entry, null, 2));
           const originFarmId = String(entry.__farmId ?? "");
           const targetFarmId = String(entry.destination?.farm_id ?? "");
+
+          // si son iguales, no se dibuja
+          if (!originFarmId || !targetFarmId || originFarmId === targetFarmId) {
+            return null;
+          }
+
+          const data =
+            typeof entry.destination.geojson === "string"
+              ? JSON.parse(entry.destination.geojson)
+              : entry.destination.geojson;
+
           const yearKey = String(yearStart);
 
           // Lista de farms mixed del origen (año actual)
@@ -193,18 +203,13 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []
           ).map(String);
 
-          // marcar rosado si está en mixed y NO es self
-          const isMixed =
-            !!originFarmId &&
-            !!targetFarmId &&
-            originFarmId !== targetFarmId &&
-            farmsMixed.includes(targetFarmId);
-
+          // marcar rosado si está en mixed
+          const isMixed = farmsMixed.includes(targetFarmId);
           const finalColor = isMixed ? "#e91e63" : color;
 
           return (
             <GeoJSON
-              key={`geojson-${idx}-${targetFarmId || "noid"}`}
+              key={`geojson-${targetFarmId || idx}`}
               data={data}
               style={{ color: finalColor, weight: 2, fillOpacity: 0.3 }}
             >
@@ -227,6 +232,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           return null;
         }
       });
+  };
 
   const renderMarkers = (movements, color, farm_main) => {
     return (movements || [])
@@ -242,7 +248,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         const lon = dest.longitud;
         const name = dest.name || "Sin nombre";
         const id = String(dest._id ?? ""); // ✅ ID real de la empresa
-        const type = "Empresa";
+        const type = dest.type_enterprise
 
         // 🧭 finca origen: usa __farmId si existe; si no, source.farm_id
         const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
@@ -288,12 +294,14 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         );
       });
   };
+
   const renderFarmRiskPolygons = (
     polygons,
     farmRiskData,
     foundFarmsList = []
   ) => {
     if (!farmRiskData) return null;
+    console.log("renderFarmRiskPolygons", { polygons, farmRiskData, foundFarmsList });
 
     return polygons.map((farm, idx) => {
       let geojson;
@@ -303,6 +311,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             ? JSON.parse(farm.geojson)
             : farm.geojson;
       } catch {
+        console.warn("Error parseando geojson de farm:", farm, err);
         return null;
       }
 
@@ -325,8 +334,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       else if (riskVal > 0) color = "#FFD600"; // Amarillo - Bajo
 
       return (
+        <>
         <GeoJSON
-          key={`farmrisk-${idx}`}
+          key={`farmrisk-${farmId}`}
           data={geojson}
           style={{ color, weight: 2, fillColor: color, fillOpacity: 0.3 }}
         >
@@ -343,6 +353,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
 </Popup>
 
         </GeoJSON>
+        </>
       );
     });
   };
@@ -531,10 +542,10 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           <FlyToFarmPolygons polygons={farmPolygons} />
 
           {renderMarkers(allInputs, "#8B4513", farmPolygons)}
-          {renderGeoJsons(allInputs, "#8B4513")}
+          {renderGeoJsons(allInputs, "#8B4513", farmPolygons)}
 
           {renderMarkers(allOutputs, "purple", farmPolygons)}
-          {renderGeoJsons(allOutputs, "purple")}
+          {renderGeoJsons(allOutputs, "purple", farmPolygons)}
 
           {renderFarmRiskPolygons(farmPolygons, riskFarm, foundFarms)}
 

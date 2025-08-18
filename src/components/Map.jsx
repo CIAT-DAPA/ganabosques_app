@@ -234,6 +234,24 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       });
   };
 
+  // utils/typeEnterprise.ts
+const getTypeLabel = (type) =>{
+  switch (type) {
+    case "SLAUGHTERHOUSE":
+      return "Planta de sacrificio";
+    case "COLLECTION_CENTER":
+      return "Centro de acopio";
+    case "CATTLE_FAIR":
+      return "Feria de ganado";
+    case "ENTERPRISE":
+      return "Empresa";
+    case "FARM":
+      return "Finca";
+    default:
+      return type;
+  }
+}
+
   const renderMarkers = (movements, color, farm_main) => {
     return (movements || [])
       .filter(
@@ -279,7 +297,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
               <Popup>
                 <div className="p-3  bg-white text-sm space-y-2">
                   <div>
-                    <span className="font-semibold">Tipo:</span> {type}
+                    <span className="font-semibold">Tipo:</span> {getTypeLabel(type)}
                   </div>
                   <div>
                     <span className="font-semibold">Nombre:</span> {name}

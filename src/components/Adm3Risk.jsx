@@ -49,6 +49,7 @@ const RiskPopup = ({ detail, riskData, yearStart }) => {
     yaxis: {
       title: { text: "Nivel de Riesgo" },
       labels: { formatter: (val) => val.toFixed(1) },
+      max: 3,
     },
     tooltip: {
       y: { formatter: (val) => val.toFixed(2) },

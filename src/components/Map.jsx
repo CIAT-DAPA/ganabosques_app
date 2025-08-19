@@ -109,7 +109,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
         console.error("Error al buscar nivel administrativo:", err);
       }
     }
-  }, []);
+  }, [search]);
 
   const FlyToFarmPolygons = ({ polygons }) => {
     const map = useMap();
@@ -599,7 +599,7 @@ const getTypeLabel = (type) =>{
 
                 {/* Renderizas el popup si hay datos */}
                 {popupData && (
-                  <Popup position={[popupData.lat, popupData.lng]}>
+                  <Popup position={[popupData.lat, popupData.lng]} key={`popup-${popupData.detail.ext_id}`}>
                     <RiskPopup
                       detail={popupData.detail}
                       riskData={popupData.riskData}

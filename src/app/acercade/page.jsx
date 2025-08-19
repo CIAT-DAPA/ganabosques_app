@@ -31,14 +31,6 @@ export default function AcercaDe() {
           Con esta combinación de datos, Ganabosques calcula indicadores
           precisos de riesgo a nivel predial, territorial y empresarial.
         </p>
-        <h3 class='text-2xl font-semibold mb-3'>Contribuye a</h3>
-        <ul class='list-disc list-inside space-y-1 mb-4'>
-          <li>
-            Política Nacional de Lucha contra la Deforestación (CONPES 4021)
-          </li>
-          <li>Monitoreo y verificación de compromisos de Cero Deforestación</li>
-          <li>Priorización de acciones y alertas tempranas</li>
-        </ul>
 
         <section class='md:col-span-2'>
           <h2 class='text-2xl font-semibold mb-4'>Socios estratégicos</h2>
@@ -48,36 +40,48 @@ export default function AcercaDe() {
             lucha contra la deforestación. A continuación, presentamos algunas
             de las organizaciones aliadas:
           </p>
-          <div class='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4'>
-            <div class='rounded-lg h-34 flex items-center justify-center bg-white p-2'>
-              <img
-                src='/partner1.png'
-                alt='Socio 1'
-                class='max-h-full max-w-full object-contain'
-              />
-            </div>
-            <div class='rounded-lg h-34 flex items-center justify-center bg-white p-2'>
-              <img
-                src='/partner2.png'
-                alt='Socio 2'
-                class='max-h-full max-w-full object-contain'
-              />
-            </div>
-            <div class='rounded-lg h-34 flex items-center justify-center bg-white p-2'>
-              <img
-                src='/partner3.png'
-                alt='Socio 3'
-                class='max-h-full max-w-full object-contain'
-              />
-            </div>
-            <div class='rounded-lg h-34 flex items-center justify-center bg-white p-2'>
-              <img
-                src='/partner4.png'
-                alt='Socio 4'
-                class='max-h-full max-w-full object-contain'
-              />
-            </div>
-          </div>
+          <ul class='grid grid-cols-1 sm:grid-cols-4 gap-4 text-center items-center mt-4'>
+            <li>
+              <a
+                href='https://www.minagricultura.gov.co/paginas/default.aspx'
+                target='_blank'
+                rel='noopener noreferrer'
+                class='block bg-white border border-gray-300 text-gray-900 font-bold rounded-lg p-4 shadow-sm hover:shadow-xl transform hover:-translate-y-1 transition'
+              >
+                Ministerio de Agricultura y Desarrollo Rural
+              </a>
+            </li>
+            <li>
+              <a
+                href='https://www.ukpact.co.uk/'
+                target='_blank'
+                rel='noopener noreferrer'
+                class='block bg-white border border-gray-300 text-gray-900 font-bold rounded-lg p-4 shadow-sm hover:shadow-xl transform hover:-translate-y-1 transition'
+              >
+                UK PACT
+              </a>
+            </li>
+            <li>
+              <a
+                href='https://www.cgiar.org/'
+                target='_blank'
+                rel='noopener noreferrer'
+                class='block bg-white border border-gray-300 text-gray-900 font-bold rounded-lg p-4 shadow-sm hover:shadow-xl transform hover:-translate-y-1 transition'
+              >
+                CGIAR
+              </a>
+            </li>
+            <li>
+              <a
+                href='https://alliancebioversityciat.org/es'
+                target='_blank'
+                rel='noopener noreferrer'
+                class='block bg-white border border-gray-300 text-gray-900 font-bold rounded-lg p-4 shadow-sm hover:shadow-xl transform hover:-translate-y-1 transition'
+              >
+                Alliance Bioversity & CIAT
+              </a>
+            </li>
+          </ul>
         </section>
       </main>
     </>

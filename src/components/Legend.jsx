@@ -19,6 +19,9 @@ export default function RiskLegend({ enterpriseRisk = false, farmRisk = false })
     <div className="absolute bottom-4 right-4 z-[1000] flex flex-col gap-2">
 
       <div className="bg-white rounded-xl shadow-md px-4 py-3 space-y-2">
+        <div key={"lblRisk"} className="flex items-center gap-2 text-sm text-gray-800">
+            <b>Nivel de riesgo</b>
+        </div>
         {riskLevels.map((risk) => (
           <div key={risk.label} className="flex items-center gap-2 text-sm text-gray-800">
             <span className={`w-3 h-3 rounded-full ${risk.color}`}></span>
@@ -39,6 +42,9 @@ export default function RiskLegend({ enterpriseRisk = false, farmRisk = false })
 
       {farmRisk && (
   <div className="bg-white rounded-xl shadow-md px-4 py-3 space-y-2">
+    <div key={"lblRelations"} className="flex items-center gap-2 text-sm text-gray-800">
+            <b>Tipo de relación</b>
+        </div>
     {mobilityTypes.map((mob) => (
       <div key={mob.label} className="flex items-center gap-2 text-sm text-gray-800">
         <span

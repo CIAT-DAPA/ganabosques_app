@@ -85,7 +85,7 @@ export default function FilterBar({
           const firstId = asId(first.id);
           setPeriod(first);
           setYear(firstId);
-          onYearStartEndChange?.(first.year_start, first.year_end);
+          onYearStartEndChange?.(first.deforestation_year_start, first.deforestation_year_end);
         }
 
         if (!arr.length) {

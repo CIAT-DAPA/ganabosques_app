@@ -511,11 +511,11 @@ const getTypeLabel = (type) =>{
               <WMSTileLayer
                 key={`wms-${start ?? 'na'}-${end ?? 'na'}-${source}-${risk}`}
                 url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
-                layers={`${source}_deforestation_${risk}`}
+                layers={`${source}`}
                 format="image/png"
                 transparent
                 version="1.1.1"
-                {...(hasPeriod ? { time: `${start}-${end}` } : {})}
+                {...(hasPeriod ? { time: `${start}` } : {})}
                 zIndex={1000}
               />
             </LayersControl.Overlay>

@@ -240,7 +240,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
                 <div className="p-3  bg-white text-sm space-y-1">
                   <div>
                     <span className="font-semibold">Código SIT:</span>{" "}
-                    {entry.sit_code || "N/A"}
+                    {data.name || "N/A"}
                   </div>
                 </div>
               </Popup>

@@ -13,7 +13,6 @@ const RiskPopup = ({ detail, riskData, yearStart }) => {
 
   const riesgoTotal = riskData.risk_total;
   const risk = getRiskLabel(riesgoTotal);
-console.log(yearStart)
   // Solo un dato real de 2024
   const historial = [
     { year: yearStart, value: riesgoTotal }

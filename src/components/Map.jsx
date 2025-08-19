@@ -17,9 +17,7 @@ import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import "leaflet/dist/leaflet.css";
 import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
-import {
-  searchAdmByName,
-} from "@/services/apiService";
+import { searchAdmByName } from "@/services/apiService";
 import MovementCharts from "@/components/MovementChart";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import RiskPopup from "@/components/Adm3Risk";
@@ -32,6 +30,7 @@ import { useAdm3Risk } from "@/hooks/useAdm3Risk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { useAdm3Details } from "@/hooks/useAdm3Details";
 
+// --- Leaflet icon defaults ---
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -73,6 +72,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [adm3Risk, setAdm3Risk] = useState(null);
   const [adm3Details, setAdm3Details] = useState([]);
   const [popupData, setPopupData] = useState(null);
+
   const movement = useFilteredMovement(originalMovement, yearStart);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
   useFarmPolygons(
@@ -85,6 +85,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
   useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks);
+
   useEffect(() => {
     import("leaflet");
   }, []);
@@ -93,23 +94,53 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
     setLoading(pendingTasks > 0);
   }, [pendingTasks]);
 
-  const handleAdmSearch = useCallback(async (searchText, level) => {
-    try {
-      const results = await searchAdmByName(searchText, level);
-      if (!results || results.length === 0) return;
+  // --- Limpieza robusta del popup ---
+  useEffect(() => {
+    // Si no hay veredas encontradas, cerramos el popup
+    if (!foundAdms || foundAdms.length === 0) {
+      setPopupData(null);
+      mapRef.current?.closePopup?.();
+    }
+  }, [foundAdms]);
 
-      setAdmResults(results);
-      const geometry = results[0]?.geometry;
-      if (geometry && mapRef.current) {
-        const layer = L.geoJSON(geometry);
-        mapRef.current.fitBounds(layer.getBounds());
-      }
-    } catch (err) {
-      if (process.env.NODE_ENV !== "production") {
-        console.error("Error al buscar nivel administrativo:", err);
+  useEffect(() => {
+    if (popupData && Array.isArray(adm3Details)) {
+      const stillExists = adm3Details.some(
+        (d) => d.ext_id === popupData.detail?.ext_id
+      );
+      if (!stillExists) {
+        setPopupData(null);
+        mapRef.current?.closePopup?.();
       }
     }
-  }, [search]);
+  }, [adm3Details, popupData]);
+
+  // (Opcional) Cuando cambian filtros clave, limpiamos el popup
+  useEffect(() => {
+    setPopupData(null);
+    mapRef.current?.closePopup?.();
+  }, [admLevel, period, source, risk, yearStart]);
+
+  const handleAdmSearch = useCallback(
+    async (searchText, level) => {
+      try {
+        const results = await searchAdmByName(searchText, level);
+        if (!results || results.length === 0) return;
+
+        setAdmResults(results);
+        const geometry = results[0]?.geometry;
+        if (geometry && mapRef.current) {
+          const layer = L.geoJSON(geometry);
+          mapRef.current.fitBounds(layer.getBounds());
+        }
+      } catch (err) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error al buscar nivel administrativo:", err);
+        }
+      }
+    },
+    [search]
+  );
 
   const FlyToFarmPolygons = ({ polygons }) => {
     const map = useMap();
@@ -177,19 +208,15 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   ]);
 
   const renderGeoJsons = (entries, color, farm_main) => {
-    console.log("entries", entries);
-
     return (entries || [])
-      .filter((e) => e?.destination?.geojson) // solo los que tienen polígono
+      .filter((e) => e?.destination?.geojson)
       .map((entry, idx) => {
         try {
           const originFarmId = String(entry.__farmId ?? "");
           const targetFarmId = String(entry.destination?.farm_id ?? "");
 
-          // si son iguales, no se dibuja
-          if (!originFarmId || !targetFarmId || originFarmId === targetFarmId) {
+          if (!originFarmId || !targetFarmId || originFarmId === targetFarmId)
             return null;
-          }
 
           const data =
             typeof entry.destination.geojson === "string"
@@ -197,13 +224,9 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
               : entry.destination.geojson;
 
           const yearKey = String(yearStart);
-
-          // Lista de farms mixed del origen (año actual)
           const farmsMixed = (
             movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []
           ).map(String);
-
-          // marcar rosado si está en mixed
           const isMixed = farmsMixed.includes(targetFarmId);
           const finalColor = isMixed ? "#e91e63" : color;
 
@@ -215,14 +238,10 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             >
               <Popup>
                 <div className="p-3  bg-white text-sm space-y-1">
-
-                  
                   <div>
                     <span className="font-semibold">Código SIT:</span>{" "}
                     {entry.sit_code || "N/A"}
                   </div>
-                  
-              
                 </div>
               </Popup>
             </GeoJSON>
@@ -234,23 +253,22 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
       });
   };
 
-  // utils/typeEnterprise.ts
-const getTypeLabel = (type) =>{
-  switch (type) {
-    case "SLAUGHTERHOUSE":
-      return "Planta de sacrificio";
-    case "COLLECTION_CENTER":
-      return "Centro de acopio";
-    case "CATTLE_FAIR":
-      return "Feria de ganado";
-    case "ENTERPRISE":
-      return "Empresa";
-    case "FARM":
-      return "Finca";
-    default:
-      return type;
-  }
-}
+  const getTypeLabel = (type) => {
+    switch (type) {
+      case "SLAUGHTERHOUSE":
+        return "Planta de sacrificio";
+      case "COLLECTION_CENTER":
+        return "Centro de acopio";
+      case "CATTLE_FAIR":
+        return "Feria de ganado";
+      case "ENTERPRISE":
+        return "Empresa";
+      case "FARM":
+        return "Finca";
+      default:
+        return type;
+    }
+  };
 
   const renderMarkers = (movements, color, farm_main) => {
     return (movements || [])
@@ -258,32 +276,26 @@ const getTypeLabel = (type) =>{
         (m) =>
           m?.destination?.latitude &&
           m?.destination?.longitud &&
-          !m?.destination?.farm_id // ⛔️ Solo empresas
+          !m?.destination?.farm_id
       )
       .map((m, idx) => {
         const dest = m.destination;
         const lat = dest.latitude;
         const lon = dest.longitud;
         const name = dest.name || "Sin nombre";
-        const id = String(dest._id ?? ""); // ✅ ID real de la empresa
-        const type = dest.type_enterprise
+        const id = String(dest._id ?? "");
+        const type = dest.type_enterprise;
 
-        // 🧭 finca origen: usa __farmId si existe; si no, source.farm_id
         const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
         const yearKey = String(yearStart);
-
-        // 🧰 lista de enterprises mixed para esa finca y año (normalizada a string)
         const enterprisesMixed = (
           movement?.[originFarmId]?.mixed?.[yearKey]?.enterprises || []
         ).map(String);
-
-        // 🎯 es mixed solo si tenemos origen e id válidos y está listado
         const isMixed = !!originFarmId && !!id && enterprisesMixed.includes(id);
 
         const finalColor = isMixed ? "#e91e63" : color;
         let farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
-        //console.log("dibujando");
-        //console.log(farm_tmp);
+
         return (
           <>
             <Marker
@@ -297,7 +309,8 @@ const getTypeLabel = (type) =>{
               <Popup>
                 <div className="p-3  bg-white text-sm space-y-2">
                   <div>
-                    <span className="font-semibold">Tipo:</span> {getTypeLabel(type)}
+                    <span className="font-semibold">Tipo:</span>{" "}
+                    {getTypeLabel(type)}
                   </div>
                   <div>
                     <span className="font-semibold">Nombre:</span> {name}
@@ -306,8 +319,14 @@ const getTypeLabel = (type) =>{
               </Popup>
             </Marker>
             {farm_tmp && (
-              <Polyline key={`line-${idx}-${id || "noid"}`} positions={[[farm_tmp.latitude, farm_tmp.longitud], [lat, lon]]} />)
-            }
+              <Polyline
+                key={`line-${idx}-${id || "noid"}`}
+                positions={[
+                  [farm_tmp.latitude, farm_tmp.longitud],
+                  [lat, lon],
+                ]}
+              />
+            )}
           </>
         );
       });
@@ -319,7 +338,6 @@ const getTypeLabel = (type) =>{
     foundFarmsList = []
   ) => {
     if (!farmRiskData) return null;
-    console.log("renderFarmRiskPolygons", { polygons, farmRiskData, foundFarmsList });
 
     return polygons.map((farm, idx) => {
       let geojson;
@@ -328,21 +346,17 @@ const getTypeLabel = (type) =>{
           typeof farm.geojson === "string"
             ? JSON.parse(farm.geojson)
             : farm.geojson;
-      } catch {
+      } catch (err) {
         console.warn("Error parseando geojson de farm:", farm, err);
         return null;
       }
 
       const farmId = farm.farm_id || farm.id;
-
-      // Buscar riesgo asociado
       const riskObject = Object.values(farmRiskData)
         .flat()
         .find((r) => r.farm_id === farmId);
-
       const riskVal = riskObject?.risk_total ?? 0;
 
-      // Obtener sit_code
       const matchedFarm = foundFarmsList.find((f) => f.id === farmId);
       const sitCode = matchedFarm?.code || "Sin código";
 
@@ -352,41 +366,43 @@ const getTypeLabel = (type) =>{
       else if (riskVal > 0) color = "#FFD600"; // Amarillo - Bajo
 
       return (
-        <>
         <GeoJSON
           key={`farmrisk-${farmId}`}
           data={geojson}
           style={{ color, weight: 2, fillColor: color, fillOpacity: 0.3 }}
         >
           <Popup>
-  <div className="p-3  bg-white text-sm space-y-1">
-    <div className="font-semibold text-green-700">Finca</div>
-    <div>
-      <span className="font-medium">Código SIT:</span> {sitCode || "N/A"}
-    </div>
-    <div>
-      <span className="font-medium">Riesgo total:</span> {riskVal ?? "N/A"}
-    </div>
-  </div>
-</Popup>
-
+            <div className="p-3  bg-white text-sm space-y-1">
+              <div className="font-semibold text-green-700">Finca</div>
+              <div>
+                <span className="font-medium">Código SIT:</span>{" "}
+                {sitCode || "N/A"}
+              </div>
+              <div>
+                <span className="font-medium">Riesgo total:</span>{" "}
+                {riskVal ?? "N/A"}
+              </div>
+            </div>
+          </Popup>
         </GeoJSON>
-        </>
       );
     });
   };
-  // Callback estable para año inicio/fin
+
   const handleYearStartEndChange = useCallback((start, end) => {
     setYearStart(start);
     setYearEnd(end);
   }, []);
 
+  // --- Handler único de clicks WMS con limpieza ---
   function WMSRiskClickHandler({ adm3Risk, adm3Details, showPopup }) {
-    const [clickLatLng, setClickLatLng] = useState(null);
+    const activeReq = useRef(0);
 
-    const map = useMapEvent("click", async (e) => {
+    useMapEvent("click", async (e) => {
+      const reqId = ++activeReq.current;
+
+      const map = e.target;
       const { lat, lng } = e.latlng;
-      setClickLatLng([lat, lng]);
 
       const bbox = map.getBounds().toBBoxString();
       const size = map.getSize();
@@ -410,32 +426,38 @@ const getTypeLabel = (type) =>{
         INFO_FORMAT: "application/json",
       });
 
-      // ✅ Aplica proxy para evitar CORS (sin cambiar nada más)
       const rawUrl = `https://ganageo.alliance.cgiar.org/geoserver/administrative/wms?${params.toString()}`;
       const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
 
       try {
         const response = await fetch(proxiedUrl);
-        const data = await response.json();
+        if (activeReq.current !== reqId) return; // Evita carreras si hubo otro click
 
+        const data = await response.json();
         const cod_ver = data?.features?.[0]?.properties?.cod_ver;
-        if (!cod_ver) return;
+
+        if (!cod_ver) {
+          showPopup(null);
+          return;
+        }
 
         const detail = adm3Details.find((d) => d.ext_id === cod_ver);
-        if (!detail) return;
+        if (!detail) {
+          showPopup(null);
+          return;
+        }
 
         const riskArray = Object.values(adm3Risk).flat();
         const riskData = riskArray.find((r) => r.adm3_id === detail.id);
-        if (!riskData) return;
+        if (!riskData) {
+          showPopup(null);
+          return;
+        }
 
-        showPopup({
-          lat,
-          lng,
-          detail,
-          riskData,
-        });
+        showPopup({ lat, lng, detail, riskData });
       } catch (err) {
-        console.error("Error al hacer GetFeatureInfo:", err.message);
+        console.error("Error al hacer GetFeatureInfo:", err);
+        showPopup(null);
       }
     });
 
@@ -449,7 +471,6 @@ const getTypeLabel = (type) =>{
   const defLabel = hasPeriod
     ? `Deforestación ${start}-${end}`
     : "Deforestación";
-
   return (
     <>
       <div className="relative">
@@ -478,7 +499,7 @@ const getTypeLabel = (type) =>{
           onYearStartEndChange={handleYearStartEndChange}
           riskOptions={riskOptions}
           period={period}
-          setPeriod={setPeriod /*handlePeriodChanged*/}
+          setPeriod={setPeriod}
         />
 
         {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
@@ -505,11 +526,11 @@ const getTypeLabel = (type) =>{
 
           <LayersControl position="bottomleft">
             <LayersControl.Overlay
-              key={`def-${start ?? 'na'}-${end ?? 'na'}-${source}-${risk}`}
+              key={`def-${start ?? "na"}-${end ?? "na"}-${source}-${risk}`}
               name={defLabel}
             >
               <WMSTileLayer
-                key={`wms-${start ?? 'na'}-${end ?? 'na'}-${source}-${risk}`}
+                key={`wms-${start ?? "na"}-${end ?? "na"}-${source}-${risk}`}
                 url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
                 layers={`${source}`}
                 format="image/png"
@@ -519,6 +540,7 @@ const getTypeLabel = (type) =>{
                 zIndex={1000}
               />
             </LayersControl.Overlay>
+
             <LayersControl.Overlay name="Áreas protegidas">
               <WMSTileLayer
                 url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
@@ -529,6 +551,7 @@ const getTypeLabel = (type) =>{
                 zIndex={1001}
               />
             </LayersControl.Overlay>
+
             <LayersControl.Overlay name="Frontera agrícola">
               <WMSTileLayer
                 url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
@@ -539,6 +562,7 @@ const getTypeLabel = (type) =>{
                 zIndex={1001}
               />
             </LayersControl.Overlay>
+
             {farmRisk && (
               <LayersControl.Overlay name="Veredas">
                 <WMSTileLayer
@@ -566,20 +590,20 @@ const getTypeLabel = (type) =>{
           {renderGeoJsons(allOutputs, "purple", farmPolygons)}
 
           {renderFarmRiskPolygons(farmPolygons, riskFarm, foundFarms)}
+          {foundAdms &&
+            foundAdms.length > 0 &&
+            adm3Details.map((detail) => {
+              const riskArray = Object.values(adm3Risk || {}).flat();
+              const riskData = riskArray.find((r) => r.adm3_id === detail.id);
+              if (!riskData) return null;
+              const riskVal = riskData.risk_total;
 
-          {adm3Details.map((detail) => {
-            const riskArray = Object.values(adm3Risk).flat();
-            const riskData = riskArray.find((r) => r.adm3_id === detail.id);
-            if (!riskData) return null;
-            const risk = riskData.risk_total;
-            let styleName = "norisk";
+              let styleName = "norisk";
+              if (riskVal > 2.5) styleName = "hightrisk";
+              else if (riskVal > 1.5) styleName = "mediumrisk";
+              else if (riskVal > 0) styleName = "lowrisk";
 
-            if (risk > 2.5) styleName = "hightrisk";
-            else if (risk > 1.5) styleName = "mediumrisk";
-            else if (risk > 0) styleName = "lowrisk";
-
-            return (
-              <>
+              return (
                 <WMSTileLayer
                   key={detail.ext_id}
                   url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
@@ -590,26 +614,30 @@ const getTypeLabel = (type) =>{
                   styles={styleName}
                   zIndex={10000}
                 />
+              );
+            })}
 
-                <WMSRiskClickHandler
-                  adm3Risk={adm3Risk}
-                  adm3Details={adm3Details}
-                  showPopup={setPopupData}
-                />
+          {adm3Risk && adm3Details?.length > 0 && foundAdms?.length > 0 && (
+            <WMSRiskClickHandler
+              adm3Risk={adm3Risk}
+              adm3Details={adm3Details}
+              showPopup={setPopupData}
+            />
+          )}
 
-                {/* Renderizas el popup si hay datos */}
-                {popupData && (
-                  <Popup position={[popupData.lat, popupData.lng]} key={`popup-${popupData.detail.ext_id}`}>
-                    <RiskPopup
-                      detail={popupData.detail}
-                      riskData={popupData.riskData}
-                      yearStart={yearStart}
-                    />
-                  </Popup>
-                )}
-              </>
-            );
-          })}
+          {/* --- Un solo Popup controlado por estado --- */}
+          {popupData && (
+            <Popup
+              position={[popupData.lat, popupData.lng]}
+              key={`popup-${popupData.detail.ext_id}`}
+            >
+              <RiskPopup
+                detail={popupData.detail}
+                riskData={popupData.riskData}
+                yearStart={yearStart}
+              />
+            </Popup>
+          )}
         </MapContainer>
       </div>
 

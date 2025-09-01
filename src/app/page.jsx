@@ -1,88 +1,138 @@
-'use client';
+"use client";
 
-import Image from 'next/image';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faMap, faChartBar, faUserCheck, faTractor, faBuilding } from '@fortawesome/free-solid-svg-icons';
+import Image from "next/image";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import {
+  faMap,
+  faChartBar,
+  faTractor,
+  faBuilding,
+} from "@fortawesome/free-solid-svg-icons";
+import { useAuth } from "@/hooks/useAuth";
+import { useRouter } from "next/navigation";
 
+// Constantes
+const FEATURES_DATA = [
+  {
+    icon: faMap,
+    title: "Riesgo nacional",
+    description:
+      "Explora el nivel de riesgo de deforestación en Colombia por departamento, municipio o vereda. Una visión clara para tomar decisiones informadas y basadas en evidencia.",
+  },
+  {
+    icon: faTractor,
+    title: "Riesgo de predios",
+    description:
+      "Accede a información detallada y georreferenciada sobre el riesgo de deforestación en predios específicos. Una mirada cercana al territorio.",
+  },
+  {
+    icon: faBuilding,
+    title: "Riesgo de empresas",
+    description:
+      "Descubre cómo las actividades económicas y empresariales se relacionan con zonas de riesgo y cómo impactan nuestros ecosistemas.",
+  },
+  {
+    icon: faChartBar,
+    title: "Metodología",
+    description:
+      "Conoce la base técnica y científica detrás de los mapas de riesgo. Transparencia y rigor para entender cómo se priorizan territorios y se analizan los impactos ambientales.",
+  },
+];
+
+// Clases CSS reutilizables
+const CSS_CLASSES = {
+  heroSection: "relative w-full h-[80vh] md:h-[90vh] overflow-hidden",
+  heroOverlay:
+    "absolute inset-0 z-10 flex items-center bg-gradient-to-r from-black/70 from-25% to-black/20",
+  heroContent: "text-white px-6 md:px-20 max-w-2xl",
+  heroTitle: "text-5xl md:text-6xl font-heading font-bold mb-4",
+  heroDescription:
+    "text-lg md:text-xl font-plus-jakarta mb-6 text-custom-light",
+  explorarButton:
+    "bg-[#C5F642] text-[#082C14] px-6 py-3 rounded-full font-plus-jakarta font-semibold hover:bg-[#B5E632] transition-colors duration-200 cursor-pointer",
+  featuresContainer: "max-w-8xl mx-auto px-6 md:px-12 lg:px-20 py-16",
+  featuresSection:
+    "flex flex-col lg:flex-row lg:items-stretch lg:justify-between gap-12",
+  featureCard: "text-center flex-1 lg:max-w-xs mx-auto lg:mx-0",
+  featureIcon: "mb-6 flex justify-center",
+  featureTitle: "font-bold text-xl mb-4 text-[#082C14]",
+  featureDescription: "text-[#082C14] font-medium font-plus-jakarta",
+  separator: "hidden lg:flex justify-center items-center px-4",
+  separatorLine: "w-px h-full bg-[#082C14]/75",
+};
 
 export default function Home() {
+  const { userInfo, login } = useAuth();
+  const router = useRouter();
+
+  const handleExplorarMapas = () => {
+    userInfo ? router.push("/riesgosnacionales") : login();
+  };
+
+  // Componente para renderizar una característica
+  const FeatureCard = ({ icon, title, description }) => (
+    <div className={CSS_CLASSES.featureCard}>
+      <div className={CSS_CLASSES.featureIcon}>
+        <FontAwesomeIcon icon={icon} className="text-[#082C14]" size="3x" />
+      </div>
+      <h3 className={CSS_CLASSES.featureTitle}>{title}</h3>
+      <p className={CSS_CLASSES.featureDescription}>{description}</p>
+    </div>
+  );
+
+  // Componente para renderizar separador
+  const Separator = () => (
+    <div className={CSS_CLASSES.separator}>
+      <div className={CSS_CLASSES.separatorLine}></div>
+    </div>
+  );
+
   return (
     <>
-      {/* Hero Section con imagen de fondo y texto alineado a la izquierda */}
-      <section className="relative w-full h-[80vh] md:h-[90vh] overflow-hidden">
+      {/* Hero Section */}
+      <section className={CSS_CLASSES.heroSection}>
         <Image
           src="/bosque.png"
           alt="Imagen aérea del bosque"
-          layout="fill"
-          objectFit="cover"
+          fill
+          style={{ objectFit: "cover" }}
           quality={100}
           className="absolute inset-0 z-0"
+          priority
         />
-        <div className="absolute inset-0 z-10 flex items-center bg-black/40">
-          {/* Texto alineado a la izquierda con padding */}
-          <div className="text-white px-6 md:px-20 max-w-2xl">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4">Ganabosques</h1>
-            <h2 className="text-sm md:text-base tracking-widest uppercase">
-              Tecnología al servicio del monitoreo ambiental
-            </h2>
+        <div className={CSS_CLASSES.heroOverlay}>
+          <div className={CSS_CLASSES.heroContent}>
+            <h1 className={CSS_CLASSES.heroTitle}>
+              <span className="text-[#C5F642]">Gana</span>
+              <span className="text-[#77D094]">Bosques</span>
+            </h1>
+            <p className={CSS_CLASSES.heroDescription}>
+              Visualiza el riesgo de deforestación y el movimiento de ganado en
+              Colombia, fácil y en un solo lugar.
+            </p>
+            <button
+              onClick={handleExplorarMapas}
+              className={CSS_CLASSES.explorarButton}
+            >
+              Explorar mapas
+            </button>
           </div>
         </div>
       </section>
 
-      {/* Contenido inferior */}
-      <main className="max-w-7xl mx-auto px-6 md:px-12 lg:px-20 py-12">
-  <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-10">
-    {/* Riesgo Nacional */}
-    <div className="text-left">
-      <div className="mb-4">
-        <FontAwesomeIcon icon={faMap} className="text-green-700" size="2x" />
-      </div>
-      <h3 className="font-bold text-lg mb-2">Riesgo Nacional</h3>
-      <p className="text-gray-700 text-justify">
-        Consulta el nivel de riesgo de deforestación por departamento, municipio o vereda.
-        Una herramienta para tomar decisiones con base en evidencia.
-      </p>
-    </div>
-
-    {/* Riesgo de Predios */}
-    <div className="text-left">
-      <div className="mb-4">
-        <FontAwesomeIcon icon={faTractor} className="text-green-700" size="2x" />
-      </div>
-      <h3 className="font-bold text-lg mb-2">Riesgo de Predios</h3>
-      <p className="text-gray-700 text-justify">
-        Accede a información detallada sobre riesgo de deforestación a nivel de predios
-        específicos, con visualización geoespacial integrada.
-      </p>
-    </div>
-
-    {/* Riesgo de Empresas */}
-    <div className="text-left">
-      <div className="mb-4">
-        <FontAwesomeIcon icon={faBuilding} className="text-green-700" size="2x" />
-      </div>
-      <h3 className="font-bold text-lg mb-2">Riesgo de Empresas</h3>
-      <p className="text-gray-700 text-justify">
-        Analiza cómo ciertas actividades económicas y empresas se relacionan con zonas
-        de riesgo y contribuyen a la presión sobre los ecosistemas.
-      </p>
-    </div>
-
-    {/* Metodología */}
-    <div className="text-left">
-      <div className="mb-4">
-        <FontAwesomeIcon icon={faChartBar} className="text-green-700" size="2x" />
-      </div>
-      <h3 className="font-bold text-lg mb-2">Metodología</h3>
-      <p className="text-gray-700 text-justify">
-        Conoce la metodología técnica y científica empleada para construir los mapas de riesgo,
-        priorización y análisis de impactos ambientales.
-      </p>
-    </div>
-  </section>
-</main>
-
-
+      {/* Features Section */}
+      <main className={CSS_CLASSES.featuresContainer}>
+        <section className={CSS_CLASSES.featuresSection}>
+          {FEATURES_DATA.map((feature, index) => (
+            <>
+              <FeatureCard key={feature.title} {...feature} />
+              {index < FEATURES_DATA.length - 1 && (
+                <Separator key={`separator-${index}`} />
+              )}
+            </>
+          ))}
+        </section>
+      </main>
     </>
   );
 }

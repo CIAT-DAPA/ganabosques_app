@@ -1,17 +1,19 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Raleway, Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/hooks/useAuth"; 
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
+const raleway = Raleway({
+  variable: "--font-raleway",
   subsets: ["latin"],
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
+const plusJakartaSans = Plus_Jakarta_Sans({
+  variable: "--font-plus-jakarta-sans",
   subsets: ["latin"],
+  display: "swap",
 });
 
 export const metadata = {
@@ -22,7 +24,7 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${raleway.variable} ${plusJakartaSans.variable} antialiased`}>
         <AuthProvider> 
           <Header />
           {children}

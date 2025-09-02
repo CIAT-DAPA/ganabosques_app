@@ -1,27 +1,54 @@
 @import "tailwindcss";
 
-/* Variables for light mode only (forzado) */
+/* Variables de colores y tipografías personalizadas */
 :root {
-  --background: #ffffff;  /* fondo blanco */
-  --foreground: #171717;  /* texto casi negro */
+  /* Colores personalizados */
+  --background: #FCFFF5;     /* Color de fondo personalizado en lugar del blanco */
+  --foreground: #082C14;     /* Color de texto principal (fondo oscuro) */
+  --background-dark: #082C14; /* Color para fondos oscuros */
+  --foreground-light: #FCFFF5; /* Color de texto claro para fondos oscuros */
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
 
-  /* Tipografías personalizadas si las usas */
-  --font-sans: var(--font-geist-sans, Arial, sans-serif);
-  --font-mono: var(--font-geist-mono, monospace);
+  /* Tipografías personalizadas */
+  --font-heading: var(--font-raleway, "Raleway", Arial, sans-serif);      /* Para títulos */
+  --font-body: var(--font-plus-jakarta-sans, "Plus Jakarta Sans", Arial, sans-serif); /* Para texto general */
 }
-
-/* No hay media query para dark mode → todo queda en blanco siempre */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-sans, Arial, Helvetica, sans-serif);
+  font-family: var(--font-body, "Plus Jakarta Sans", Arial, Helvetica, sans-serif);
   margin: 0;
   padding: 0;
   line-height: 1.6;
+}
+
+/* Clases utilitarias para tipografías */
+.font-heading {
+  font-family: var(--font-heading, "Raleway", Arial, sans-serif);
+}
+
+.font-body {
+  font-family: var(--font-body, "Plus Jakarta Sans", Arial, sans-serif);
+}
+
+/* Clases utilitarias para colores */
+.bg-custom {
+  background-color: var(--background);
+}
+
+.bg-custom-dark {
+  background-color: var(--background-dark);
+}
+
+.text-custom {
+  color: var(--foreground);
+}
+
+.text-custom-light {
+  color: var(--foreground-light);
 }
 .leaflet-popup-content-wrapper {
   max-width: none !important;

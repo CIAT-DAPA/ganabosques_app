@@ -77,3 +77,122 @@ body {
   padding: 12px;
   width: 220px;
 }
+
+/* Estilos personalizados para controles de Leaflet */
+/* Contenedor principal del control de zoom */
+.leaflet-control-zoom {
+  border-radius: 8px !important;
+  overflow: hidden !important;
+  box-shadow: 0 2px 8px rgba(8, 44, 20, 0.15) !important;
+}
+
+/* Botones de zoom */
+.leaflet-control-zoom a {
+  background-color: var(--background) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  color: var(--foreground) !important;
+  transition: all 0.2s ease-in-out;
+  box-shadow: none !important;
+}
+
+.leaflet-control-zoom a:first-child {
+  border-top-left-radius: 8px !important;
+  border-top-right-radius: 8px !important;
+  border-bottom: 1px solid rgba(8, 44, 20, 0.3) !important;
+}
+
+.leaflet-control-zoom a:last-child {
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+}
+
+.leaflet-control-zoom a:hover {
+  background-color: var(--background-dark) !important;
+  color: var(--foreground-light) !important;
+}
+
+/* Control de layers */
+.leaflet-control-layers {
+  background-color: var(--background) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(8, 44, 20, 0.15) !important;
+}
+
+.leaflet-control-layers-toggle {
+  background-color: var(--background) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  transition: all 0.2s ease-in-out;
+  box-shadow: 0 2px 8px rgba(8, 44, 20, 0.15) !important;
+}
+
+.leaflet-control-layers-toggle:hover {
+  background-color: var(--background-dark) !important;
+  box-shadow: 0 4px 12px rgba(8, 44, 20, 0.25) !important;
+}
+
+/* SVG en los botones de zoom - cambiar color negro a custom-dark */
+.leaflet-control-zoom a svg,
+.leaflet-control-zoom a:before,
+.leaflet-control-zoom a:after {
+  color: var(--foreground) !important;
+}
+
+/* Para los iconos de texto en los botones de zoom */
+.leaflet-control-zoom-in,
+.leaflet-control-zoom-out {
+  color: var(--foreground) !important;
+  font-weight: bold;
+}
+
+.leaflet-control-zoom a:hover .leaflet-control-zoom-in,
+.leaflet-control-zoom a:hover .leaflet-control-zoom-out {
+  color: var(--foreground-light) !important;
+}
+
+/* Estilo para el icono del control de layers */
+.leaflet-control-layers-toggle:after {
+  background-color: var(--foreground) !important;
+}
+
+.leaflet-control-layers-toggle:hover:after {
+  background-color: var(--foreground-light) !important;
+}
+
+/* Panel desplegable de layers */
+.leaflet-control-layers-expanded {
+  background-color: var(--background) !important;
+  border: none !important;
+  border-radius: 12px !important;
+  box-shadow: 0 6px 16px rgba(8, 44, 20, 0.2) !important;
+}
+
+/* Texto en el panel de layers */
+.leaflet-control-layers label {
+  color: var(--foreground) !important;
+  font-family: var(--font-body) !important;
+  font-size: 0.875rem;
+}
+
+/* Checkboxes en el panel de layers */
+.leaflet-control-layers input[type="checkbox"] {
+  accent-color: var(--foreground) !important;
+}
+
+/* Asegurar que todos los elementos svg tengan el color correcto */
+.leaflet-control svg {
+  fill: var(--foreground) !important;
+  stroke: var(--foreground) !important;
+}
+
+.leaflet-control:hover svg {
+  fill: var(--foreground-light) !important;
+  stroke: var(--foreground-light) !important;
+}
+
+/* Estilo adicional para el icono de layers cuando está expandido */
+.leaflet-control-layers-expanded .leaflet-control-layers-toggle:after {
+  background-color: var(--foreground) !important;
+}

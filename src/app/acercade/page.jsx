@@ -1,3 +1,6 @@
+"use client";
+
+import { useEffect } from "react";
 import Image from "next/image";
 
 // Constantes
@@ -47,6 +50,11 @@ const CSS_CLASSES = {
 };
 
 export default function AcercaDe() {
+  // Configurar el título de la página
+  useEffect(() => {
+    document.title = "Ganabosques - Acerca de";
+  }, []);
+
   // Componente para renderizar una contribución
   const ContribucionItem = ({ texto }) => (
     <li className={CSS_CLASSES.contributionItem}>

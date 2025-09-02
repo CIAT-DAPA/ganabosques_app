@@ -29,33 +29,79 @@ const RiskPopup = ({ detail, riskData, yearStart }) => {
     return detail.label.split(",")[0].trim() || "Desconocido";
   }
 
-  const options = {
-    chart: {
-      type: "bar",
-      height: 250,
-      toolbar: { show: false },
+ const options = {
+  chart: {
+    type: "bar",
+    height: 250,
+    toolbar: { show: false },
+  },
+  plotOptions: {
+    bar: {
+      distributed: true,
+      borderRadius: 6,
     },
-    plotOptions: {
-      bar: {
-        distributed: true,
-        borderRadius: 6,
+  },
+  colors: historial.map((item) => getRiskLabel(item.value).color),
+  xaxis: {
+    categories: historial.map((item) => item.year),
+    labels: { style: { fontSize: "12px" } },
+  },
+  yaxis: {
+    title: { text: "Nivel de Riesgo" },
+    labels: {
+  formatter: (val) => {
+    if (val === 0) return "Riesgo bajo";
+    if (val === 1.5) return "Riesgo medio";
+    if (val === 2.5) return "Riesgo alto";
+    return "";
+  },
+},
+
+    max: 3,
+  },
+  tooltip: {
+    y: { formatter: (val) => val.toFixed(2) },
+  },
+  legend: { show: false },
+  annotations: {
+    yaxis: [
+      {
+        y: 2.5,
+        borderColor: "#D50000",
+        label: {
+          
+          style: {
+            background: "#D50000",
+            color: "#fff",
+          },
+        },
       },
-    },
-    colors: historial.map((item) => getRiskLabel(item.value).color),
-    xaxis: {
-      categories: historial.map((item) => item.year),
-      labels: { style: { fontSize: "12px" } },
-    },
-    yaxis: {
-      title: { text: "Nivel de Riesgo" },
-      labels: { formatter: (val) => val.toFixed(1) },
-      max: 3,
-    },
-    tooltip: {
-      y: { formatter: (val) => val.toFixed(2) },
-    },
-    legend: { show: false },
-  };
+      {
+        y: 1.5,
+        borderColor: "#FF6D00",
+        label: {
+       
+          style: {
+            background: "#FF6D00",
+            color: "#fff",
+          },
+        },
+      },
+      {
+        y: 0,
+        borderColor: "#00C853",
+        label: {
+         
+          style: {
+            background: "#00C853",
+            color: "#fff",
+          },
+        },
+      },
+    ],
+  },
+};
+
 
   return (
     <div

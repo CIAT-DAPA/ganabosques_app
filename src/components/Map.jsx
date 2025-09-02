@@ -30,7 +30,6 @@ import { useAdm3Risk } from "@/hooks/useAdm3Risk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { useAdm3Details } from "@/hooks/useAdm3Details";
 
-// --- Leaflet icon defaults ---
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -72,6 +71,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const [adm3Risk, setAdm3Risk] = useState(null);
   const [adm3Details, setAdm3Details] = useState([]);
   const [popupData, setPopupData] = useState(null);
+  const [lastCenteredExtId, setLastCenteredExtId] = useState(null);
 
   const movement = useFilteredMovement(originalMovement, yearStart);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
@@ -467,10 +467,92 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
   const start = period?.deforestation_year_start ?? null;
   const end = period?.deforestation_year_end ?? null;
   const hasPeriod = start != null && end != null;
-
+  console.log(adm3Details);
   const defLabel = hasPeriod
     ? `Deforestación ${start}-${end}`
     : "Deforestación";
+
+  function FlyToAdm3Detail({
+    adm3Details,
+    lastCenteredExtId,
+    setLastCenteredExtId,
+  }) {
+    const map = useMap();
+
+    useEffect(() => {
+      if (!map || !adm3Details || adm3Details.length === 0) return;
+
+      const latest = adm3Details[adm3Details.length - 1];
+      const extId = latest?.ext_id || latest?.cod_ver || latest?.id;
+      if (!extId) return;
+
+      if (extId === lastCenteredExtId) {
+        console.log("🔁 Ya centrado en", extId);
+        return;
+      }
+
+      console.log("📍 Volando a nuevo adm3:", extId);
+      setLastCenteredExtId(extId); // ✅ marcamos como ya centrado
+
+      const wfsUrl = `https://ganageo.alliance.cgiar.org/geoserver/administrative/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=administrative:admin_3&outputFormat=application/json&CQL_FILTER=cod_ver='${extId}'&srsName=EPSG:4326`;
+      const fullUrl = `https://corsproxy.io/?${encodeURIComponent(wfsUrl)}`;
+
+      fetch(fullUrl)
+        .then((res) => res.json())
+        .then((geojson) => {
+          const coords = [];
+
+          geojson?.features?.forEach((feature) => {
+            const geom = feature.geometry;
+
+            if (geom?.type === "Polygon") {
+              geom.coordinates[0].forEach(([lon, lat]) => {
+                coords.push([lat, lon]);
+              });
+            }
+
+            if (geom?.type === "MultiPolygon") {
+              geom.coordinates.forEach((polygon) => {
+                polygon[0].forEach(([lon, lat]) => {
+                  coords.push([lat, lon]);
+                });
+              });
+            }
+          });
+
+          if (coords.length > 0) {
+            const bounds = L.latLngBounds(coords);
+            map.flyToBounds(bounds, { padding: [50, 50], duration: 1.5 });
+          }
+        })
+        .catch((err) => {
+          console.error("❌ Error al centrar en adm3:", err);
+        });
+    }, [adm3Details, lastCenteredExtId, setLastCenteredExtId]);
+
+    return null;
+  }
+
+  useEffect(() => {
+    if (adm3Details.length === 0) {
+      setLastCenteredExtId(null);
+    }
+  }, [adm3Details]);
+
+  function ZoomControlTopRight() {
+    const map = useMap();
+
+    useEffect(() => {
+      const zoom = L.control.zoom({ position: "topright" });
+      zoom.addTo(map);
+      return () => {
+        zoom.remove();
+      };
+    }, [map]);
+
+    return null;
+  }
+
   return (
     <>
       <div className="relative">
@@ -514,6 +596,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
           center={[4.5709, -74.2973]}
           zoom={6}
           scrollWheelZoom={true}
+          zoomControl={false}
           className="h-[80vh] w-full"
           whenCreated={(mapInstance) => {
             mapRef.current = mapInstance;
@@ -524,7 +607,7 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 
-          <LayersControl position="bottomleft">
+          <LayersControl position="topright">
             <LayersControl.Overlay
               key={`def-${start ?? "na"}-${end ?? "na"}-${source}-${risk}`}
               name={defLabel}
@@ -576,12 +659,18 @@ export default function LeafletMap({ enterpriseRisk, farmRisk, nationalRisk }) {
               </LayersControl.Overlay>
             )}
           </LayersControl>
+          <ZoomControlTopRight />
 
           {loading && (
             <LoadingSpinner message="Cargando datos y polígonos..." />
           )}
 
           <FlyToFarmPolygons polygons={farmPolygons} />
+          <FlyToAdm3Detail
+            adm3Details={adm3Details}
+            lastCenteredExtId={lastCenteredExtId}
+            setLastCenteredExtId={setLastCenteredExtId}
+          />
 
           {renderMarkers(allInputs, "#8B4513", farmPolygons)}
           {renderGeoJsons(allInputs, "#8B4513", farmPolygons)}

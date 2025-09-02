@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import dynamic from 'next/dynamic';
 import 'leaflet/dist/leaflet.css';
 import Banner from '@/components/Banner';
@@ -11,6 +12,11 @@ const Map = dynamic(() => import('@/components/Map'), {
 });
 
 export default function RiesgosNacionales() {
+  // Configurar el título de la página
+  useEffect(() => {
+    document.title = "Ganabosques - Riesgos de empresas";
+  }, []);
+
   const { validatedPayload } = useAuth();
   if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
   return <UnauthorizedPage />;

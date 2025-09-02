@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
@@ -62,6 +63,11 @@ const CSS_CLASSES = {
 };
 
 export default function Home() {
+  // Configurar el título de la página
+  useEffect(() => {
+    document.title = "Ganabosques";
+  }, []);
+
   const { userInfo, login } = useAuth();
   const router = useRouter();
 

@@ -38,10 +38,37 @@ const CHART_CONFIG = {
 };
 
 const RISK_LEVELS = {
-  HIGH: { threshold: 2.5, color: "red-500", label: "Riesgo alto" },
-  MEDIUM: { threshold: 1.5, color: "orange-400", label: "Riesgo medio" },
-  LOW: { threshold: 0, color: "yellow-400", label: "Riesgo bajo" },
-  NONE: { color: "green-500", label: "Sin riesgo" },
+  HIGH: {
+    threshold: 2.5,
+    color: "red-500",
+    label: "Riesgo alto",
+    bgClass: "bg-red-500/20",
+    borderClass: "border-red-500",
+    textClass: "text-red-700",
+  },
+  MEDIUM: {
+    threshold: 1.5,
+    color: "orange-400",
+    label: "Riesgo medio",
+    bgClass: "bg-orange-400/20",
+    borderClass: "border-orange-400",
+    textClass: "text-orange-700",
+  },
+  LOW: {
+    threshold: 0,
+    color: "yellow-400",
+    label: "Riesgo bajo",
+    bgClass: "bg-yellow-400/20",
+    borderClass: "border-yellow-400",
+    textClass: "text-yellow-700",
+  },
+  NONE: {
+    color: "green-500",
+    label: "Sin riesgo",
+    bgClass: "bg-green-500/20",
+    borderClass: "border-green-500",
+    textClass: "text-green-700",
+  },
 };
 
 // Utilidades
@@ -55,8 +82,9 @@ const getRiskLevel = (value) => {
   return {
     color: `bg-${riskType.color}`,
     label: riskType.label,
-    bgOpacity: `bg-${riskType.color}/20`,
-    border: `border-${riskType.color}`,
+    bgClass: riskType.bgClass,
+    borderClass: riskType.borderClass,
+    textClass: riskType.textClass,
   };
 };
 
@@ -84,7 +112,7 @@ const InfoItem = ({ label, value, suffix = "" }) => (
 
 const RiskBadge = ({ level }) => (
   <span
-    className={`text-xs text-custom-dark px-2 py-1 ${level.bgOpacity} ${level.border} border rounded-full`}
+    className={`text-xs px-2 py-1 ${level.bgClass} ${level.borderClass} ${level.textClass} border rounded-full font-medium`}
   >
     {level.label}
   </span>

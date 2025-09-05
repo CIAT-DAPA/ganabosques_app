@@ -1,14 +1,15 @@
 "use client";
 
-import { Marker, GeoJSON, Popup, Polyline } from "react-leaflet";
+import { Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 
+// === Mapeo de íconos para empresas (se mantiene igual) ===
 const TYPE_BASE = {
   SLAUGHTERHOUSE: "planta",
   COLLECTION_CENTER: "acopio",
   CATTLE_FAIR: "feria",
   ENTERPRISE: "empresa",
-  FARM: "empresa",
+  FARM: "finca", // por si viene el type
 };
 
 function getEnterpriseBase(type) {
@@ -16,20 +17,27 @@ function getEnterpriseBase(type) {
   return TYPE_BASE[type] || "empresa";
 }
 
-function getIconUrl(type, flow, isMixed) {
+function getEnterpriseIcon(type, flow, isMixed) {
   const base = getEnterpriseBase(type);
   const variant = isMixed ? "mixta" : flow; // prioridad a mixta
-  return `/${base}_${variant}.png`;
-}
-
-function getLeafletIcon(type, flow, isMixed) {
-  const url = getIconUrl(type, flow, isMixed);
   return L.icon({
-    iconUrl: url,
+    iconUrl: `/${base}_${variant}.png`,
     iconSize: [28, 28],
     iconAnchor: [14, 28],
     popupAnchor: [0, -24],
     className: "enterprise-marker",
+  });
+}
+
+// === Ícono para fincas (nuevo) ===
+function getFarmIcon(flow, isMixed) {
+  const variant = isMixed ? "mixta" : flow; // 'entrada' | 'salida' | 'mixta'
+  return L.icon({
+    iconUrl: `/finca_${variant}.png`,
+    iconSize: [30, 30],
+    iconAnchor: [15, 30],
+    popupAnchor: [0, -26],
+    className: "farm-marker",
   });
 }
 
@@ -63,55 +71,13 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
     ...(m.outputs?.enterprises || []).map((entry) => ({ ...entry, __farmId: farmId })),
   ]);
 
-  const renderGeoJsons = (entries, color) => {
-    return (entries || [])
-      .filter((e) => e?.destination?.geojson)
-      .map((entry, idx) => {
-        try {
-          const originFarmId = String(entry.__farmId ?? "");
-          const targetFarmId = String(entry.destination?.farm_id ?? "");
-          if (!originFarmId || !targetFarmId || originFarmId === targetFarmId) return null;
-
-          const data =
-            typeof entry.destination.geojson === "string"
-              ? JSON.parse(entry.destination.geojson)
-              : entry.destination.geojson;
-
-          const yearKey = String(yearStart);
-          const farmsMixed = (movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []).map(String);
-          const isMixed = farmsMixed.includes(targetFarmId);
-          const finalColor = isMixed ? "#e91e63" : color;
-
-          return (
-            <GeoJSON
-              key={`geojson-${targetFarmId || idx}`}
-              data={data}
-              style={{ color: finalColor, weight: 2, fillOpacity: 0.3 }}
-            >
-              <Popup>
-                <div className="p-3 bg-white text-sm space-y-1">
-                  <div>
-                    <span className="font-semibold">Código SIT:</span>{" "}
-                    {data.name || "N/A"}
-                  </div>
-                </div>
-              </Popup>
-            </GeoJSON>
-          );
-        } catch (error) {
-          console.warn("Error al parsear geojson:", error);
-          return null;
-        }
-      });
-  };
-
-  const renderMarkers = (movements, flow, lineColor, farm_main) => {
+  const renderEnterpriseMarkers = (movements, flow, lineColor, farm_main) => {
     return (movements || [])
       .filter(
         (m) =>
           m?.destination?.latitude &&
           m?.destination?.longitud &&
-          !m?.destination?.farm_id
+          !m?.destination?.farm_id // ← empresas
       )
       .map((m, idx) => {
         const dest = m.destination;
@@ -126,33 +92,84 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
         const enterprisesMixed = (movement?.[originFarmId]?.mixed?.[yearKey]?.enterprises || []).map(String);
         const isMixed = !!originFarmId && !!id && enterprisesMixed.includes(id);
 
-        const icon = getLeafletIcon(type, flow, isMixed);
+        const icon = getEnterpriseIcon(type, flow, isMixed);
         const finalLineColor = isMixed ? "#e91e63" : lineColor;
         const farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
 
         return (
           <>
             <Marker
-              key={`marker-${idx}-${id || "noid"}`}
+              key={`ent-${idx}-${id || "noid"}`}
               position={[lat, lon]}
               icon={icon}
             >
               <Popup>
                 <div className="p-3 bg-white text-sm space-y-2">
-                  <div>
-                    <span className="font-semibold">Tipo:</span>{" "}
-                    {getTypeLabel(type)}
-                  </div>
-                  <div>
-                    <span className="font-semibold">Nombre:</span> {name}
-                  </div>
+                  <div><span className="font-semibold">Tipo:</span> {getTypeLabel(type)}</div>
+                  <div><span className="font-semibold">Nombre:</span> {name}</div>
                 </div>
               </Popup>
             </Marker>
 
             {farm_tmp && (
               <Polyline
-                key={`line-${idx}-${id || "noid"}`}
+                key={`ent-line-${idx}-${id || "noid"}`}
+                positions={[
+                  [farm_tmp.latitude, farm_tmp.longitud],
+                  [lat, lon],
+                ]}
+                pathOptions={{ color: finalLineColor }}
+              />
+            )}
+          </>
+        );
+      });
+  };
+
+  const renderFarmMarkers = (movements, flow, lineColor, farm_main) => {
+    console.log('Rendering farm markers for', movements);
+    return (movements || [])
+      .filter(
+        (m) =>
+          m?.destination?.latitude &&
+          m?.destination?.longitud &&
+          m?.destination?.farm_id // ← fincas
+      )
+      .map((m, idx) => {
+        const dest = m.destination;
+        const lat = dest.latitude;
+        const lon = dest.longitud;
+        const name = dest.name || dest.code || "Finca";
+        const targetFarmId = String(dest.farm_id ?? "");
+
+        const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
+        const yearKey = String(yearStart);
+        const farmsMixed = (movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []).map(String);
+        const isMixed = !!originFarmId && !!targetFarmId && farmsMixed.includes(targetFarmId);
+
+        const icon = getFarmIcon(flow, isMixed);
+        const finalLineColor = isMixed ? "#e91e63" : lineColor;
+        const farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
+
+        return (
+          <>
+            <Marker
+              key={`farm-${idx}-${targetFarmId || "noid"}`}
+              position={[lat, lon]}
+              icon={icon}
+            >
+              <Popup>
+                <div className="p-3 bg-white text-sm space-y-2">
+                  <div><span className="font-semibold">Tipo:</span> Finca</div>
+                  <div><span className="font-semibold">Nombre:</span> {name}</div>
+                  <div><span className="font-semibold">ID:</span> {targetFarmId || "N/A"}</div>
+                </div>
+              </Popup>
+            </Marker>
+
+            {farm_tmp && (
+              <Polyline
+                key={`farm-line-${idx}-${targetFarmId || "noid"}`}
                 positions={[
                   [farm_tmp.latitude, farm_tmp.longitud],
                   [lat, lon],
@@ -168,12 +185,12 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
   return (
     <>
       {/* ENTRADAS */}
-      {renderMarkers(allInputs, "entrada", "#8B4513", farmPolygons)}
-      {renderGeoJsons(allInputs, "#8B4513")}
+      {renderEnterpriseMarkers(allInputs, "entrada", "#8B4513", farmPolygons)}
+      {renderFarmMarkers(allInputs, "entrada", "#8B4513", farmPolygons)}
 
       {/* SALIDAS */}
-      {renderMarkers(allOutputs, "salida", "purple", farmPolygons)}
-      {renderGeoJsons(allOutputs, "purple")}
+      {renderEnterpriseMarkers(allOutputs, "salida", "purple", farmPolygons)}
+      {renderFarmMarkers(allOutputs, "salida", "purple", farmPolygons)}
     </>
   );
 }

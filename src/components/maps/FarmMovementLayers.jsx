@@ -57,7 +57,7 @@ function getGeojsonName(geojson) {
 function getTypeLabel(type) {
   switch (type) {
     case "SLAUGHTERHOUSE":
-      return "Planta de sacrificio";
+      return "Planta de beneficio";
     case "COLLECTION_CENTER":
       return "Centro de acopio";
     case "CATTLE_FAIR":
@@ -170,7 +170,6 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
         const finalLineColor = isMixed ? "#e91e63" : lineColor;
         const farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
 
-        // AQUÍ: tomar el "name" desde el geojson del destino
         const sitCode = getGeojsonName(dest.geojson);
         const displayName = dest.name || dest.code || "Finca";
 

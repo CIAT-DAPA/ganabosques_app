@@ -21,9 +21,9 @@ function getEnterpriseIcon(type, flow, isMixed) {
   const variant = isMixed ? "mixta" : flow;
   return L.icon({
     iconUrl: `/${base}_${variant}.png`,
-    iconSize: [28, 28],
-    iconAnchor: [14, 28],
-    popupAnchor: [0, -24],
+    iconSize: [28 * 1.5, 38 * 1.5],
+    iconAnchor: [14 * 1.5, 38 * 1.5],
+    popupAnchor: [0, -24 * 1.5],
     className: "enterprise-marker",
   });
 }
@@ -32,9 +32,9 @@ function getFarmIcon(flow, isMixed) {
   const variant = isMixed ? "mixta" : flow;
   return L.icon({
     iconUrl: `/finca_${variant}.png`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 30],
-    popupAnchor: [0, -26],
+    iconSize: [28 * 1.5, 38 * 1.5],
+    iconAnchor: [14 * 1.5, 38 * 1.5],
+    popupAnchor: [0, -24 * 1.5],
     className: "farm-marker",
   });
 }
@@ -71,17 +71,30 @@ function getTypeLabel(type) {
   }
 }
 
-export default function FarmMovementLayers({ movement, farmPolygons, yearStart }) {
+export default function FarmMovementLayers({
+  movement,
+  farmPolygons,
+  yearStart,
+}) {
   if (!movement) return null;
 
   const allInputs = Object.entries(movement || {}).flatMap(([farmId, m]) => [
     ...(m.inputs?.farms || []).map((entry) => ({ ...entry, __farmId: farmId })),
-    ...(m.inputs?.enterprises || []).map((entry) => ({ ...entry, __farmId: farmId })),
+    ...(m.inputs?.enterprises || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
   ]);
 
   const allOutputs = Object.entries(movement || {}).flatMap(([farmId, m]) => [
-    ...(m.outputs?.farms || []).map((entry) => ({ ...entry, __farmId: farmId })),
-    ...(m.outputs?.enterprises || []).map((entry) => ({ ...entry, __farmId: farmId })),
+    ...(m.outputs?.farms || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
+    ...(m.outputs?.enterprises || []).map((entry) => ({
+      ...entry,
+      __farmId: farmId,
+    })),
   ]);
 
   const renderEnterpriseMarkers = (movements, flow, lineColor, farm_main) => {
@@ -101,13 +114,15 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
 
         const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
         const yearKey = String(yearStart);
-        const enterprisesMixed =
-          (movement?.[originFarmId]?.mixed?.[yearKey]?.enterprises || []).map(String);
+        const enterprisesMixed = (
+          movement?.[originFarmId]?.mixed?.[yearKey]?.enterprises || []
+        ).map(String);
         const isMixed = !!originFarmId && !!id && enterprisesMixed.includes(id);
 
         const icon = getEnterpriseIcon(type, flow, isMixed);
         const finalLineColor = isMixed ? "#e91e63" : lineColor;
-        const farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
+        const farm_tmp =
+          farm_main && farm_main.length > 0 ? farm_main[0] : null;
 
         const sitFromGeojson = getGeojsonName(dest.geojson);
 
@@ -120,12 +135,20 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
             >
               <Popup>
                 <div className="p-3 bg-white text-sm space-y-2">
-                  <div><span className="font-semibold">Tipo:</span> {getTypeLabel(type)}</div>
+                  <div>
+                    <span className="font-semibold">Tipo:</span>{" "}
+                    {getTypeLabel(type)}
+                  </div>
                   {sitFromGeojson && (
-                    <div><span className="font-semibold">Código SIT:</span> {sitFromGeojson}</div>
+                    <div>
+                      <span className="font-semibold">Código SIT:</span>{" "}
+                      {sitFromGeojson}
+                    </div>
                   )}
                   {dest.name && (
-                    <div><span className="font-semibold">Nombre:</span> {dest.name}</div>
+                    <div>
+                      <span className="font-semibold">Nombre:</span> {dest.name}
+                    </div>
                   )}
                 </div>
               </Popup>
@@ -162,13 +185,16 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
 
         const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
         const yearKey = String(yearStart);
-        const farmsMixed =
-          (movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []).map(String);
-        const isMixed = !!originFarmId && !!targetFarmId && farmsMixed.includes(targetFarmId);
+        const farmsMixed = (
+          movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []
+        ).map(String);
+        const isMixed =
+          !!originFarmId && !!targetFarmId && farmsMixed.includes(targetFarmId);
 
         const icon = getFarmIcon(flow, isMixed);
         const finalLineColor = isMixed ? "#e91e63" : lineColor;
-        const farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
+        const farm_tmp =
+          farm_main && farm_main.length > 0 ? farm_main[0] : null;
 
         const sitCode = getGeojsonName(dest.geojson);
         const displayName = dest.name || dest.code || "Finca";
@@ -182,8 +208,13 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
             >
               <Popup>
                 <div className="p-3 bg-white text-sm space-y-2">
-                  <div><span className="font-semibold">Tipo:</span> Finca</div>
-                  <div><span className="font-semibold">Código SIT:</span> {sitCode || "N/A"}</div>
+                  <div>
+                    <span className="font-semibold">Tipo:</span> Finca
+                  </div>
+                  <div>
+                    <span className="font-semibold">Código SIT:</span>{" "}
+                    {sitCode || "N/A"}
+                  </div>
                 </div>
               </Popup>
             </Marker>

@@ -83,7 +83,7 @@ export default function Adm3HistoricalRisk({
   className = "",
 }) {
   if (!Array.isArray(adm3RiskHistory) || adm3RiskHistory.length === 0) {
-    return <p className="text-sm text-gray-500">No hay datos para mostrar.</p>;
+    return <p className="text-sm text-gray-500"></p>;
   }
 
   return (

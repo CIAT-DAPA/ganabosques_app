@@ -24,11 +24,9 @@ export default function NationalNavigationHelpers({
       if (!extId) return;
 
       if (extId === lastCenteredExtId) {
-        console.log("🔁 Ya centrado en", extId);
         return;
       }
 
-      console.log("📍 Volando a nuevo adm3:", extId);
       setLastCenteredExtId(extId);
 
       const wfsUrl = `https://ganageo.alliance.cgiar.org/geoserver/administrative/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=administrative:admin_3&outputFormat=application/json&CQL_FILTER=cod_ver='${extId}'&srsName=EPSG:4326`;

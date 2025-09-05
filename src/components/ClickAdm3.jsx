@@ -22,7 +22,6 @@ function ClickAdm3({ adm3Details, adm3Risk, onAreaClick }) {
 
       axios.get(proxiedUrl)
         .then((res) => {
-          console.log("Respuesta GeoServer:", res.data);
           const feature = res.data.features?.[0];
           if (!feature) {
             console.warn("No se encontró ninguna feature en esa zona.");
@@ -30,7 +29,6 @@ function ClickAdm3({ adm3Details, adm3Risk, onAreaClick }) {
           }
 
           const cod_ver = feature.properties.cod_ver;
-          console.log("cod_ver encontrado:", cod_ver);
 
           const detail = adm3Details.find((d) => d.ext_id === cod_ver);
           if (!detail) {
@@ -45,7 +43,6 @@ function ClickAdm3({ adm3Details, adm3Risk, onAreaClick }) {
             return;
           }
 
-          console.log("Llamando onAreaClick con:", detail, riskData, e.latlng);
           onAreaClick(detail, riskData, e.latlng);
         })
         .catch((err) => {

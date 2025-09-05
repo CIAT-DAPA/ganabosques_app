@@ -3,13 +3,12 @@
 import { Marker, Popup, Polyline } from "react-leaflet";
 import L from "leaflet";
 
-// === Mapeo de íconos para empresas (se mantiene igual) ===
 const TYPE_BASE = {
   SLAUGHTERHOUSE: "planta",
   COLLECTION_CENTER: "acopio",
   CATTLE_FAIR: "feria",
   ENTERPRISE: "empresa",
-  FARM: "finca", // por si viene el type
+  FARM: "finca",
 };
 
 function getEnterpriseBase(type) {
@@ -19,7 +18,7 @@ function getEnterpriseBase(type) {
 
 function getEnterpriseIcon(type, flow, isMixed) {
   const base = getEnterpriseBase(type);
-  const variant = isMixed ? "mixta" : flow; // prioridad a mixta
+  const variant = isMixed ? "mixta" : flow;
   return L.icon({
     iconUrl: `/${base}_${variant}.png`,
     iconSize: [28, 28],
@@ -29,9 +28,8 @@ function getEnterpriseIcon(type, flow, isMixed) {
   });
 }
 
-// === Ícono para fincas (nuevo) ===
 function getFarmIcon(flow, isMixed) {
-  const variant = isMixed ? "mixta" : flow; // 'entrada' | 'salida' | 'mixta'
+  const variant = isMixed ? "mixta" : flow;
   return L.icon({
     iconUrl: `/finca_${variant}.png`,
     iconSize: [30, 30],
@@ -39,6 +37,21 @@ function getFarmIcon(flow, isMixed) {
     popupAnchor: [0, -26],
     className: "farm-marker",
   });
+}
+
+function getGeojsonName(geojson) {
+  try {
+    const data = typeof geojson === "string" ? JSON.parse(geojson) : geojson;
+    if (!data) return null;
+    if (data.name) return String(data.name);
+    if (data.properties?.name) return String(data.properties.name);
+    if (Array.isArray(data.features) && data.features[0]?.properties?.name)
+      return String(data.features[0].properties.name);
+    return null;
+  } catch (e) {
+    console.warn("Error al parsear geojson para name:", e);
+    return null;
+  }
 }
 
 function getTypeLabel(type) {
@@ -77,24 +90,26 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
         (m) =>
           m?.destination?.latitude &&
           m?.destination?.longitud &&
-          !m?.destination?.farm_id // ← empresas
+          !m?.destination?.farm_id
       )
       .map((m, idx) => {
         const dest = m.destination;
         const lat = dest.latitude;
         const lon = dest.longitud;
-        const name = dest.name || "Sin nombre";
         const id = String(dest._id ?? "");
         const type = dest.type_enterprise;
 
         const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
         const yearKey = String(yearStart);
-        const enterprisesMixed = (movement?.[originFarmId]?.mixed?.[yearKey]?.enterprises || []).map(String);
+        const enterprisesMixed =
+          (movement?.[originFarmId]?.mixed?.[yearKey]?.enterprises || []).map(String);
         const isMixed = !!originFarmId && !!id && enterprisesMixed.includes(id);
 
         const icon = getEnterpriseIcon(type, flow, isMixed);
         const finalLineColor = isMixed ? "#e91e63" : lineColor;
         const farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
+
+        const sitFromGeojson = getGeojsonName(dest.geojson);
 
         return (
           <>
@@ -106,7 +121,12 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
               <Popup>
                 <div className="p-3 bg-white text-sm space-y-2">
                   <div><span className="font-semibold">Tipo:</span> {getTypeLabel(type)}</div>
-                  <div><span className="font-semibold">Nombre:</span> {name}</div>
+                  {sitFromGeojson && (
+                    <div><span className="font-semibold">Código SIT:</span> {sitFromGeojson}</div>
+                  )}
+                  {dest.name && (
+                    <div><span className="font-semibold">Nombre:</span> {dest.name}</div>
+                  )}
                 </div>
               </Popup>
             </Marker>
@@ -127,29 +147,32 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
   };
 
   const renderFarmMarkers = (movements, flow, lineColor, farm_main) => {
-    console.log('Rendering farm markers for', movements);
     return (movements || [])
       .filter(
         (m) =>
           m?.destination?.latitude &&
           m?.destination?.longitud &&
-          m?.destination?.farm_id // ← fincas
+          m?.destination?.farm_id
       )
       .map((m, idx) => {
         const dest = m.destination;
         const lat = dest.latitude;
         const lon = dest.longitud;
-        const name = dest.name || dest.code || "Finca";
         const targetFarmId = String(dest.farm_id ?? "");
 
         const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
         const yearKey = String(yearStart);
-        const farmsMixed = (movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []).map(String);
+        const farmsMixed =
+          (movement?.[originFarmId]?.mixed?.[yearKey]?.farms || []).map(String);
         const isMixed = !!originFarmId && !!targetFarmId && farmsMixed.includes(targetFarmId);
 
         const icon = getFarmIcon(flow, isMixed);
         const finalLineColor = isMixed ? "#e91e63" : lineColor;
         const farm_tmp = farm_main && farm_main.length > 0 ? farm_main[0] : null;
+
+        // AQUÍ: tomar el "name" desde el geojson del destino
+        const sitCode = getGeojsonName(dest.geojson);
+        const displayName = dest.name || dest.code || "Finca";
 
         return (
           <>
@@ -161,8 +184,7 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart }
               <Popup>
                 <div className="p-3 bg-white text-sm space-y-2">
                   <div><span className="font-semibold">Tipo:</span> Finca</div>
-                  <div><span className="font-semibold">Nombre:</span> {name}</div>
-                  <div><span className="font-semibold">ID:</span> {targetFarmId || "N/A"}</div>
+                  <div><span className="font-semibold">Código SIT:</span> {sitCode || "N/A"}</div>
                 </div>
               </Popup>
             </Marker>

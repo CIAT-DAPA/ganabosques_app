@@ -70,11 +70,10 @@ function normalizeSeries(items = []) {
   rows.sort((a, b) => a.sortKey - b.sortKey);
 
   return {
-    categories: rows.map((r) => r.label), // ← ahora “YYYY - YYYY”
+    categories: rows.map((r) => r.label),
     data: rows.map((r) => r.risk),
   };
 }
-
 
 function getBarColors(values = []) {
   return values.map((v) => riskBadge(v).color);
@@ -118,6 +117,12 @@ export default function Adm3HistoricalRisk({
             toolbar: { show: false },
             parentHeightOffset: 0,
           },
+          title: {
+            text: "Riesgos históricos",
+            align: "left",
+            offsetY: 6,
+            style: { fontSize: "18px", fontWeight: 600 },
+          },
           grid: { strokeDashArray: 3, padding: { left: 0, right: 0 } },
           plotOptions: { bar: { borderRadius: 6, columnWidth: "25%" } },
           dataLabels: {
@@ -133,9 +138,14 @@ export default function Adm3HistoricalRisk({
           },
           yaxis: {
             title: { text: "Riesgo" },
-            decimalsInFloat: 3,
             min: 0,
             max: 3,
+            tickAmount: 4,
+            decimalsInFloat: 0,
+            labels: {
+              formatter: (val) =>
+                typeof val === "number" ? Math.round(val) : val,
+            },
           },
           tooltip: {
             y: {
@@ -196,7 +206,7 @@ export default function Adm3HistoricalRisk({
                   <Activity className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
                     <div className="text-xs uppercase text-gray-500">
-                      Último riesgo
+                      Último riesgo total
                     </div>
                     <div
                       className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"

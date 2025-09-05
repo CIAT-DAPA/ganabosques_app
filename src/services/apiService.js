@@ -125,3 +125,32 @@ export async function fetchFarmRiskByAnalysisAndFarm(analysisId, farmIds) {
 
   return res.json();
 }
+export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
+  if (!Array.isArray(adm3Ids) || adm3Ids.length === 0) return {};
+  const t = (type || "").toString().trim().toLowerCase();
+  if (t !== "annual" && t !== "cumulative") {
+    throw new Error("El parámetro 'type' debe ser 'annual' o 'cumulative'");
+  }
+
+  const url = "https://ganaapi.alliance.cgiar.org/adm3risk/by-adm3-and-type";
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", accept: "application/json" },
+    body: JSON.stringify({
+      adm3_ids: adm3Ids,
+      type: t,
+    }),
+  });
+
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const err = await res.json();
+      detail = err?.detail ? `: ${err.detail}` : "";
+    } catch (_) {}
+    throw new Error(`Error al obtener adm3 risks${detail}`);
+  }
+
+  return res.json();
+}

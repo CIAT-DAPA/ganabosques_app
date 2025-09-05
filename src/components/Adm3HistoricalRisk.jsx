@@ -43,31 +43,38 @@ function riskBadge(risk) {
 }
 
 function normalizeSeries(items = []) {
-  const rows = items.map((it) => {
-    const year =
-      typeof it.year_start === "number"
-        ? it.year_start
-        : typeof it.year_end === "number"
-        ? it.year_end
+  const rows = (items || []).map((it) => {
+    const ys = Number.isFinite(+it.year_start) ? +it.year_start : null;
+    const ye = Number.isFinite(+it.year_end) ? +it.year_end : null;
+
+    const label =
+      ys != null && ye != null
+        ? `${ys} - ${ye}`
+        : ys != null
+        ? String(ys)
+        : ye != null
+        ? String(ye)
         : "—";
+
     const risk =
       typeof it.risk_total === "number" && !Number.isNaN(it.risk_total)
         ? it.risk_total
         : 0;
-    return { year, risk, _id: it._id };
+
+    // Usamos el inicio (o fin) para ordenar
+    const sortKey = ys != null ? ys : ye != null ? ye : 0;
+
+    return { label, risk, sortKey, _id: it._id };
   });
 
-  rows.sort((a, b) =>
-    typeof a.year === "number" && typeof b.year === "number"
-      ? a.year - b.year
-      : 0
-  );
+  rows.sort((a, b) => a.sortKey - b.sortKey);
 
   return {
-    categories: rows.map((r) => r.year),
+    categories: rows.map((r) => r.label), // ← ahora “YYYY - YYYY”
     data: rows.map((r) => r.risk),
   };
 }
+
 
 function getBarColors(values = []) {
   return values.map((v) => riskBadge(v).color);

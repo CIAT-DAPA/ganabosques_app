@@ -137,16 +137,52 @@ export default function Adm3HistoricalRisk({
             labels: { rotate: -45 },
           },
           yaxis: {
-            title: { text: "Riesgo" },
-            min: 0,
-            max: 3,
-            tickAmount: 4,
-            decimalsInFloat: 0,
+            title: { text: "Nivel de Riesgo" },
             labels: {
-              formatter: (val) =>
-                typeof val === "number" ? Math.round(val) : val,
+              formatter: (val) => {
+                if (val === 0) return "Riesgo bajo";
+                if (val === 1.5) return "Riesgo medio";
+                if (val === 2.5) return "Riesgo alto";
+                return "";
+              },
+            },
+
+            max: 3,
+          },
+          annotations: {
+      yaxis: [
+        {
+          y: 2.5,
+          borderColor: "#D50000",
+          label: {
+            style: {
+              background: "#D50000",
+              color: "#fff",
             },
           },
+        },
+        {
+          y: 1.5,
+          borderColor: "#FF6D00",
+          label: {
+            style: {
+              background: "#FF6D00",
+              color: "#fff",
+            },
+          },
+        },
+        {
+          y: 0,
+          borderColor: "#00C853",
+          label: {
+            style: {
+              background: "#00C853",
+              color: "#fff",
+            },
+          },
+        },
+      ],
+    },
           tooltip: {
             y: {
               formatter: (val) =>

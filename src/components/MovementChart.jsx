@@ -5,7 +5,6 @@ import {
   faTriangleExclamation,
   faTree,
   faShieldHalved,
-  faBorderTopLeft,
 } from "@fortawesome/free-solid-svg-icons";
 import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
@@ -37,56 +36,24 @@ const CHART_CONFIG = {
   },
 };
 
-const RISK_LEVELS = {
-  HIGH: {
-    threshold: 2.5,
-    color: "red-500",
-    label: "Riesgo alto",
+// ALERTAS (booleanos)
+const ALERT_LEVELS = {
+  TRUE: {
+    label: "Alerta activa",
     bgClass: "bg-red-500/20",
     borderClass: "border-red-500",
     textClass: "text-red-700",
   },
-  MEDIUM: {
-    threshold: 1.5,
-    color: "orange-400",
-    label: "Riesgo medio",
-    bgClass: "bg-orange-400/20",
-    borderClass: "border-orange-400",
-    textClass: "text-orange-700",
-  },
-  LOW: {
-    threshold: 0,
-    color: "yellow-400",
-    label: "Riesgo bajo",
-    bgClass: "bg-yellow-400/20",
-    borderClass: "border-yellow-400",
-    textClass: "text-yellow-700",
-  },
-  NONE: {
-    color: "green-500",
-    label: "Sin riesgo",
+  FALSE: {
+    label: "Sin alerta",
     bgClass: "bg-green-500/20",
     borderClass: "border-green-500",
     textClass: "text-green-700",
   },
 };
 
-// Utilidades
-const getRiskLevel = (value) => {
-  let riskType;
-  if (value > RISK_LEVELS.HIGH.threshold) riskType = RISK_LEVELS.HIGH;
-  else if (value > RISK_LEVELS.MEDIUM.threshold) riskType = RISK_LEVELS.MEDIUM;
-  else if (value > RISK_LEVELS.LOW.threshold) riskType = RISK_LEVELS.LOW;
-  else riskType = RISK_LEVELS.NONE;
-
-  return {
-    color: `bg-${riskType.color}`,
-    label: riskType.label,
-    bgClass: riskType.bgClass,
-    borderClass: riskType.borderClass,
-    textClass: riskType.textClass,
-  };
-};
+// Valor booleano -> estilos
+const getAlertLevel = (flag) => (flag ? ALERT_LEVELS.TRUE : ALERT_LEVELS.FALSE);
 
 const formatValue = (value, decimals = 2) => (value || 0).toFixed(decimals);
 
@@ -171,16 +138,15 @@ const ChartSection = ({
   </div>
 );
 
-// Componente para la información de riesgos
-const RiskSection = ({ risks, year }) => (
+// Componente para la información de alertas
+const AlertSection = ({ risks }) => (
   <div className="space-y-3">
-    <SectionHeader icon={faTriangleExclamation} title="Riesgos" />
+    <SectionHeader icon={faTriangleExclamation} title="Alertas" />
     <div className="space-y-2">
       {[
-        { label: "Riesgo directo:", level: risks.direct },
-        { label: "Riesgo entrada:", level: risks.input },
-        { label: "Riesgo salida:", level: risks.output },
-        { label: `Riesgo total ${year}:`, level: risks.total },
+        { label: "Directa:", level: risks.direct },
+        { label: "Indirecta de entrada:", level: risks.input },
+        { label: "Indirecta de salida:", level: risks.output },
       ].map((item, idx) => (
         <div key={idx} className="flex items-center justify-between">
           <span className="text-sm text-custom-dark">{item.label}</span>
@@ -191,6 +157,7 @@ const RiskSection = ({ risks, year }) => (
   </div>
 );
 
+// Componente para información ambiental
 // Componente para información ambiental
 const EnvironmentalSection = ({ riskObj }) => (
   <div className="space-y-4">
@@ -206,10 +173,6 @@ const EnvironmentalSection = ({ riskObj }) => (
         <InfoItem
           label="Hectáreas"
           value={formatValue(riskObj?.deforestation?.ha)}
-        />
-        <InfoItem
-          label="Distancia"
-          value={formatValue(riskObj?.deforestation?.distance)}
         />
       </div>
     </div>
@@ -227,28 +190,49 @@ const EnvironmentalSection = ({ riskObj }) => (
           label="Hectáreas"
           value={formatValue(riskObj?.protected?.ha)}
         />
-        <InfoItem
-          label="Distancia"
-          value={formatValue(riskObj?.protected?.distance)}
-        />
       </div>
     </div>
 
-    {/* Frontera Agrícola */}
+    {/* Frontera Agrícola (unificada) */}
     <div className="space-y-2">
-      <SectionHeader icon={faBorderTopLeft} title="Frontera agrícola" />
-      <div>
-        <span
-          className={`text-xs px-3 py-1 rounded-full ${
-            riskObj?.farming
-              ? "bg-green-100 text-green-700 border-1 border-green-700"
-              : "bg-red-100 text-red-700 border-1 border-red-700"
-          }`}
-        >
-          {riskObj?.farming
-            ? "Dentro de frontera agrícola"
-            : "Fuera de frontera agrícola"}
-        </span>
+      <SectionHeader icon={faShieldHalved} title="Frontera agrícola" />
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Dentro de frontera */}
+        <div className="p-3 rounded-lg border border-gray-200 bg-white/60">
+          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+            Dentro de frontera
+          </div>
+          <div className="space-y-1 text-sm text-custom-dark">
+            <InfoItem
+              label="Prop"
+              value={formatValue(riskObj?.farming_in?.prop * 100)}
+              suffix="%"
+            />
+            <InfoItem
+              label="Ha"
+              value={formatValue(riskObj?.farming_in?.ha)}
+            />
+          </div>
+        </div>
+
+        {/* Fuera de frontera */}
+        <div className="p-3 rounded-lg border border-gray-200 bg-white/60">
+          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+            Fuera de frontera
+          </div>
+          <div className="space-y-1 text-sm text-custom-dark">
+            <InfoItem
+              label="Prop"
+              value={formatValue(riskObj?.farming_out?.prop * 100)}
+              suffix="%"
+            />
+            <InfoItem
+              label="Ha"
+              value={formatValue(riskObj?.farming_out?.ha)}
+            />
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -300,7 +284,7 @@ const FarmYearCard = ({
         {/* PANEL IZQUIERDO - Información del predio */}
         <div className="w-full lg:w-1/3">
           <div className="grid grid-cols-2 gap-4">
-            {/* COLUMNA 1: Predio y Riesgos */}
+            {/* COLUMNA 1: Predio y Alertas */}
             <div className="space-y-4">
               {/* Título del predio */}
               <div className="space-y-2">
@@ -313,7 +297,7 @@ const FarmYearCard = ({
                 </div>
               </div>
 
-              <RiskSection risks={risks} year={year} />
+              <AlertSection risks={risks} />
             </div>
 
             {/* COLUMNA 2: Información Ambiental */}
@@ -419,7 +403,7 @@ export default function MovementCharts({
     return { options, series };
   };
 
-  // Memoizar datos de riesgo para optimizar rendimiento
+  // Memoizar datos de alerta para optimizar rendimiento
   const riskData = useMemo(() => {
     const flatRisk = Object.values(riskFarm || {}).flat();
     return flatRisk.reduce((acc, risk) => {
@@ -431,10 +415,9 @@ export default function MovementCharts({
   const getFarmRiskLevels = (farmId) => {
     const riskObj = riskData[farmId];
     return {
-      direct: getRiskLevel(riskObj?.risk_direct),
-      input: getRiskLevel(riskObj?.risk_input),
-      output: getRiskLevel(riskObj?.risk_output),
-      total: getRiskLevel(riskObj?.risk_total),
+      direct: getAlertLevel(Boolean(riskObj?.risk_direct)),
+      input: getAlertLevel(Boolean(riskObj?.risk_input)),
+      output: getAlertLevel(Boolean(riskObj?.risk_output)),
     };
   };
 

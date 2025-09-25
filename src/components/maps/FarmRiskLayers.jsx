@@ -12,7 +12,7 @@ export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
   ) => {
     if (!farmRiskData) return null;
 
-    return polygons.map((farm, idx) => {
+    return polygons.map((farm) => {
       let geojson;
       try {
         geojson =
@@ -25,19 +25,19 @@ export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
       }
 
       const farmId = farm.farm_id || farm.id;
+
+      // Buscar el objeto de riesgo de esta finca
       const riskObject = Object.values(farmRiskData)
         .flat()
         .find((r) => r.farm_id === farmId);
-      const riskVal = riskObject?.risk_total ?? 0;
 
+      const isAlert = Boolean(riskObject?.risk_direct);
+      console.log(riskObject)
+      const color = isAlert ? "#D50000" : "#00C853";
+
+      // SIT code opcional
       const matchedFarm = foundFarmsList.find((f) => f.id === farmId);
       const sitCode = matchedFarm?.code || "Sin código";
-
-      let color = "#00C853"; // Verde por defecto (sin riesgo)
-      if (riskVal > 2.5) color = "#D50000"; // Rojo - Alto
-      else if (riskVal > 1.5) color = "#FF6D00"; // Naranja - Medio
-      else if (riskVal > 0) color = "#FFD600"; // Amarillo - Bajo
-
       return (
         <GeoJSON
           key={`farmrisk-${farmId}`}
@@ -52,8 +52,8 @@ export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
                 {sitCode || "N/A"}
               </div>
               <div>
-                <span className="font-medium">Riesgo total:</span>{" "}
-                {riskVal ?? "N/A"}
+                <span className="font-medium">Alerta Directa:</span>{" "}
+                {isAlert ? "Con alerta" : "Sin alerta"}
               </div>
             </div>
           </Popup>

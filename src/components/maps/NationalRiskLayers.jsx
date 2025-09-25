@@ -13,7 +13,6 @@ export default function NationalRiskLayers({
   // Handler de clicks WMS
   function WMSRiskClickHandler({ adm3Risk, adm3Details, showPopup }) {
     const activeReq = useRef(0);
-
     useMapEvent("click", async (e) => {
       const reqId = ++activeReq.current;
 
@@ -63,7 +62,7 @@ export default function NationalRiskLayers({
           return;
         }
 
-        const riskArray = Object.values(adm3Risk).flat();
+        const riskArray = Object.values(adm3Risk || {}).flat();
         const riskData = riskArray.find((r) => r.adm3_id === detail.id);
         if (!riskData) {
           showPopup(null);
@@ -79,26 +78,21 @@ export default function NationalRiskLayers({
 
     return null;
   }
-
   return (
     <>
       {/* Capas de riesgo por veredas */}
       {foundAdms &&
         foundAdms.length > 0 &&
-        adm3Details.map((detail) => {
+        (adm3Details || []).map((detail) => {
           const riskArray = Object.values(adm3Risk || {}).flat();
           const riskData = riskArray.find((r) => r.adm3_id === detail.id);
           if (!riskData) return null;
-          const riskVal = riskData.risk_total;
 
-          let styleName = "norisk";
-          if (riskVal > 2.5) styleName = "hightrisk";
-          else if (riskVal > 1.5) styleName = "mediumrisk";
-          else if (riskVal > 0) styleName = "lowrisk";
-
+          const isRisk = Boolean(riskData.risk_total);
+          const styleName = isRisk ? "hightrisk" : "norisk";
           return (
             <WMSTileLayer
-              key={detail.ext_id}
+              key={`wms-admin3-${detail.ext_id}-${styleName}`}
               url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
               layers="administrative:admin_3"
               format="image/png"

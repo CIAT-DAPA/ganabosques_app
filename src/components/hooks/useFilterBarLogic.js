@@ -59,51 +59,34 @@ export const useYearRanges = (source, risk, year, setYear, setPeriod, onYearStar
   const asId = (v) => (v == null ? "" : String(v));
 
   useEffect(() => {
-    let aborted = false;
+  let aborted = false;
 
-    const loadYears = async () => {
-      setLoading(true);
-      setError(null);
+  const loadYears = async () => {
+    setLoading(true);
+    setError(null);
 
-      try {
-        const data = await fetchAnalysisYearRanges(source, risk);
-        if (aborted) return;
+    try {
+      const data = await fetchAnalysisYearRanges(source, risk);
+      if (aborted) return;
 
-        const arr = Array.isArray(data) ? data : [];
-        setYearRanges(arr);
 
-        // Auto-select first range if no year is set
-        if ((!year || year === "") && arr.length > 0) {
-          const first = arr[0];
-          const firstId = asId(first.id);
-          setPeriod(first);
-          setYear(firstId);
-          onYearStartEndChange?.(
-            first.deforestation_year_start,
-            first.deforestation_year_end
-          );
-        }
+      const arr = Array.isArray(data) ? data : [];
+      setYearRanges(arr);
 
-        if (!arr.length) {
-          setError("No se encontraron años disponibles");
-        }
-      } catch (err) {
-        if (!aborted) {
-          setError("Error al cargar años disponibles");
-          console.error("Error fetching year ranges:", err);
-        }
-      } finally {
-        if (!aborted) {
-          setLoading(false);
-        }
+      // ...
+    } catch (err) {
+      if (!aborted) {
+        setError("Error al cargar años disponibles");
+        console.error("Error fetching year ranges:", err);
       }
-    };
+    } finally {
+      if (!aborted) setLoading(false);
+    }
+  };
 
-    loadYears();
-    return () => {
-      aborted = true;
-    };
-  }, [source, risk, year, setYear, setPeriod, onYearStartEndChange]);
+  loadYears();
+  return () => { aborted = true; };
+}, [source, risk, year, setYear, setPeriod, onYearStartEndChange]);
 
   return { yearRanges, loading, error };
 };

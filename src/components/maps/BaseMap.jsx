@@ -59,13 +59,17 @@ export default function BaseMap({
     }
   };
 
-  const start = period?.deforestation_year_start ?? null;
-  const end = period?.deforestation_year_end ?? null;
+const start = period?.deforestation_period_start
+  ? period.deforestation_period_start.slice(0, 4)
+  : null;
+
+const end = period?.deforestation_period_end
+  ? period.deforestation_period_end.slice(0, 4)
+  : null;
   const hasPeriod = start != null && end != null;
   const defLabel = hasPeriod
     ? `Deforestación ${start}-${end}`
     : "Deforestación";
-
   return (
     <MapContainer
       center={center}
@@ -89,11 +93,11 @@ export default function BaseMap({
             <WMSTileLayer
               key={`wms-${start ?? "na"}-${end ?? "na"}-${source}-${risk}`}
               url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
-              layers={`${source}`}
+              layers={`${source}_deforestation_${risk}`}
               format="image/png"
               transparent
               version="1.1.1"
-              {...(hasPeriod ? { time: `${start}` } : {})}
+              params={{ time: start + "-" + end }}
               zIndex={1000}
             />
           </LayersControl.Overlay>

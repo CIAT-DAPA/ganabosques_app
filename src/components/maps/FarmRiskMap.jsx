@@ -90,6 +90,7 @@ export default function FarmRiskMap() {
   const handleMapCreated = (mapInstance) => {
     mapRef.current = mapInstance;
   };
+  console.log(period)
 
   return (
     <>
@@ -149,6 +150,7 @@ export default function FarmRiskMap() {
             farmPolygons={farmPolygons}
             riskFarm={riskFarm}
             foundFarms={foundFarms}
+            yearStart={yearStart}
           />
         </BaseMap>
       </div>

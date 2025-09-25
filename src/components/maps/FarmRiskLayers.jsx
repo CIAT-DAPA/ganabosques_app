@@ -31,16 +31,13 @@ export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
         .flat()
         .find((r) => r.farm_id === farmId);
 
-      // Ahora risk_total es booleano
       const isAlert = Boolean(riskObject?.risk_direct);
       console.log(riskObject)
-      // Colores: rojo si true (alerta), verde si false (sin alerta)
       const color = isAlert ? "#D50000" : "#00C853";
 
       // SIT code opcional
       const matchedFarm = foundFarmsList.find((f) => f.id === farmId);
       const sitCode = matchedFarm?.code || "Sin código";
-
       return (
         <GeoJSON
           key={`farmrisk-${farmId}`}

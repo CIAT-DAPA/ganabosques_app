@@ -17,8 +17,8 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 });
 
 // Paleta para booleano
-const COLOR_TRUE = "#D50000";  // riesgo (true) -> rojo
-const COLOR_FALSE = "#00C853"; // sin riesgo (false) -> verde
+const COLOR_TRUE = "#D50000";  
+const COLOR_FALSE = "#00C853"; 
 
 function riskBadgeBool(isRisk) {
   return isRisk
@@ -39,11 +39,14 @@ function badgeTextColor(hex) {
   return hex.toUpperCase() === "#FFD600" ? "#111827" : "#ffffff";
 }
 
-// Helpers para derivar etiqueta de período desde ISODate
 function isoToYear(iso) {
   if (!iso) return null;
-  const d = new Date(iso);
-  const y = d.getUTCFullYear?.();
+  const s = String(iso);
+
+  const hasTZ = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(s);
+
+  const d = new Date(s);
+  const y = hasTZ ? d.getUTCFullYear() : d.getFullYear();
   return Number.isFinite(y) ? y : null;
 }
 
@@ -62,14 +65,6 @@ function sortKeyFromPeriod(it) {
   return ys != null ? ys : ye != null ? ye : 0;
 }
 
-/**
- * Transforma items (con period_start/end y risk_total booleano)
- * en puntos para bubble chart:
- *  - x: etiqueta del período
- *  - y: 1 (centrado)
- *  - z: tamaño de burbuja (constante, se puede ajustar si quieres escalar)
- *  - fillColor: verde si false, rojo si true
- */
 function normalizeBubbleSeries(items = []) {
   const rows = (items || [])
     .map((it) => ({
@@ -82,8 +77,8 @@ function normalizeBubbleSeries(items = []) {
 
   const points = rows.map((r) => ({
     x: r.label,
-    y: 1,          // centrado
-    z: 28,         // tamaño de burbuja (ajústalo si deseas)
+    y: 1,         
+    z: 28,        
     fillColor: r.isRisk ? COLOR_TRUE : COLOR_FALSE,
   }));
 
@@ -97,7 +92,6 @@ export default function Adm3HistoricalRisk({
   if (!Array.isArray(adm3RiskHistory) || adm3RiskHistory.length === 0) {
     return <p className="text-sm text-gray-500"></p>;
   }
-
   return (
     <div className={`space-y-6 ${className}`}>
       {adm3RiskHistory.map((group, idx) => {

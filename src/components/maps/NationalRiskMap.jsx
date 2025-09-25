@@ -6,7 +6,6 @@ import BaseMap from "./BaseMap";
 import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import RiskPopup from "@/components/Adm3Risk";
 import { searchAdmByName } from "@/services/apiService";
 import { useAdm3Risk } from "@/hooks/useAdm3Risk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
@@ -162,7 +161,6 @@ useEffect(() => {
         setAdm3RiskHistory(prev => [...prev, ...newGroups]);
       } catch (e) {
         if (process.env.NODE_ENV !== "production") {
-          console.error("Adm3Risk fetch (added):", e);
         }
       } finally {
         setPendingTasks(v => v - 1);
@@ -241,18 +239,7 @@ useEffect(() => {
         />
 
         {/* Popup controlado por estado */}
-        {popupData && (
-          <Popup
-            position={[popupData.lat, popupData.lng]}
-            key={`popup-${popupData.detail.ext_id}`}
-          >
-            <RiskPopup
-              detail={popupData.detail}
-              riskData={popupData.riskData}
-              yearStart={yearStart}
-            />
-          </Popup>
-        )}
+        
       </BaseMap>
      
     </div>

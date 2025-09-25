@@ -69,7 +69,6 @@ export const useYearRanges = (source, risk, year, setYear, setPeriod, onYearStar
       const data = await fetchAnalysisYearRanges(source, risk);
       if (aborted) return;
 
-      console.log(">>> raw yearRanges from API:", data); // 👈 imprime aquí
 
       const arr = Array.isArray(data) ? data : [];
       setYearRanges(arr);

@@ -13,7 +13,6 @@ export default function NationalRiskLayers({
   // Handler de clicks WMS
   function WMSRiskClickHandler({ adm3Risk, adm3Details, showPopup }) {
     const activeReq = useRef(0);
-
     useMapEvent("click", async (e) => {
       const reqId = ++activeReq.current;
 
@@ -79,7 +78,6 @@ export default function NationalRiskLayers({
 
     return null;
   }
-console.log("hola)")
   return (
     <>
       {/* Capas de riesgo por veredas */}
@@ -91,12 +89,10 @@ console.log("hola)")
           if (!riskData) return null;
 
           const isRisk = Boolean(riskData.risk_total);
-          console.log(detail.ext_id, isRisk)
           const styleName = isRisk ? "hightrisk" : "norisk";
-
           return (
             <WMSTileLayer
-              key={detail.ext_id}
+              key={`wms-admin3-${detail.ext_id}-${styleName}`}
               url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
               layers="administrative:admin_3"
               format="image/png"

@@ -19,27 +19,48 @@ export default function FilterSelects({
   // Utility function to normalize values to safe strings
   const asId = (v) => (v == null ? "" : String(v));
 
+  // Utility: formatea según type
+  const formatPeriod = (item) => {
+    if (
+      item.deforestation_type === "annual" ||
+      item.deforestation_type === "cumulative"
+    ) {
+      // convertir a year si es fecha válida
+      const start = item.deforestation_period_start
+        ? new Date(item.deforestation_period_start).getFullYear()
+        : "";
+      const end = item.deforestation_period_end
+        ? new Date(item.deforestation_period_end).getFullYear()
+        : "";
+      return `${start} - ${end}`;
+    }
+    // fallback: mostrar ISO completo
+    return `${item.deforestation_period_start} - ${item.deforestation_period_end}`;
+  };
+
   // Memoized options to prevent unnecessary re-renders
   const sourceOptions = useMemo(() => [{ value: "smbyc", label: "SMBYC" }], []);
 
-  const yearOptions = useMemo(() => 
-    yearRanges.map((item) => ({
-      value: asId(item.id),
-      label: `${item.deforestation_year_start} - ${item.deforestation_year_end}`,
-    })), [yearRanges]
+  const yearOptions = useMemo(
+    () =>
+      yearRanges.map((item) => ({
+        value: asId(item.id),
+        label: formatPeriod(item),
+      })),
+    [yearRanges]
   );
 
   const handleYearChange = (e) => {
     const selectedId = e.target.value;
     setYear(selectedId);
-    
+
     const selected = yearRanges.find((y) => asId(y.id) === selectedId);
     setPeriod(selected);
-    
+
     if (selected) {
       onYearStartEndChange?.(
-        selected.deforestation_year_start,
-        selected.deforestation_year_end
+        selected.deforestation_period_start,
+        selected.deforestation_period_end
       );
     } else {
       onYearStartEndChange?.(null, null);

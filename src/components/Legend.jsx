@@ -8,10 +8,8 @@ export default function RiskLegend({
   farmRisk = false,
 }) {
   const riskLevels = [
-    { label: "Sin Riesgo", color: "bg-green-600" },
-    { label: "Riesgo Bajo", color: "bg-yellow-400" },
-    { label: "Riesgo Medio", color: "bg-orange-400" },
-    { label: "Riesgo Alto", color: "bg-red-600" },
+    { label: "Sin Alerta", color: "bg-green-600" },
+    { label: "Con Alerta", color: "bg-red-600" },
   ];
 
   const mobilityTypes = [
@@ -25,7 +23,7 @@ export default function RiskLegend({
       {/* Leyenda de Niveles de Riesgo */}
       <div className="bg-custom rounded-xl shadow-lg border border-gray-200/50 px-4 py-3 backdrop-blur-sm space-y-1">
         <div className="flex items-center gap-2 text-sm text-custom-dark mb-2">
-          <b>Nivel de riesgo</b>
+          <b>Tipo de alerta</b>
         </div>
         {riskLevels.map((risk) => (
           <div

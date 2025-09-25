@@ -63,7 +63,7 @@ export default function NationalRiskLayers({
           return;
         }
 
-        const riskArray = Object.values(adm3Risk).flat();
+        const riskArray = Object.values(adm3Risk || {}).flat();
         const riskData = riskArray.find((r) => r.adm3_id === detail.id);
         if (!riskData) {
           showPopup(null);
@@ -79,22 +79,20 @@ export default function NationalRiskLayers({
 
     return null;
   }
-
+console.log("hola)")
   return (
     <>
       {/* Capas de riesgo por veredas */}
       {foundAdms &&
         foundAdms.length > 0 &&
-        adm3Details.map((detail) => {
+        (adm3Details || []).map((detail) => {
           const riskArray = Object.values(adm3Risk || {}).flat();
           const riskData = riskArray.find((r) => r.adm3_id === detail.id);
           if (!riskData) return null;
-          const riskVal = riskData.risk_total;
 
-          let styleName = "norisk";
-          if (riskVal > 2.5) styleName = "hightrisk";
-          else if (riskVal > 1.5) styleName = "mediumrisk";
-          else if (riskVal > 0) styleName = "lowrisk";
+          const isRisk = Boolean(riskData.risk_total);
+          console.log(detail.ext_id, isRisk)
+          const styleName = isRisk ? "hightrisk" : "norisk";
 
           return (
             <WMSTileLayer

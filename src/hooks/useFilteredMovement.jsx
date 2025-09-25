@@ -6,7 +6,8 @@ export function useFilteredMovement(originalMovement, yearStart) {
   useEffect(() => {
     if (!yearStart || !originalMovement) return;
 
-    const yearKey = String(yearStart);
+    // Sacamos solo el año (soporta string ISO o Date)
+    const yearKey = String(new Date(yearStart).getFullYear());
     const filtered = {};
 
     Object.entries(originalMovement).forEach(([farmId, data]) => {
@@ -21,9 +22,7 @@ export function useFilteredMovement(originalMovement, yearStart) {
 
       const filteredInputs = {
         ...data.inputs,
-        statistics: {
-          [yearKey]: inputStats,
-        },
+        statistics: { [yearKey]: inputStats },
         farms:
           data.inputs.farms?.filter(Boolean)?.filter((f) =>
             involvedInputFarms.includes(String(f.destination?.farm_id))
@@ -36,9 +35,7 @@ export function useFilteredMovement(originalMovement, yearStart) {
 
       const filteredOutputs = {
         ...data.outputs,
-        statistics: {
-          [yearKey]: outputStats,
-        },
+        statistics: { [yearKey]: outputStats },
         farms:
           data.outputs.farms?.filter(Boolean)?.filter((f) =>
             involvedOutputFarms.includes(String(f.destination?.farm_id))

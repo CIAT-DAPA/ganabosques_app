@@ -20,14 +20,18 @@ export const metadata = {
   title: "Ganabosques",
   description:
     "Visualiza el riesgo de deforestación y el movimiento de ganado en Colombia, fácil y en un solo lugar",
+  icons: {
+    icon: "/favicon.ico",         // <- vive en public/
+    // opcionales:
+    // shortcut: "/favicon.ico",
+    // apple: "/apple-icon.png",
+  },
 };
 
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body
-        className={`${raleway.variable} ${plusJakartaSans.variable} antialiased`}
-      >
+      <body className={`${raleway.variable} ${plusJakartaSans.variable} antialiased`}>
         <AuthProvider>
           <Header />
           {children}

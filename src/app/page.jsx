@@ -72,7 +72,7 @@ export default function Home() {
   const router = useRouter();
 
   const handleExplorarMapas = () => {
-    userInfo ? router.push("/riesgosnacionales") : login();
+    userInfo ? router.push("/alertasnacionales") : login();
   };
 
   // Componente para renderizar una característica
@@ -113,7 +113,7 @@ export default function Home() {
               <span className="text-[#77D094]">Bosques</span>
             </h1>
             <p className={CSS_CLASSES.heroDescription}>
-              Visualiza el riesgo de deforestación y el movimiento de ganado en
+              Visualiza alertas de deforestación y el movimiento de ganado en
               Colombia, fácil y en un solo lugar.
             </p>
             <button

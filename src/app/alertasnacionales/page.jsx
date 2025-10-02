@@ -3,9 +3,8 @@
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
-import Banner from "@/components/Banner";
-import { useAuth } from "@/hooks/useAuth";
-import UnauthorizedPage from "@/components/Unauthorized";
+
+// Importación dinámica del componente Map
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
 });
@@ -20,38 +19,33 @@ const CSS_CLASSES = {
   mapContainer: "flex-1",
 };
 
-export default function RiesgosPredios() {
+export default function RiesgosNacionales() {
   // Configurar el título de la página
   useEffect(() => {
-    document.title = "Ganabosques - Riesgos de predios";
+    document.title = "Ganabosques - Alertas nacionales";
   }, []);
 
-  //const { validatedPayload } = useAuth();
-  // if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
-  // return <UnauthorizedPage />;
-  // }
   return (
     <main className={CSS_CLASSES.pageContainer}>
       {/* Sección de encabezado */}
       <header className={CSS_CLASSES.headerSection}>
         <div className={CSS_CLASSES.contentWrapper}>
-          <h1 className={CSS_CLASSES.title}>Riesgos de predios</h1>
+          <h1 className={CSS_CLASSES.title}>Alertas nacionales</h1>
 
           <hr className={CSS_CLASSES.separator} />
 
           <p className={CSS_CLASSES.description}>
-            Consulta el nivel de riesgo ambiental asociado a un predio
-            específico mediante su código SIT. Este módulo te permite
-            identificar los niveles de riesgo y los indicadores ambientales
-            correspondientes por finca. También puedes visualizar la
-            movilización de predios y las relaciones entre ellos.
+            Una herramienta que muestra la alerta asociada a la ganadería, la
+            deforestación y las áreas protegidas en Colombia. Con
+            visualizaciones simples podrás identificar las regiones más críticas
+            del país, usando datos de distintas fuentes y períodos de monitoreo.
           </p>
         </div>
       </header>
 
       {/* Sección del mapa */}
       <section className={CSS_CLASSES.mapContainer}>
-        <Map farmRisk />
+        <Map nationalRisk={true} />
       </section>
     </main>
   );

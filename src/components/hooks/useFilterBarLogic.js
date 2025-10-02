@@ -3,51 +3,43 @@ import {
   fetchEnterprises, 
   fetchAnalysisYearRanges, 
   fetchFarmBySITCode, 
-  searchAdmByName 
+  searchAdmByName,
+  searchEnterprisesByName
 } from "@/services/apiService";
 
 // Hook para manejar empresas
-export const useEnterprises = (enterpriseRisk, search) => {
-  const [enterpriseList, setEnterpriseList] = useState([]);
-  const [filteredEnterprises, setFilteredEnterprises] = useState([]);
+export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) => {
+  const [enterpriseSuggestions, setEnterpriseSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
 
   useEffect(() => {
-    if (!enterpriseRisk) return;
-
-    setLoading(true);
-    fetchEnterprises()
-      .then((data) => {
-        setEnterpriseList(data);
-        setError(null);
-      })
-      .catch((err) => {
-        setError("Error al cargar empresas");
-        console.error("Error fetching enterprises:", err);
-      })
-      .finally(() => setLoading(false));
-  }, [enterpriseRisk]);
-
-  useEffect(() => {
-    if (enterpriseRisk && search.trim() !== "") {
-      const term = search.toLowerCase();
-      const filtered = enterpriseList.filter((ent) =>
-        ent.name.toLowerCase().includes(term)
-      );
-      setFilteredEnterprises(filtered);
-    } else {
-      setFilteredEnterprises([]);
+    // Si no hay búsqueda o no aplica riesgo, vaciamos (igual a ADM)
+    if (!search || !enterpriseRisk) {
+      setEnterpriseSuggestions([]);
+      return;
     }
-  }, [search, enterpriseList, enterpriseRisk]);
 
-  return {
-    enterpriseList,
-    filteredEnterprises,
-    setFilteredEnterprises,
-    loading,
-    error,
-  };
+    const timer = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const results = await searchEnterprisesByName(search);
+        console.log("Enterprise search results:", results);
+        setEnterpriseSuggestions(results || []);
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.error("Error al buscar sugerencias de empresas:", error);
+        }
+        setEnterpriseSuggestions([]);
+      } finally {
+        setLoading(false);
+      }
+    }, delay);
+
+    // Limpieza del debounce
+    return () => clearTimeout(timer);
+  }, [search, enterpriseRisk, delay]);
+
+  return { enterpriseSuggestions, setEnterpriseSuggestions, loading };
 };
 
 // Hook para manejar rangos de años

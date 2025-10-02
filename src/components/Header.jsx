@@ -14,13 +14,18 @@ import {
 // Constantes
 const NAV_ITEMS = [
   {
-    name: "Riesgos nacionales",
-    path: "/riesgosnacionales",
+    name: "Alertas nacionales",
+    path: "/alertasnacionales",
     loginRequired: true,
   },
   {
-    name: "Riesgos de predio",
-    path: "/riesgopredios",
+    name: "Alertas de predio",
+    path: "/alertapredios",
+    loginRequired: true,
+  },
+  {
+    name: "Alertas de empresa",
+    path: "/alertaempresas",
     loginRequired: true,
   },
   {
@@ -28,6 +33,11 @@ const NAV_ITEMS = [
     path: "https://cerodeforestacioncolombia.co/tfa/protocolo-de-monitoreo-reporte-y-verificacion-mrv-de-la-no-deforestacion-asociada-a-predios-de-cadenas-de-suministro-agropecuario-cacao-cafe-leche-carne-palma/",
     external: true,
     loginRequired: false,
+  },
+  {
+    name: "Reporte",
+    path: "/reporte",
+    loginRequired: true,
   },
   {
     name: "Acerca de",

@@ -154,3 +154,11 @@ export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
 
   return res.json();
 }
+export async function searchEnterprisesByName(name) {
+  const url = `https://ganaapi.alliance.cgiar.org/enterprise/by-name?name=${encodeURIComponent(
+    name
+  )}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Error al buscar empresas por nombre");
+  return res.json();
+}

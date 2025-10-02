@@ -89,6 +89,7 @@ export default function Adm3HistoricalRisk({
   adm3RiskHistory = [],
   className = "",
 }) {
+  console.log(adm3RiskHistory)
   if (!Array.isArray(adm3RiskHistory) || adm3RiskHistory.length === 0) {
     return <p className="text-sm text-gray-500"></p>;
   }

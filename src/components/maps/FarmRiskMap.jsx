@@ -45,7 +45,7 @@ export default function FarmRiskMap() {
   const [riskFarm, setRiskFarm] = useState(null);
 
   // Hooks personalizados
-  const movement = useFilteredMovement(originalMovement, yearStart);
+  const movement = useFilteredMovement(originalMovement, yearStart, yearEnd, risk);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
   useFarmPolygons(
     foundFarms,
@@ -90,8 +90,7 @@ export default function FarmRiskMap() {
   const handleMapCreated = (mapInstance) => {
     mapRef.current = mapInstance;
   };
-  console.log(period)
-
+console.log(risk)
   return (
     <>
       <div className="relative">

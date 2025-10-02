@@ -92,9 +92,7 @@ const ToggleButton = ({ isVisible, onToggle, label }) => (
   >
     {isVisible ? `Ocultar ${label}` : `Mostrar ${label}`}
     <span
-      className={`transition-transform ${
-        isVisible ? "rotate-180" : "rotate-0"
-      }`}
+      className={`transition-transform ${isVisible ? "rotate-180" : "rotate-0"}`}
     >
       ▼
     </span>
@@ -157,7 +155,6 @@ const AlertSection = ({ risks }) => (
   </div>
 );
 
-// Componente para información ambiental
 // Componente para información ambiental
 const EnvironmentalSection = ({ riskObj }) => (
   <div className="space-y-4">
@@ -251,24 +248,24 @@ const FarmYearCard = ({
   toggleLegend,
 }) => {
   const statsEntrada = farmData?.inputs?.statistics?.[year];
-  const statsSalida = farmData?.outputs?.statistics?.[year];
+  const statsSalida  = farmData?.outputs?.statistics?.[year];
   const showLegendEntrada = legendEntradaMap[`${farm.id}-${year}`] || false;
-  const showLegendSalida = legendSalidaMap[`${farm.id}-${year}`] || false;
+  const showLegendSalida  = legendSalidaMap[`${farm.id}-${year}`] || false;
+
+  // 🔎 Debug del render por tarjeta
+  console.log('[FarmYearCard]', {
+    farm: farm.id,
+    year,
+    inHasSpecies: !!statsEntrada?.species,
+    outHasSpecies: !!statsSalida?.species,
+  });
 
   const entradaChart = statsEntrada
-    ? buildChartData(
-        { [year]: statsEntrada.species },
-        "Entradas",
-        showLegendEntrada
-      )
+    ? buildChartData({ [year]: statsEntrada.species }, "Entradas", showLegendEntrada)
     : null;
 
   const salidaChart = statsSalida
-    ? buildChartData(
-        { [year]: statsSalida.species },
-        "Salidas",
-        showLegendSalida
-      )
+    ? buildChartData({ [year]: statsSalida.species }, "Salidas", showLegendSalida)
     : null;
 
   const label = getFarmLabel(farm);
@@ -276,7 +273,7 @@ const FarmYearCard = ({
   const risks = getFarmRiskLevels(farm.id);
 
   const hasEntrada = entradaChart?.series[0]?.data?.some((d) => d > 0);
-  const hasSalida = salidaChart?.series[0]?.data?.some((d) => d > 0);
+  const hasSalida  = salidaChart?.series[0]?.data?.some((d) => d > 0);
 
   return (
     <div className="bg-custom border-b border-[#082C14] p-6 m-10">
@@ -293,7 +290,7 @@ const FarmYearCard = ({
                   <h2 className="text-lg font-bold">Predio {label}</h2>
                 </div>
                 <div className="text-lg text-custom-dark text-medium">
-                  {year}
+                  Periodo: {year}
                 </div>
               </div>
 
@@ -333,13 +330,10 @@ export default function MovementCharts({
   riskFarm = {},
 }) {
   const [legendEntradaMap, setLegendEntradaMap] = useState({});
-  const [legendSalidaMap, setLegendSalidaMap] = useState({});
+  const [legendSalidaMap,  setLegendSalidaMap]  = useState({});
 
   const toggleLegend = (type, id, year) => {
-    const setterMap = {
-      entrada: setLegendEntradaMap,
-      salida: setLegendSalidaMap,
-    };
+    const setterMap = { entrada: setLegendEntradaMap, salida: setLegendSalidaMap };
     const setter = setterMap[type];
     setter((prev) => ({
       ...prev,
@@ -347,62 +341,89 @@ export default function MovementCharts({
     }));
   };
 
+  // ✅ buildChartData parcheado: soporta species como OBJETO o ARRAY
   const buildChartData = (dataByYear, title, showLegend) => {
-    const aggregated = {};
-
-    Object.values(dataByYear || {}).forEach((speciesGroup) => {
-      Object.values(speciesGroup || {}).forEach((categoryGroup) => {
-        Object.entries(categoryGroup || {}).forEach(([category, values]) => {
-          aggregated[category] =
-            (aggregated[category] || 0) + (values.headcount || 0);
-        });
-      });
-    });
-
-    const categories = Object.keys(aggregated);
-    const series = [
-      {
-        name: title,
-        data: categories.map((label) => aggregated[label]),
-      },
-    ];
-
-    const options = {
-      chart: {
-        type: "bar",
-        height: CHART_CONFIG.height,
-        toolbar: { show: false },
-        background: "transparent",
-      },
-      title: { text: "" },
-      xaxis: {
-        categories,
-        labels: { show: false, style: { colors: CHART_CONFIG.colors.primary } },
-        axisTicks: { show: false },
-        axisBorder: { show: false },
-      },
-      yaxis: {
-        labels: { style: { colors: CHART_CONFIG.colors.primary } },
-      },
-      colors: categories.map((_, i) => BASE_COLORS[i % BASE_COLORS.length]),
-      legend: {
-        show: showLegend,
-        labels: { colors: CHART_CONFIG.colors.primary },
-      },
-      plotOptions: {
-        bar: { distributed: true, borderRadius: 4, horizontal: false },
-      },
-      dataLabels: { enabled: false },
-      tooltip: { x: { show: true }, theme: "light" },
-      grid: {
-        borderColor: CHART_CONFIG.colors.grid,
-        strokeDashArray: 3,
-      },
-    };
-
-    return { options, series };
+  // dataByYear: { [year]: species }
+  const aggregated = {};
+  const addToAgg = (label, value) => {
+    const v = Number.isFinite(value) ? value : 0;
+    aggregated[label] = (aggregated[label] || 0) + v;
   };
 
+  Object.values(dataByYear || {}).forEach((speciesGroup) => {
+    if (!speciesGroup) return;
+
+    if (Array.isArray(speciesGroup)) {
+      // ARRAY: intenta usar 'subcategory' (si existe) y cae a 'name'
+      for (const it of speciesGroup) {
+        if (!it) continue;
+        const label = String(
+          it?.subcategory ?? it?.name ?? it?.species_name ??
+          it?.category ?? it?._id ?? it?.id ?? it?.species_id ?? 'N/A'
+        );
+        const val =
+          (typeof it.headcount === 'number' && it.headcount) ??
+          (typeof it.amount === 'number' && it.amount) ??
+          (typeof it.total === 'number' && it.total) ?? 0;
+        addToAgg(label, val);
+      }
+      return;
+    }
+
+    if (typeof speciesGroup === 'object') {
+      // OBJETO anidado: { Grupo: { Subcat: { headcount } } }
+      for (const [group, sub] of Object.entries(speciesGroup)) {
+        if (typeof sub === 'number') {
+          // raro, pero sumamos bajo el nombre del grupo
+          addToAgg(group, sub);
+          continue;
+        }
+        if (!sub || typeof sub !== 'object') continue;
+
+        for (const [subcat, values] of Object.entries(sub)) {
+          if (!values || typeof values !== 'object') continue;
+          const v =
+            (typeof values.headcount === 'number' && values.headcount) ??
+            (typeof values.amount === 'number' && values.amount) ??
+            (typeof values.total === 'number' && values.total) ?? 0;
+          // ⬅️ usamos la SUBCATEGORÍA como etiqueta (lo de antes)
+          addToAgg(String(subcat), v);
+        }
+      }
+      return;
+    }
+    // Otros tipos: ignorar
+  });
+
+  const categories = Object.keys(aggregated);
+  const series = [{ name: title, data: categories.map((label) => aggregated[label]) }];
+
+  console.log('[Chart/buildChartData]', {
+    title,
+    cats: categories.length,
+    sum: series[0].data.reduce((a, b) => a + b, 0),
+  });
+
+  const options = {
+    chart: { type: "bar", height: 250, toolbar: { show: false }, background: "transparent" },
+    title: { text: "" },
+    xaxis: {
+      categories,
+      labels: { show: false, style: { colors: "#082C14" } },
+      axisTicks: { show: false },
+      axisBorder: { show: false },
+    },
+    yaxis: { labels: { style: { colors: "#082C14" } } },
+    colors: categories.map((_, i) => BASE_COLORS[i % BASE_COLORS.length]),
+    legend: { show: showLegend, labels: { colors: "#082C14" } },
+    plotOptions: { bar: { distributed: true, borderRadius: 4, horizontal: false } },
+    dataLabels: { enabled: false },
+    tooltip: { x: { show: true }, theme: "light" },
+    grid: { borderColor: "#f1f1f1", strokeDashArray: 3 },
+  };
+
+  return { options, series };
+};
   // Memoizar datos de alerta para optimizar rendimiento
   const riskData = useMemo(() => {
     const flatRisk = Object.values(riskFarm || {}).flat();
@@ -416,7 +437,7 @@ export default function MovementCharts({
     const riskObj = riskData[farmId];
     return {
       direct: getAlertLevel(Boolean(riskObj?.risk_direct)),
-      input: getAlertLevel(Boolean(riskObj?.risk_input)),
+      input:  getAlertLevel(Boolean(riskObj?.risk_input)),
       output: getAlertLevel(Boolean(riskObj?.risk_output)),
     };
   };
@@ -427,9 +448,10 @@ export default function MovementCharts({
         const farmData = summary[farm.id];
         if (!farmData) return null;
 
+        // ✅ Solo claves de año válidas, ordenadas numéricamente
         const allYears = Object.keys(farmData?.inputs?.statistics || {})
-          .filter((k) => !isNaN(k))
-          .sort();
+          .filter((k) => /^\d{4}$/.test(String(k)))
+          .sort((a, b) => Number(a) - Number(b));
 
         return allYears.map((year) => (
           <FarmYearCard

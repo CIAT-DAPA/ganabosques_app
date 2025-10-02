@@ -1,65 +1,243 @@
 import { useEffect, useState } from "react";
 
-export function useFilteredMovement(originalMovement, yearStart) {
+export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) {
   const [filteredMovement, setFilteredMovement] = useState({});
 
   useEffect(() => {
-    if (!yearStart || !originalMovement) return;
+    if (!originalMovement) {
+      setFilteredMovement({});
+      return;
+    }
 
-    // Sacamos solo el año (soporta string ISO o Date)
-    const yearKey = String(new Date(yearStart).getFullYear());
+    console.log('[useFilteredMovement] inputs:', {
+      risk, yearStart, yearEnd,
+      typeYearStart: typeof yearStart,
+      typeYearEnd: typeof yearEnd,
+    });
+
+    const baseDate =
+      risk === "cumulative" ? (yearEnd ?? yearStart) : (yearStart ?? yearEnd);
+
+    const dbgDate = new Date(baseDate);
+    console.log('[useFilteredMovement] baseDate pick:', baseDate, {
+      parsed: isNaN(dbgDate.getTime()) ? 'Invalid' : dbgDate.toISOString(),
+      year: dbgDate.getFullYear(),
+    });
+
+    if (!baseDate) { setFilteredMovement({}); return; }
+
+    const year = new Date(baseDate).getFullYear();
+    if (Number.isNaN(year)) { setFilteredMovement({}); return; }
+
+    const yearKey = String(year);
+
+    // Helpers SOLO acumulado
+    const parseYear = (v) => {
+      if (v == null) return NaN;
+      if (typeof v === "number" && v >= 1000 && v <= 9999) return v;
+      if (typeof v === "string" && /^\d{4}$/.test(v.trim())) return Number(v.trim());
+      const d = new Date(v); const y = d.getFullYear();
+      return Number.isNaN(y) ? NaN : y;
+    };
+
+    const getYearRange = (ys, ye) => {
+      const a = parseYear(ys ?? ye);
+      const b = parseYear(ye ?? ys);
+      if (Number.isNaN(a) || Number.isNaN(b)) return [yearKey];
+      const start = Math.min(a, b), end = Math.max(a, b);
+      const arr = []; for (let y = start; y <= end; y++) arr.push(String(y));
+      return arr;
+    };
+
+    const uniq = (arr) => Array.from(new Set((arr || []).map(String)));
+    const isPlainObject = (v) => v && typeof v === "object" && !Array.isArray(v);
+
+    // 🔧 FIX: mergeSpecies que conserva subcategorías (deep-merge)
+    const mergeSpecies = (speciesList) => {
+      const list = (speciesList || []).filter(Boolean);
+      if (!list.length) return undefined;
+
+      // Caso ARRAY de items (lo mantenemos como antes)
+      if (Array.isArray(list[0])) {
+        const map = new Map();
+        for (const arr of list) {
+          if (!Array.isArray(arr)) continue;
+          for (const item of arr) {
+            if (!item) continue;
+            const key = String(
+              item?.subcategory ?? item?.name ?? item?.species_name ??
+              item?.category ?? item?._id ?? item?.id ?? item?.species_id ?? JSON.stringify(item)
+            );
+            const prev = map.get(key) || {};
+            const merged = { ...prev, ...item };
+            for (const [k, v] of Object.entries(item)) {
+              if (typeof v === "number") merged[k] = (typeof prev[k] === "number" ? prev[k] : 0) + v;
+            }
+            map.set(key, merged);
+          }
+        }
+        return Array.from(map.values());
+      }
+
+      // Caso OBJETO: { Grupo: { Subcat: { headcount,... } } }
+      if (isPlainObject(list[0])) {
+        const out = {};
+        for (const obj of list) {
+          if (!isPlainObject(obj)) continue;
+          for (const [group, sub] of Object.entries(obj)) {
+            // sub puede ser número o un objeto de subcategorías
+            if (typeof sub === "number") {
+              out[group] = (typeof out[group] === "number" ? out[group] + sub : (out[group] || 0) + sub);
+              continue;
+            }
+            if (!isPlainObject(sub)) continue;
+            out[group] = out[group] || {};
+            for (const [subcat, values] of Object.entries(sub)) {
+              if (!isPlainObject(values)) continue;
+              const dst = out[group][subcat] || {};
+              for (const [k, v] of Object.entries(values)) {
+                dst[k] = typeof v === "number"
+                  ? ((typeof dst[k] === "number" ? dst[k] : 0) + v)
+                  : v; // último no numérico gana
+              }
+              out[group][subcat] = dst;
+            }
+          }
+        }
+        return out; // <- mantiene la forma anidada
+      }
+
+      // Fallback
+      return list[list.length - 1];
+    };
+
+    const mergeStats = (statsList) => {
+      const farms = uniq(statsList.flatMap(s => (s?.farms || []).map(String)));
+      const enterprises = uniq(statsList.flatMap(s => (s?.enterprises || []).map(String)));
+      const species = mergeSpecies(statsList.map(s => s?.species));
+      const lastNonNull = [...statsList].reverse().find(s => s && typeof s === "object") || {};
+      const merged = { ...lastNonNull, farms, enterprises };
+      if (species !== undefined) merged.species = species;
+      return merged;
+    };
+
+    const mergeMixed = (mixedObj, years) => {
+      if (!mixedObj) return {};
+      const acc = {};
+      years.forEach(y => {
+        const v = mixedObj?.[y];
+        if (v && typeof v === "object") for (const [k, val] of Object.entries(v)) acc[k] = val;
+      });
+      return acc;
+    };
+
+    const collectInvolved = (statsByYear, years, field) => {
+      const all = [];
+      for (const y of years) {
+        const s = statsByYear?.[y];
+        if (s && Array.isArray(s[field])) all.push(...s[field].map(String));
+      }
+      return uniq(all);
+    };
+
     const filtered = {};
 
     Object.entries(originalMovement).forEach(([farmId, data]) => {
-      const inputStats = data.inputs?.statistics?.[yearKey];
-      const outputStats = data.outputs?.statistics?.[yearKey];
+      const yearsToUse = risk === "cumulative" ? getYearRange(yearStart, yearEnd) : [yearKey];
+      const finalYearKey = (risk === "cumulative" && yearsToUse.length) ? yearsToUse[yearsToUse.length - 1] : yearKey;
 
-      const involvedInputFarms = inputStats?.farms?.map(String) || [];
-      const involvedInputEnterprises = inputStats?.enterprises?.map(String) || [];
+      console.log('RANGE', { farmId, yearsToUse, finalYearKey });
 
-      const involvedOutputFarms = outputStats?.farms?.map(String) || [];
-      const involvedOutputEnterprises = outputStats?.enterprises?.map(String) || [];
+      // INPUTS
+      const inputStatsList = yearsToUse.map(y => data?.inputs?.statistics?.[y]).filter(Boolean);
+      const inputStatsMerged = risk === "cumulative"
+        ? (inputStatsList.length ? mergeStats(inputStatsList) : {})
+        : data?.inputs?.statistics?.[yearKey];
+
+      const involvedInputFarms = risk === "cumulative"
+        ? collectInvolved(data?.inputs?.statistics, yearsToUse, 'farms')
+        : (inputStatsMerged?.farms?.map(String) || data?.inputs?.statistics?.[yearKey]?.farms?.map(String) || []);
+
+      const involvedInputEnterprises = risk === "cumulative"
+        ? collectInvolved(data?.inputs?.statistics, yearsToUse, 'enterprises')
+        : (inputStatsMerged?.enterprises?.map(String) || data?.inputs?.statistics?.[yearKey]?.enterprises?.map(String) || []);
+
+      const perYearCounts = yearsToUse.map(y => ({
+        y,
+        inFarms: (data?.inputs?.statistics?.[y]?.farms || []).length,
+        inEnts:  (data?.inputs?.statistics?.[y]?.enterprises || []).length,
+        outFarms:(data?.outputs?.statistics?.[y]?.farms || []).length,
+        outEnts: (data?.outputs?.statistics?.[y]?.enterprises || []).length,
+      }));
+      console.log('PER-YEAR', { farmId, perYearCounts });
 
       const filteredInputs = {
-        ...data.inputs,
-        statistics: { [yearKey]: inputStats },
-        farms:
-          data.inputs.farms?.filter(Boolean)?.filter((f) =>
-            involvedInputFarms.includes(String(f.destination?.farm_id))
-          ) || [],
-        enterprises:
-          data.inputs.enterprises?.filter(Boolean)?.filter((e) =>
-            involvedInputEnterprises.includes(String(e.destination?._id))
-          ) || [],
+        ...data?.inputs,
+        statistics: { [finalYearKey]: inputStatsMerged },
+        farms: (data?.inputs?.farms || [])
+          ?.filter(Boolean)
+          ?.filter(f => involvedInputFarms.includes(String(f?.destination?.farm_id))) || [],
+        enterprises: (data?.inputs?.enterprises || [])
+          ?.filter(Boolean)
+          ?.filter(e => involvedInputEnterprises.includes(String(e?.destination?._id))) || [],
       };
 
-      const filteredOutputs = {
-        ...data.outputs,
-        statistics: { [yearKey]: outputStats },
-        farms:
-          data.outputs.farms?.filter(Boolean)?.filter((f) =>
-            involvedOutputFarms.includes(String(f.destination?.farm_id))
-          ) || [],
-        enterprises:
-          data.outputs.enterprises?.filter(Boolean)?.filter((e) =>
-            involvedOutputEnterprises.includes(String(e.destination?._id))
-          ) || [],
-      };
+      // OUTPUTS
+      const outputStatsList = yearsToUse.map(y => data?.outputs?.statistics?.[y]).filter(Boolean);
+      const outputStatsMerged = risk === "cumulative"
+        ? (outputStatsList.length ? mergeStats(outputStatsList) : {})
+        : data?.outputs?.statistics?.[yearKey];
+
+      const involvedOutputFarms = risk === "cumulative"
+        ? collectInvolved(data?.outputs?.statistics, yearsToUse, 'farms')
+        : (outputStatsMerged?.farms?.map(String) || data?.outputs?.statistics?.[yearKey]?.farms?.map(String) || []);
+
+      const involvedOutputEnterprises = risk === "cumulative"
+        ? collectInvolved(data?.outputs?.statistics, yearsToUse, 'enterprises')
+        : (outputStatsMerged?.enterprises?.map(String) || data?.outputs?.statistics?.[yearKey]?.enterprises?.map(String) || []);
+
+      console.log('INVOLVED', {
+        inFarms: involvedInputFarms.length,
+        inEnts:  involvedInputEnterprises.length,
+        outFarms: involvedOutputFarms.length,
+        outEnts:  involvedOutputEnterprises.length
+      });
+
+      console.log('SPECIES', {
+        inType: Array.isArray(inputStatsMerged?.species) ? 'array' : typeof inputStatsMerged?.species,
+        inSize: Array.isArray(inputStatsMerged?.species)
+          ? inputStatsMerged?.species?.length
+          : (inputStatsMerged?.species ? Object.keys(inputStatsMerged?.species).length : 0),
+        outType: Array.isArray(outputStatsMerged?.species) ? 'array' : typeof outputStatsMerged?.species,
+        outSize: Array.isArray(outputStatsMerged?.species)
+          ? outputStatsMerged?.species?.length
+          : (outputStatsMerged?.species ? Object.keys(outputStatsMerged?.species).length : 0),
+      });
 
       const filteredMixed = {
-        [yearKey]: data.mixed?.[yearKey] || {},
+        [finalYearKey]: risk === "cumulative" ? mergeMixed(data?.mixed, yearsToUse) : (data?.mixed?.[finalYearKey] || {}),
       };
 
+      // ✅ ENSAMBLE FINAL
       filtered[farmId] = {
         ...data,
         inputs: filteredInputs,
-        outputs: filteredOutputs,
+        outputs: {
+          ...data?.outputs,
+          statistics: { [finalYearKey]: outputStatsMerged },
+          farms: (data?.outputs?.farms || [])
+            ?.filter(Boolean)
+            ?.filter(f => involvedOutputFarms.includes(String(f?.destination?.farm_id))) || [],
+          enterprises: (data?.outputs?.enterprises || [])
+            ?.filter(Boolean)
+            ?.filter(e => involvedOutputEnterprises.includes(String(e?.destination?._id))) || [],
+        },
         mixed: filteredMixed,
       };
     });
 
     setFilteredMovement(filtered);
-  }, [yearStart, originalMovement]);
+  }, [originalMovement, yearStart, yearEnd, risk]);
 
   return filteredMovement;
 }

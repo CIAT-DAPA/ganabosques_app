@@ -53,23 +53,29 @@ export default function FilterChips({
       )}
 
       {/* Chip empresa seleccionada para Enterprise Risk */}
-      {enterpriseRisk && selectedEnterprise && (
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            onClick={handleRemoveEnterprise}
-            className={chipBaseClasses}
-            aria-label={`Remover empresa ${selectedEnterprise.name}`}
-          >
-            <span className="me-2">{selectedEnterprise.name}</span>
-            <FontAwesomeIcon
-              icon={faXmark}
-              className="text-[#082C14]"
-              size="sm"
-            />
-          </button>
-        </div>
-      )}
+      {/* Chips de empresas seleccionadas para Enterprise Risk */}
+{enterpriseRisk && Array.isArray(selectedEnterprise) && selectedEnterprise.length > 0 && (
+  <div className="flex flex-wrap gap-2">
+    {selectedEnterprise.map((ent) => (
+      <button
+        key={ent.id}
+        type="button"
+        onClick={() =>
+          setSelectedEnterprise((prev) => prev.filter((e) => e.id !== ent.id))
+        }
+        className={chipBaseClasses}
+        aria-label={`Remover empresa ${ent.name}`}
+      >
+        <span className="me-2">{ent.name}</span>
+        <FontAwesomeIcon
+          icon={faXmark}
+          className="text-[#082C14]"
+          size="sm"
+        />
+      </button>
+    ))}
+  </div>
+)}
 
       {/* Chips ADM seleccionados para National Risk */}
       {nationalRisk && foundAdms.length > 0 && (

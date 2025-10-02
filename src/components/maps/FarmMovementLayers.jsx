@@ -5,39 +5,21 @@ import { useMap } from "react-leaflet";
 import { useEffect, useRef, useState, useMemo, useCallback } from "react";
 import L from "leaflet";
 
-// Constantes de configuración
+// ------------------------------
+// Config flechas
+// ------------------------------
 const ARROW_CONFIG = {
   ROTATION_ADJUSTMENT: 180,
   ANIMATION_DURATION: "1.5s",
-  ICON_SIZES: {
-    HIGH_ZOOM: 24,
-    MEDIUM_ZOOM: 20,
-    LOW_ZOOM: 16,
-  },
-  ZOOM_THRESHOLDS: {
-    HIGH: 14,
-    MEDIUM: 12,
-    LOW: 10,
-  },
-  SPACING: {
-    HIGH_ZOOM: 1500,
-    MEDIUM_ZOOM: 3000,
-    LOW_ZOOM: 6000,
-    VERY_LOW_ZOOM: 12000,
-  },
+  ICON_SIZES: { HIGH_ZOOM: 24, MEDIUM_ZOOM: 20, LOW_ZOOM: 16 },
+  ZOOM_THRESHOLDS: { HIGH: 14, MEDIUM: 12, LOW: 10 },
+  SPACING: { HIGH_ZOOM: 1500, MEDIUM_ZOOM: 3000, LOW_ZOOM: 6000, VERY_LOW_ZOOM: 12000 },
   MIXED_SIZE_RATIO: 0.8,
   MIXED_OPACITY: 0.7,
   NORMAL_OPACITY: 0.8,
 };
 
-const ENTERPRISE_TYPES = {
-  SLAUGHTERHOUSE: "planta",
-  COLLECTION_CENTER: "acopio",
-  CATTLE_FAIR: "feria",
-  ENTERPRISE: "empresa",
-  FARM: "finca",
-};
-
+// Etiquetas para popups
 const TYPE_LABELS = {
   SLAUGHTERHOUSE: "Planta de beneficio",
   COLLECTION_CENTER: "Centro de acopio",
@@ -46,37 +28,68 @@ const TYPE_LABELS = {
   FARM: "Finca",
 };
 
-// Funciones utilitarias optimizadas
-const getEnterpriseBase = (type) => {
-  return type ? ENTERPRISE_TYPES[type] || "empresa" : "empresa";
+// ------------------------------
+// Íconos neutros (mapeo robusto)
+// ------------------------------
+const ENTERPRISE_BASES = {
+  SLAUGHTERHOUSE: "planta",
+  COLLECTION_CENTER: "acopio",
+  CATTLE_FAIR: "feria",
+  ENTERPRISE: "empresa",
+  FARM: "finca",
 };
 
-const createIcon = (iconUrl, className) => {
-  return L.icon({
+// Aliases -> tipo canónico
+const TYPE_ALIASES = {
+  // Centro de acopio
+  "COLLECTIONCENTER": "COLLECTION_CENTER",
+  "CENTRO_ACOPIO": "COLLECTION_CENTER",
+  "CENTRO DE ACOPIO": "COLLECTION_CENTER",
+  "ACOPIO": "COLLECTION_CENTER",
+  // Otras variantes comunes
+  "PLANTA": "SLAUGHTERHOUSE",
+  "FERIA": "CATTLE_FAIR",
+  "EMPRESA": "ENTERPRISE",
+  "FINCA": "FARM",
+};
+
+const normalizeType = (type) => {
+  if (!type) return "ENTERPRISE";
+  const t = String(type).trim().toUpperCase().replace(/\s+/g, " ");
+  const t2 = t.replace(/-/g, "_");
+  return TYPE_ALIASES[t2] || t2;
+};
+
+const getEnterpriseBase = (type) => {
+  const canon = normalizeType(type);
+  const base = ENTERPRISE_BASES[canon];
+  if (!base) console.warn("[Enterprise Icon] Tipo desconocido:", type, "→ canon:", canon);
+  return base || "empresa";
+};
+
+const createIcon = (iconUrl, className) =>
+  L.icon({
     iconUrl,
-    iconSize: [42, 57], // 28 * 1.5, 38 * 1.5
-    iconAnchor: [21, 57], // 14 * 1.5, 38 * 1.5
-    popupAnchor: [0, -36], // 0, -24 * 1.5
+    iconSize: [42, 57],
+    iconAnchor: [21, 57],
+    popupAnchor: [0, -36],
     className,
   });
+
+const getEnterpriseIcon = (type) => {
+  const base = getEnterpriseBase(type); // planta | acopio | feria | empresa | finca
+  return createIcon(`/${base}.png`, "enterprise-marker");
 };
 
-const getEnterpriseIcon = (type, flow, isMixed) => {
-  const base = getEnterpriseBase(type);
-  const variant = isMixed ? "mixta" : flow;
-  return createIcon(`/${base}_${variant}.png`, "enterprise-marker");
-};
+const getFarmIcon = () => createIcon(`/finca.png`, "farm-marker");
 
-const getFarmIcon = (flow, isMixed) => {
-  const variant = isMixed ? "mixta" : flow;
-  return createIcon(`/finca_${variant}.png`, "farm-marker");
-};
-
+// ------------------------------
+// Utilidades varias
+// ------------------------------
 const getGeojsonName = (geojson) => {
   try {
     const data = typeof geojson === "string" ? JSON.parse(geojson) : geojson;
     if (!data) return null;
-
     return (
       data.name ||
       data.properties?.name ||
@@ -89,23 +102,18 @@ const getGeojsonName = (geojson) => {
   }
 };
 
-const getTypeLabel = (type) => {
-  return TYPE_LABELS[type] || type;
-};
+const getTypeLabel = (type) => TYPE_LABELS[normalizeType(type)] || type;
 
-// Funciones de cálculo geográfico
 const calculateDistance = (lat1, lon1, lat2, lon2) => {
-  const R = 6371e3; // Radio de la Tierra en metros
+  const R = 6371e3;
   const φ1 = (lat1 * Math.PI) / 180;
   const φ2 = (lat2 * Math.PI) / 180;
   const Δφ = ((lat2 - lat1) * Math.PI) / 180;
   const Δλ = ((lon2 - lon1) * Math.PI) / 180;
-
   const a =
-    Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
-    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    Math.sin(Δφ / 2) ** 2 +
+    Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) ** 2;
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-
   return R * c;
 };
 
@@ -113,12 +121,10 @@ const calculateAngle = (lat1, lon1, lat2, lon2) => {
   const lat1Rad = (lat1 * Math.PI) / 180;
   const lat2Rad = (lat2 * Math.PI) / 180;
   const dLonRad = ((lon2 - lon1) * Math.PI) / 180;
-
   const y = Math.sin(dLonRad) * Math.cos(lat2Rad);
   const x =
     Math.cos(lat1Rad) * Math.sin(lat2Rad) -
     Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLonRad);
-
   let bearing = (Math.atan2(y, x) * 180) / Math.PI;
   return (bearing + 360) % 360;
 };
@@ -126,35 +132,28 @@ const calculateAngle = (lat1, lon1, lat2, lon2) => {
 const interpolatePoints = (lat1, lon1, lat2, lon2, numPoints) => {
   const points = [];
   for (let i = 0; i <= numPoints; i++) {
-    const ratio = i / numPoints;
-    const lat = lat1 + (lat2 - lat1) * ratio;
-    const lon = lon1 + (lon2 - lon1) * ratio;
-    points.push([lat, lon]);
+    const r = i / numPoints;
+    points.push([lat1 + (lat2 - lat1) * r, lon1 + (lon2 - lon1) * r]);
   }
   return points;
 };
 
-// Función para obtener espaciado basado en zoom
 const getArrowSpacing = (zoom) => {
-  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.HIGH)
-    return ARROW_CONFIG.SPACING.HIGH_ZOOM;
-  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.MEDIUM)
-    return ARROW_CONFIG.SPACING.MEDIUM_ZOOM;
-  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.LOW)
-    return ARROW_CONFIG.SPACING.LOW_ZOOM;
+  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.HIGH) return ARROW_CONFIG.SPACING.HIGH_ZOOM;
+  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.MEDIUM) return ARROW_CONFIG.SPACING.MEDIUM_ZOOM;
+  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.LOW) return ARROW_CONFIG.SPACING.LOW_ZOOM;
   return ARROW_CONFIG.SPACING.VERY_LOW_ZOOM;
 };
 
-// Función para obtener tamaño de icono basado en zoom
 const getIconSize = (zoom) => {
-  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.MEDIUM)
-    return ARROW_CONFIG.ICON_SIZES.HIGH_ZOOM;
-  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.LOW)
-    return ARROW_CONFIG.ICON_SIZES.MEDIUM_ZOOM;
+  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.MEDIUM) return ARROW_CONFIG.ICON_SIZES.HIGH_ZOOM;
+  if (zoom >= ARROW_CONFIG.ZOOM_THRESHOLDS.LOW) return ARROW_CONFIG.ICON_SIZES.MEDIUM_ZOOM;
   return ARROW_CONFIG.ICON_SIZES.LOW_ZOOM;
 };
 
-// Componente ArrowLayer optimizado
+// ------------------------------
+// Capa de flechas
+// ------------------------------
 const ArrowLayer = ({
   fromLat,
   fromLon,
@@ -168,7 +167,6 @@ const ArrowLayer = ({
   const arrowsRef = useRef([]);
   const [currentZoom, setCurrentZoom] = useState(map.getZoom());
 
-  // Memoizar direcciones para evitar recálculos innecesarios
   const directions = useMemo(() => {
     if (isMixed) {
       return [
@@ -176,7 +174,6 @@ const ArrowLayer = ({
         { from: [toLat, toLon], to: [fromLat, fromLon], name: "entrada" },
       ];
     }
-
     const isEntrada = flow === "entrada";
     return [
       {
@@ -187,50 +184,33 @@ const ArrowLayer = ({
     ];
   }, [fromLat, fromLon, toLat, toLon, flow, isMixed]);
 
-  // Optimizar cleanup de flechas
   const cleanupArrows = useCallback(() => {
-    arrowsRef.current.forEach((arrow) => {
-      if (arrow && map.hasLayer(arrow)) {
-        map.removeLayer(arrow);
-      }
-    });
+    arrowsRef.current.forEach((a) => a && map.hasLayer(a) && map.removeLayer(a));
     arrowsRef.current = [];
   }, [map]);
 
-  // Crear HTML de flecha optimizado
   const createArrowHTML = useCallback(
     (rotationAngle, adjustedSize, baseOpacity) => {
-      const colorFilter =
-        color === "purple" ? "hue-rotate(280deg)" : "hue-rotate(0deg)";
-
+      const colorFilter = color === "purple" ? "hue-rotate(280deg)" : "hue-rotate(0deg)";
       return `
-      <div class="arrow-container" style="
-        width: ${adjustedSize}px;
-        height: ${adjustedSize}px;
-        background-image: url('/arrow.gif');
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: center;
-        transform: rotate(${rotationAngle}deg);
-        transform-origin: center;
-        filter: ${colorFilter};
-        opacity: ${baseOpacity};
-      "></div>
-    `;
+        <div class="arrow-container" style="
+          width:${adjustedSize}px;height:${adjustedSize}px;
+          background-image:url('/arrow.gif');background-size:contain;background-repeat:no-repeat;background-position:center;
+          transform:rotate(${rotationAngle}deg);transform-origin:center;
+          filter:${colorFilter};opacity:${baseOpacity};
+        "></div>
+      `;
     },
     [color]
   );
 
-  // Escuchar cambios de zoom
   useEffect(() => {
-    const handleZoomEnd = () => setCurrentZoom(map.getZoom());
-    map.on("zoomend", handleZoomEnd);
-    return () => map.off("zoomend", handleZoomEnd);
+    const onZoom = () => setCurrentZoom(map.getZoom());
+    map.on("zoomend", onZoom);
+    return () => map.off("zoomend", onZoom);
   }, [map]);
 
-  // Efecto principal para crear flechas
   useEffect(() => {
-    // Validar coordenadas
     if (!fromLat || !fromLon || !toLat || !toLon) {
       console.warn("Invalid coordinates provided to ArrowLayer");
       return;
@@ -242,178 +222,90 @@ const ArrowLayer = ({
     const spacing = getArrowSpacing(currentZoom);
     const numArrows = Math.max(1, Math.floor(distance / spacing));
     const iconSize = getIconSize(currentZoom);
-    const adjustedSize = isMixed
-      ? iconSize * ARROW_CONFIG.MIXED_SIZE_RATIO
-      : iconSize;
-    const baseOpacity = isMixed
-      ? ARROW_CONFIG.MIXED_OPACITY
-      : ARROW_CONFIG.NORMAL_OPACITY;
+    const adjustedSize = isMixed ? iconSize * ARROW_CONFIG.MIXED_SIZE_RATIO : iconSize;
+    const baseOpacity = isMixed ? ARROW_CONFIG.MIXED_OPACITY : ARROW_CONFIG.NORMAL_OPACITY;
 
-    directions.forEach((direction) => {
-      const angle = calculateAngle(
-        direction.from[0],
-        direction.from[1],
-        direction.to[0],
-        direction.to[1]
-      );
-
+    directions.forEach((dir) => {
+      const angle = calculateAngle(dir.from[0], dir.from[1], dir.to[0], dir.to[1]);
       const rotationAngle = angle + ARROW_CONFIG.ROTATION_ADJUSTMENT;
-      const points = interpolatePoints(
-        direction.from[0],
-        direction.from[1],
-        direction.to[0],
-        direction.to[1],
-        numArrows
-      );
+      const points = interpolatePoints(dir.from[0], dir.from[1], dir.to[0], dir.to[1], numArrows);
 
-      // Crear flechas para esta dirección
-      points.slice(1).forEach((point) => {
-        // Excluir primer punto (origen)
+      points.slice(1).forEach((pt) => {
         const arrowIcon = L.divIcon({
           html: createArrowHTML(rotationAngle, adjustedSize, baseOpacity),
           className: "arrow-marker",
           iconSize: [adjustedSize, adjustedSize],
           iconAnchor: [adjustedSize / 2, adjustedSize / 2],
         });
-
-        const arrowMarker = L.marker(point, {
-          icon: arrowIcon,
-          zIndexOffset: -1000,
-        });
-
+        const arrowMarker = L.marker(pt, { icon: arrowIcon, zIndexOffset: -1000 });
         arrowMarker.addTo(map);
         arrowsRef.current.push(arrowMarker);
       });
     });
 
     return cleanupArrows;
-  }, [
-    map,
-    fromLat,
-    fromLon,
-    toLat,
-    toLon,
-    color,
-    currentZoom,
-    flow,
-    isMixed,
-    directions,
-    cleanupArrows,
-    createArrowHTML,
-  ]);
+  }, [map, fromLat, fromLon, toLat, toLon, color, currentZoom, flow, isMixed, directions, cleanupArrows, createArrowHTML]);
 
   return null;
 };
 
-const FarmMovementLayers = ({
-  movement,
-  farmPolygons,
-  yearStart,
-  useArrows = true,
-}) => {
-  // Memoizar procesamiento de datos para evitar recálculos
+// ------------------------------
+// Componente principal
+// ------------------------------
+const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = true }) => {
   const { allInputs, allOutputs } = useMemo(() => {
     if (!movement) return { allInputs: [], allOutputs: [] };
 
     const inputs = Object.entries(movement).flatMap(([farmId, m]) => [
-      ...(m.inputs?.farms || []).map((entry) => ({
-        ...entry,
-        __farmId: farmId,
-      })),
-      ...(m.inputs?.enterprises || []).map((entry) => ({
-        ...entry,
-        __farmId: farmId,
-      })),
+      ...(m.inputs?.farms || []).map((e) => ({ ...e, __farmId: farmId })),
+      ...(m.inputs?.enterprises || []).map((e) => ({ ...e, __farmId: farmId })),
     ]);
 
     const outputs = Object.entries(movement).flatMap(([farmId, m]) => [
-      ...(m.outputs?.farms || []).map((entry) => ({
-        ...entry,
-        __farmId: farmId,
-      })),
-      ...(m.outputs?.enterprises || []).map((entry) => ({
-        ...entry,
-        __farmId: farmId,
-      })),
+      ...(m.outputs?.farms || []).map((e) => ({ ...e, __farmId: farmId })),
+      ...(m.outputs?.enterprises || []).map((e) => ({ ...e, __farmId: farmId })),
     ]);
 
     return { allInputs: inputs, allOutputs: outputs };
   }, [movement]);
 
-  // Función optimizada para crear popups
   const createPopupContent = useCallback(
     (type, sitCode, name) => (
       <div className="p-3 bg-white text-sm space-y-2">
-        <div>
-          <span className="font-semibold">Tipo:</span> {getTypeLabel(type)}
-        </div>
-        {sitCode && (
-          <div>
-            <span className="font-semibold">Código SIT:</span> {sitCode}
-          </div>
-        )}
-        {name && (
-          <div>
-            <span className="font-semibold">Nombre:</span> {name}
-          </div>
-        )}
+        <div><span className="font-semibold">Tipo:</span> {getTypeLabel(type)}</div>
+        {sitCode && <div><span className="font-semibold">Código SIT:</span> {sitCode}</div>}
+        {name && <div><span className="font-semibold">Nombre:</span> {name}</div>}
       </div>
     ),
     []
   );
 
-  // Función optimizada para verificar movimientos mixtos
   const isMixedMovement = useCallback(
-    (originFarmId, targetId, yearKey, type) => {
-      if (
-        !originFarmId ||
-        !targetId ||
-        !movement?.[originFarmId]?.mixed?.[yearKey]
-      ) {
-        return false;
-      }
-
+    (originFarmId, targetId, yearKey, kind) => {
+      if (!originFarmId || !targetId || !movement?.[originFarmId]?.mixed?.[yearKey]) return false;
       const mixedItems =
-        type === "enterprise"
+        kind === "enterprise"
           ? movement[originFarmId].mixed[yearKey].enterprises || []
           : movement[originFarmId].mixed[yearKey].farms || [];
-
       return mixedItems.map(String).includes(String(targetId));
     },
     [movement]
   );
 
-  // Renderizar marcadores de empresa optimizado
   const renderEnterpriseMarkers = useCallback(
-    (movements, flow, lineColor, farm_main) => {
-      return movements
-        .filter(
-          (m) =>
-            m?.destination?.latitude &&
-            m?.destination?.longitud &&
-            !m?.destination?.farm_id
-        )
+    (movements, flow, lineColor, farm_main) =>
+      movements
+        .filter((m) => m?.destination?.latitude && m?.destination?.longitud && !m?.destination?.farm_id)
         .map((m, idx) => {
           const { destination: dest } = m;
-          const {
-            latitude: lat,
-            longitud: lon,
-            _id: id,
-            type_enterprise: type,
-            name,
-          } = dest;
+          const { latitude: lat, longitud: lon, _id: id, type_enterprise: type, name } = dest;
 
           const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
           const yearKey = String(yearStart);
-          const isMixed = isMixedMovement(
-            originFarmId,
-            id,
-            yearKey,
-            "enterprise"
-          );
+          const mixed = isMixedMovement(originFarmId, id, yearKey, "enterprise");
 
-          const icon = getEnterpriseIcon(type, flow, isMixed);
-          const finalLineColor = isMixed ? "purple" : lineColor;
+          const icon = getEnterpriseIcon(type);
+          const finalLineColor = mixed ? "purple" : lineColor;
           const farm_tmp = farm_main?.[0];
           const sitFromGeojson = getGeojsonName(dest.geojson);
 
@@ -432,7 +324,7 @@ const FarmMovementLayers = ({
                     toLon={lon}
                     color={finalLineColor}
                     flow={flow}
-                    isMixed={isMixed}
+                    isMixed={mixed}
                   />
                 ) : (
                   <Polyline
@@ -445,36 +337,24 @@ const FarmMovementLayers = ({
                 ))}
             </div>
           );
-        });
-    },
+        }),
     [useArrows, yearStart, createPopupContent, isMixedMovement]
   );
 
-  // Renderizar marcadores de finca optimizado
   const renderFarmMarkers = useCallback(
-    (movements, flow, lineColor, farm_main) => {
-      return movements
-        .filter(
-          (m) =>
-            m?.destination?.latitude &&
-            m?.destination?.longitud &&
-            m?.destination?.farm_id
-        )
+    (movements, flow, lineColor, farm_main) =>
+      movements
+        .filter((m) => m?.destination?.latitude && m?.destination?.longitud && m?.destination?.farm_id)
         .map((m, idx) => {
           const { destination: dest } = m;
           const { latitude: lat, longitud: lon, farm_id: targetFarmId } = dest;
 
           const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
           const yearKey = String(yearStart);
-          const isMixed = isMixedMovement(
-            originFarmId,
-            targetFarmId,
-            yearKey,
-            "farm"
-          );
+          const mixed = isMixedMovement(originFarmId, targetFarmId, yearKey, "farm");
 
-          const icon = getFarmIcon(flow, isMixed);
-          const finalLineColor = isMixed ? "purple" : lineColor;
+          const icon = getFarmIcon();
+          const finalLineColor = mixed ? "purple" : lineColor;
           const farm_tmp = farm_main?.[0];
           const sitCode = getGeojsonName(dest.geojson);
 
@@ -493,7 +373,7 @@ const FarmMovementLayers = ({
                     toLon={lon}
                     color={finalLineColor}
                     flow={flow}
-                    isMixed={isMixed}
+                    isMixed={mixed}
                   />
                 ) : (
                   <Polyline
@@ -506,8 +386,7 @@ const FarmMovementLayers = ({
                 ))}
             </div>
           );
-        });
-    },
+        }),
     [useArrows, yearStart, createPopupContent, isMixedMovement]
   );
 

@@ -15,6 +15,7 @@ import {
 const NAV_ITEMS = [
   { name: "Alertas nacionales", path: "/alertasnacionales", loginRequired: false },
   { name: "Alertas de predio", path: "/alertapredios", loginRequired: true },
+  { name: "Reporte", path: "/reporte", loginRequired: true },
   
   {
     name: "Metodología",
@@ -22,7 +23,7 @@ const NAV_ITEMS = [
     external: true,
     loginRequired: false,
   },
-  { name: "Reporte", path: "/reporte", loginRequired: true },
+  
   { name: "Acerca de", path: "/acercade", loginRequired: false },
 ];
 

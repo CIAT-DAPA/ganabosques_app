@@ -9,20 +9,12 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
       return;
     }
 
-    console.log('[useFilteredMovement] inputs:', {
-      risk, yearStart, yearEnd,
-      typeYearStart: typeof yearStart,
-      typeYearEnd: typeof yearEnd,
-    });
+    
 
     const baseDate =
       risk === "cumulative" ? (yearEnd ?? yearStart) : (yearStart ?? yearEnd);
 
-    const dbgDate = new Date(baseDate);
-    console.log('[useFilteredMovement] baseDate pick:', baseDate, {
-      parsed: isNaN(dbgDate.getTime()) ? 'Invalid' : dbgDate.toISOString(),
-      year: dbgDate.getFullYear(),
-    });
+    
 
     if (!baseDate) { setFilteredMovement({}); return; }
 
@@ -146,7 +138,6 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
       const yearsToUse = risk === "cumulative" ? getYearRange(yearStart, yearEnd) : [yearKey];
       const finalYearKey = (risk === "cumulative" && yearsToUse.length) ? yearsToUse[yearsToUse.length - 1] : yearKey;
 
-      console.log('RANGE', { farmId, yearsToUse, finalYearKey });
 
       // INPUTS
       const inputStatsList = yearsToUse.map(y => data?.inputs?.statistics?.[y]).filter(Boolean);
@@ -169,7 +160,6 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
         outFarms:(data?.outputs?.statistics?.[y]?.farms || []).length,
         outEnts: (data?.outputs?.statistics?.[y]?.enterprises || []).length,
       }));
-      console.log('PER-YEAR', { farmId, perYearCounts });
 
       const filteredInputs = {
         ...data?.inputs,
@@ -196,23 +186,9 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
         ? collectInvolved(data?.outputs?.statistics, yearsToUse, 'enterprises')
         : (outputStatsMerged?.enterprises?.map(String) || data?.outputs?.statistics?.[yearKey]?.enterprises?.map(String) || []);
 
-      console.log('INVOLVED', {
-        inFarms: involvedInputFarms.length,
-        inEnts:  involvedInputEnterprises.length,
-        outFarms: involvedOutputFarms.length,
-        outEnts:  involvedOutputEnterprises.length
-      });
+      
 
-      console.log('SPECIES', {
-        inType: Array.isArray(inputStatsMerged?.species) ? 'array' : typeof inputStatsMerged?.species,
-        inSize: Array.isArray(inputStatsMerged?.species)
-          ? inputStatsMerged?.species?.length
-          : (inputStatsMerged?.species ? Object.keys(inputStatsMerged?.species).length : 0),
-        outType: Array.isArray(outputStatsMerged?.species) ? 'array' : typeof outputStatsMerged?.species,
-        outSize: Array.isArray(outputStatsMerged?.species)
-          ? outputStatsMerged?.species?.length
-          : (outputStatsMerged?.species ? Object.keys(outputStatsMerged?.species).length : 0),
-      });
+      
 
       const filteredMixed = {
         [finalYearKey]: risk === "cumulative" ? mergeMixed(data?.mixed, yearsToUse) : (data?.mixed?.[finalYearKey] || {}),

@@ -252,13 +252,7 @@ const FarmYearCard = ({
   const showLegendEntrada = legendEntradaMap[`${farm.id}-${year}`] || false;
   const showLegendSalida  = legendSalidaMap[`${farm.id}-${year}`] || false;
 
-  // 🔎 Debug del render por tarjeta
-  console.log('[FarmYearCard]', {
-    farm: farm.id,
-    year,
-    inHasSpecies: !!statsEntrada?.species,
-    outHasSpecies: !!statsSalida?.species,
-  });
+ 
 
   const entradaChart = statsEntrada
     ? buildChartData({ [year]: statsEntrada.species }, "Entradas", showLegendEntrada)
@@ -398,11 +392,7 @@ export default function MovementCharts({
   const categories = Object.keys(aggregated);
   const series = [{ name: title, data: categories.map((label) => aggregated[label]) }];
 
-  console.log('[Chart/buildChartData]', {
-    title,
-    cats: categories.length,
-    sum: series[0].data.reduce((a, b) => a + b, 0),
-  });
+
 
   const options = {
     chart: { type: "bar", height: 250, toolbar: { show: false }, background: "transparent" },

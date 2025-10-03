@@ -90,7 +90,6 @@ export default function FarmRiskMap() {
   const handleMapCreated = (mapInstance) => {
     mapRef.current = mapInstance;
   };
-console.log(risk)
   return (
     <>
       <div className="relative">

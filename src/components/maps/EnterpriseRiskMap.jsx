@@ -90,7 +90,6 @@ export default function EnterpriseMap() {
   const handleMapCreated = (mapInstance) => {
     mapRef.current = mapInstance;
   };
-console.log("EnterpriseRiskMap render with search:", selectedEnterprise);
   return (
     <div className="relative">
       <FilterBar

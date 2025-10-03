@@ -32,7 +32,6 @@ export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
         .find((r) => r.farm_id === farmId);
 
       const isAlert = Boolean(riskObject?.risk_direct);
-      console.log(riskObject)
       const color = isAlert ? "#D50000" : "#00C853";
 
       // SIT code opcional

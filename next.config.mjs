@@ -9,15 +9,21 @@ const nextConfig = {
     unoptimized: true,
   },
 
-  // Opción para añadir / al final de cada ruta
-  trailingSlash: true,
-
   // ----------------- Opcionales (descomenta si los necesitas) -----------------
+  // Si sirves bajo un subpath (por ejemplo, midominio.com/app)
   // basePath: '/app',
   // assetPrefix: '/app/',
+
+  // Útil para S3/CloudFront y algunos hostings estáticos
+  // trailingSlash: true,
+
+  // Recomendado en desarrollo
   // reactStrictMode: true,
+
+  // Si necesitas ignorar errores para no frenar el build (no recomendado en prod)
   // eslint: { ignoreDuringBuilds: true },
   // typescript: { ignoreBuildErrors: true },
+  // ----------------------------------------------------------------------------
 };
 
 export default nextConfig;

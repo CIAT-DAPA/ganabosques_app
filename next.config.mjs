@@ -23,6 +23,7 @@ const nextConfig = {
   // Si necesitas ignorar errores para no frenar el build (no recomendado en prod)
   // eslint: { ignoreDuringBuilds: true },
   // typescript: { ignoreBuildErrors: true },
+  // test
   // ----------------------------------------------------------------------------
 };
 

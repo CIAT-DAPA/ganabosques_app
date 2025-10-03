@@ -385,8 +385,10 @@ export default function Reporte() {
           <h1 className={CSS_CLASSES.title}>Reporte</h1>
           <hr className={CSS_CLASSES.separator} />
           <p className={CSS_CLASSES.description}>
-            En esta Sección podrás generar reportes asociados a deforestación y ganadería en Colombia, solo debes subir un archivo CSV con los códigos SIT de las veredas que deseas analizar. Puedes descargar una plantilla de ejemplo <a href="/adm3ids.csv" className="underline font-semibold">aquí</a>.
-          </p>
+  En esta sección podrás generar reportes sobre los focos de deforestación y su posible relación con la ganadería en Colombia, a lo largo de diferentes periodos de tiempo. 
+  Para hacerlo, solo debes cargar un archivo CSV con los IDs de las veredas correspondientes al nivel 3 (Adm3) según la base de datos de Divipola que desees analizar. 
+  Puedes descargar una plantilla de ejemplo <a href="/adm3ids.csv" className="underline font-semibold">aquí</a>.
+</p>
 
           <p className={CSS_CLASSES.description}>
             Por favor seleccione el tipo de riesgo, tipo de reporte  y los periodos de deforestación que desea analizar.

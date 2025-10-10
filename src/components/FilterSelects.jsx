@@ -199,7 +199,7 @@ export default function FilterSelects({
       onYearStartEndChange?.(null, null);
     }
   };
-
+console.log(yearOptions)
   const handleMultiChangeAndNotify = (vals, options) => {
     setMultiSelectedIds(vals);
 
@@ -277,7 +277,7 @@ export default function FilterSelects({
           aria-label="Seleccionar período de análisis"
         />
       )}
-      {report && (
+      {report &&  (
         <CustomSelect
           value={reportType}
           onChange={(e) => setReportType?.(e.target.value)}

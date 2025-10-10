@@ -158,6 +158,7 @@ export default function FarmRiskMap() {
         foundFarms={foundFarms}
         riskFarm={riskFarm}
         yearStart={yearStart}
+        yearEnd={yearEnd}
       />
     </>
   );

@@ -12,13 +12,24 @@ export default function CustomSelect({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedOption, setSelectedOption] = useState(
-    options.find(opt => opt.value === value) || null
+    options.length > 0 
+      ? options.find(opt => opt.value === value) || options[0]  // 👈 default al primero
+      : null
   );
   const selectRef = useRef(null);
 
+  // Actualiza cuando cambian value u options
   useEffect(() => {
     const option = options.find(opt => opt.value === value);
-    setSelectedOption(option || null);
+    if (option) {
+      setSelectedOption(option);
+    } else if (options.length > 0) {
+      // 👈 si no hay value válido, ponemos el primero
+      setSelectedOption(options[0]);
+      onChange?.({ target: { value: options[0].value } });
+    } else {
+      setSelectedOption(null);
+    }
   }, [value, options]);
 
   useEffect(() => {
@@ -27,7 +38,6 @@ export default function CustomSelect({
         setIsOpen(false);
       }
     };
-
     document.addEventListener('mousedown', handleClickOutside);
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
@@ -36,7 +46,7 @@ export default function CustomSelect({
 
   const handleOptionClick = (option) => {
     setSelectedOption(option);
-    onChange({ target: { value: option.value } });
+    onChange?.({ target: { value: option.value } });
     setIsOpen(false);
   };
 

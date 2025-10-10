@@ -10,6 +10,7 @@ import {
   faXmark,
   faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
+import Image from "next/image";
 
 // ===== Navegación =====
 const NAV_ITEMS = [
@@ -187,11 +188,18 @@ export default function Header() {
       <div className="w-full flex items-center justify-between px-6 sm:px-8 md:px-12 lg:px-20 py-4">
         {/* Logo */}
         <Link
-          href="/"
-          className="font-heading text-2xl font-bold text-custom-light py-2 hover:text-green-300 transition-colors"
-        >
-          Ganabosques
-        </Link>
+  href="/"
+  className="flex items-center gap-2 font-heading text-2xl font-bold text-custom-light py-2 hover:text-green-300 transition-colors"
+>
+  <Image
+    src="/logo.png"
+    alt="Logo Ganabosques"
+    width={40}   // ajusta tamaño
+    height={40}  // ajusta tamaño
+    priority
+  />
+  Ganabosques
+</Link>
 
         {/* Botón hamburguesa */}
         <button

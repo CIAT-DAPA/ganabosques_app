@@ -155,7 +155,7 @@ export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
   return res.json();
 }
 export async function searchEnterprisesByName(name) {
-  const url = `http://localhost:8000/enterprise/by-name?name=${encodeURIComponent(
+  const url = `https://ganaapi.alliance.cgiar.org/enterprise/by-name?name=${encodeURIComponent(
     name
   )}`;
   const res = await fetch(url);
@@ -164,7 +164,7 @@ export async function searchEnterprisesByName(name) {
 }
 
 export async function getEnterpriseRiskDetails(analysisId, enterpriseIds = []) {
-  const url = "http://localhost:8000/enterprise-risk/details/by-enterprise";
+  const url = "https://ganaapi.alliance.cgiar.org/enterprise-risk/details/by-enterprise";
 
   const payload = {
     analysis_id: analysisId,

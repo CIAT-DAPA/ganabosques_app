@@ -219,36 +219,36 @@ export default function EnterpriseMap() {
   const yearStartVal = asYear(yearStart);
   const yearEndVal = asYear(yearEnd);
 
-  useEffect(() => {
-    const analysisId = year && String(year).trim();
-    const enterpriseIds = Array.isArray(selectedEnterprise)
-      ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
-      : [];
+useEffect(() => {
+  const analysisId = year && String(year).trim();
+  const enterpriseIds = Array.isArray(selectedEnterprise)
+    ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
+    : [];
 
-    if (!analysisId || enterpriseIds.length === 0) {
-      setEnterpriseDetails(null);
-      return;
+  if (!analysisId || enterpriseIds.length === 0) {
+    setEnterpriseDetails(null);
+    return;
+  }
+
+  let cancelled = false;
+  setPendingTasks((p) => p + 1);
+
+  (async () => {
+    try {
+      const data = await getEnterpriseRiskDetails(analysisId, enterpriseIds);
+      if (!cancelled) setEnterpriseDetails(data);
+    } catch (err) {
+      console.error("Error al cargar enterprise risk details:", err);
+      if (!cancelled) setEnterpriseDetails(null);
+    } finally {
+      setPendingTasks((p) => Math.max(0, p - 1));
     }
+  })();
 
-    let cancelled = false;
-    setPendingTasks((p) => p + 1);
-
-    (async () => {
-      try {
-        const data = await getEnterpriseRiskDetails(analysisId, enterpriseIds);
-        if (!cancelled) setEnterpriseDetails(data);
-      } catch (err) {
-        console.error("Error al cargar enterprise risk details:", err);
-        if (!cancelled) setEnterpriseDetails(null);
-      } finally {
-        if (!cancelled) setPendingTasks((p) => Math.max(0, p - 1));
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [year, selectedEnterprise, risk]);
+  return () => {
+    cancelled = true;
+  };
+}, [year, selectedEnterprise, risk]);
 
   return (
     <>

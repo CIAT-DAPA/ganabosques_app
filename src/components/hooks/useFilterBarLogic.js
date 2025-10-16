@@ -23,7 +23,6 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) =>
       setLoading(true);
       try {
         const results = await searchEnterprisesByName(search);
-        console.log("Enterprise search results:", results);
         setEnterpriseSuggestions(results || []);
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {

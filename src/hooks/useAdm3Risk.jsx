@@ -9,7 +9,6 @@ export function useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks) {
     ) {
       return;
     }
-
     const analysisId = analysis[0]?.id;
     const adm3Ids = foundAdms.map((adm) => adm.id).filter(Boolean);
     if (!analysisId || adm3Ids.length === 0) return;

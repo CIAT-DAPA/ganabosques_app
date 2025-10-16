@@ -199,7 +199,6 @@ export default function FilterSelects({
       onYearStartEndChange?.(null, null);
     }
   };
-console.log(yearOptions)
   const handleMultiChangeAndNotify = (vals, options) => {
     setMultiSelectedIds(vals);
 

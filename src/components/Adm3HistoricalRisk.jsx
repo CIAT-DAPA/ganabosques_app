@@ -16,21 +16,21 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
 
-// Paleta para booleano
-const COLOR_TRUE = "#D50000";  
-const COLOR_FALSE = "#00C853"; 
+// Paleta
+const COLOR_TRUE = "#D50000";    // Con Alerta
+const COLOR_FALSE = "#00C853";   // Sin Alerta
 
 function riskBadgeBool(isRisk) {
   return isRisk
     ? {
         label: "Con Alerta",
         color: COLOR_TRUE,
-        desc: "Existe alertas de deforestación en este período.",
+        desc: "Se han presentado alertas para este período.",
       }
     : {
         label: "Sin Alerta",
         color: COLOR_FALSE,
-        desc: "No se han identificado alertas en este período.",
+        desc: "No se han presentado alertas para este período.",
       };
 }
 
@@ -42,12 +42,20 @@ function badgeTextColor(hex) {
 function isoToYear(iso) {
   if (!iso) return null;
   const s = String(iso);
-
   const hasTZ = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(s);
-
   const d = new Date(s);
   const y = hasTZ ? d.getUTCFullYear() : d.getFullYear();
   return Number.isFinite(y) ? y : null;
+}
+
+// Normaliza "2020-01-01T..." | "2020" | 2020 -> 2020
+function toYear(val) {
+  if (val == null) return null;
+  if (typeof val === "number" && Number.isFinite(val)) return val;
+  const s = String(val);
+  const m = s.match(/^(\d{4})/);
+  if (m) return parseInt(m[1], 10);
+  return isoToYear(s);
 }
 
 function buildLabelFromPeriod(it) {
@@ -65,21 +73,21 @@ function sortKeyFromPeriod(it) {
   return ys != null ? ys : ye != null ? ye : 0;
 }
 
+// ⚠️ IMPORTANTE: No ordenamos aquí; respetamos el orden del backend (más reciente → más antiguo)
 function normalizeBubbleSeries(items = []) {
-  const rows = (items || [])
-    .map((it) => ({
-      label: buildLabelFromPeriod(it),
-      isRisk: Boolean(it?.risk_total),
-      sortKey: sortKeyFromPeriod(it),
-      raw: it,
-    }))
-    .sort((a, b) => a.sortKey - b.sortKey);
+  const rows = (items || []).map((it) => ({
+    label: buildLabelFromPeriod(it),
+    isRisk: Boolean(it?.risk_total),
+    sortKey: sortKeyFromPeriod(it), // ya no se usa para ordenar, pero lo dejamos por si acaso
+    raw: it,
+  }));
 
   const points = rows.map((r) => ({
     x: r.label,
-    y: 1,         
-    z: 28,        
+    y: 1,
+    z: 28,
     fillColor: r.isRisk ? COLOR_TRUE : COLOR_FALSE,
+    isRisk: r.isRisk,
   }));
 
   return { points, rows };
@@ -88,10 +96,16 @@ function normalizeBubbleSeries(items = []) {
 export default function Adm3HistoricalRisk({
   adm3RiskHistory = [],
   className = "",
+  yearStart,
+  yearEnd,
 }) {
+  const filterStartYear = toYear(yearStart);
+  const filterEndYear = toYear(yearEnd);
+
   if (!Array.isArray(adm3RiskHistory) || adm3RiskHistory.length === 0) {
     return <p className="text-sm text-gray-500"></p>;
   }
+
   return (
     <div className={`space-y-6 ${className}`}>
       {adm3RiskHistory.map((group, idx) => {
@@ -103,12 +117,41 @@ export default function Adm3HistoricalRisk({
             ? `Vereda de ${group.municipality}`
             : group?.adm3_id);
 
-        // Último item (por orden temporal)
-        const lastRow = rows.length > 0 ? rows[rows.length - 1] : null;
-        const lastItem = lastRow?.raw ?? null;
-        const lastIsRisk = Boolean(lastItem?.risk_total);
-        const lastBadge = riskBadgeBool(lastIsRisk);
-        const lastTextColor = badgeTextColor(lastBadge.color);
+        // Buscar el periodo exacto (sin hooks dentro del loop)
+        let selectedRow = null;
+        if (filterStartYear != null && filterEndYear != null) {
+          selectedRow =
+            rows.find((r) => {
+              const ys = isoToYear(r?.raw?.period_start);
+              const ye = isoToYear(r?.raw?.period_end);
+              return ys === filterStartYear && ye === filterEndYear;
+            }) || null;
+        }
+
+        const selectedItem = selectedRow?.raw ?? null;
+        const hasMatch = Boolean(selectedItem);
+
+        const selYs = selectedItem
+          ? isoToYear(selectedItem?.period_start)
+          : filterStartYear;
+        const selYe = selectedItem
+          ? isoToYear(selectedItem?.period_end)
+          : filterEndYear;
+
+        // Periodo en texto
+        const selectedPeriodLabel =
+          selYs && selYe
+            ? `${selYs} - ${selYe}`
+            : selYs
+            ? `${selYs}`
+            : selYe
+            ? `${selYe}`
+            : "—";
+
+        // Estado (badge) — si no hay match => Sin Alerta (verde) y métricas 0
+        const statusBadge = hasMatch
+          ? riskBadgeBool(Boolean(selectedItem?.risk_total))
+          : riskBadgeBool(false);
 
         const options = {
           chart: {
@@ -123,13 +166,8 @@ export default function Adm3HistoricalRisk({
             offsetY: 6,
             style: { fontSize: "18px", fontWeight: 600 },
           },
-          grid: {
-            strokeDashArray: 3,
-            padding: { left: 0, right: 0 },
-          },
-          dataLabels: {
-            enabled: false, // bubbles limpias
-          },
+          grid: { strokeDashArray: 3, padding: { left: 0, right: 0 } },
+          dataLabels: { enabled: false },
           xaxis: {
             type: "category",
             labels: { rotate: -45 },
@@ -137,61 +175,37 @@ export default function Adm3HistoricalRisk({
           },
           yaxis: {
             min: 0,
-            max: 2,          // centra las burbujas en y=1
+            max: 2,
             tickAmount: 2,
-            labels: {
-              show: false,   // ocultamos para centrar visualmente
-            },
+            labels: { show: false },
             axisBorder: { show: false },
             axisTicks: { show: false },
           },
           legend: { show: false },
           tooltip: {
-            y: {
-              formatter: () => "Centro",
-            },
-            x: {
-              formatter: (val) => `Período: ${val}`,
-            },
             custom: ({ dataPointIndex, seriesIndex, w }) => {
-              const p =
-                w.config.series?.[seriesIndex]?.data?.[dataPointIndex] || null;
-              const r = rows?.[dataPointIndex] || null;
-              const isRisk = r?.isRisk ?? false;
-              const b = riskBadgeBool(isRisk);
-              const defha =
-                r?.raw?.def_ha != null ? `${r.raw.def_ha} ha` : "—";
-              const farms =
-                r?.raw?.farm_amount != null ? `${r.raw.farm_amount} fincas` : "—";
-
+              const point =
+                w.config.series?.[seriesIndex]?.data?.[dataPointIndex];
+              if (!point) return "";
+              const { x, isRisk } = point;
+              const msg = isRisk
+                ? "Se han presentado alertas para este período."
+                : "No se han presentado alertas para este período.";
               return `
                 <div style="padding:8px 10px">
-                  <div style="font-weight:600;margin-bottom:4px">${p?.x ?? ""}</div>
-                  <div style="display:inline-block;padding:2px 6px;border-radius:999px;background:${b.color};color:#fff;font-size:12px;margin-bottom:4px">
-                    ${b.label}
-                  </div>
-                  <div style="font-size:12px;opacity:.9">${b.desc}</div>
+                  <div style="font-weight:600;margin-bottom:4px">Período: ${x}</div>
+                  <div style="font-size:12px;opacity:.9">${msg}</div>
                 </div>
               `;
             },
           },
           plotOptions: {
-            bubble: {
-              minBubbleRadius: 8,
-              maxBubbleRadius: 28, // ligado a z
-            },
+            bubble: { minBubbleRadius: 8, maxBubbleRadius: 28 },
           },
-          // Los colores de cada punto vienen por 'fillColor' en cada data point
           colors: [COLOR_FALSE, COLOR_TRUE],
         };
 
-        // Una sola serie; cada punto trae su fillColor
-        const series = [
-          {
-            name: "Alerta",
-            data: points,
-          },
-        ];
+        const series = [{ name: "Alerta", data: points }];
 
         return (
           <div
@@ -216,6 +230,7 @@ export default function Adm3HistoricalRisk({
                     <div className="font-medium">{group.department || "—"}</div>
                   </div>
                 </div>
+
                 <div className="flex items-start gap-3">
                   <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
@@ -227,6 +242,7 @@ export default function Adm3HistoricalRisk({
                     </div>
                   </div>
                 </div>
+
                 <div className="flex items-start gap-3">
                   <MapIcon className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
@@ -236,24 +252,32 @@ export default function Adm3HistoricalRisk({
                     <div className="font-medium">{group.name || "—"}</div>
                   </div>
                 </div>
+
+                {/* Periodo + Estado (badge debajo) */}
                 <div className="flex items-start gap-3">
                   <Activity className="h-5 w-5 text-gray-500 mt-0.5" />
-                  <div>
+                  <div className="flex flex-col gap-1">
                     <div className="text-xs uppercase text-gray-500">
-                      Última alerta registrada
+                      Periodo:{" "}
+                      <span className="font-medium text-gray-800">
+                        {selectedPeriodLabel}
+                      </span>
                     </div>
+
                     <div
-                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium"
+                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 w-fit"
                       style={{
-                        backgroundColor: lastBadge.color,
-                        color: lastTextColor,
+                        backgroundColor: statusBadge.color,
+                        color: badgeTextColor(statusBadge.color),
                       }}
-                      title={lastBadge.desc}
+                      title={statusBadge.desc}
                     >
-                      {lastBadge.label}
+                      {statusBadge.label}
                     </div>
                   </div>
                 </div>
+
+                {/* Área deforestada */}
                 <div className="flex items-start gap-3">
                   <Trees className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
@@ -261,10 +285,14 @@ export default function Adm3HistoricalRisk({
                       Área deforestada
                     </div>
                     <div className="font-medium">
-                      {lastItem?.def_ha != null ? `${lastItem.def_ha} ha` : "—"}
+                      {hasMatch && selectedItem?.def_ha != null
+                        ? `${selectedItem.def_ha} ha`
+                        : "0 ha"}
                     </div>
                   </div>
                 </div>
+
+                {/* Cantidad de fincas */}
                 <div className="flex items-start gap-3">
                   <Home className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
@@ -272,9 +300,9 @@ export default function Adm3HistoricalRisk({
                       Cantidad de fincas
                     </div>
                     <div className="font-medium">
-                      {lastItem?.farm_amount != null
-                        ? `${lastItem.farm_amount} Fincas`
-                        : "—"}
+                      {hasMatch && selectedItem?.farm_amount != null
+                        ? `${selectedItem.farm_amount} Fincas`
+                        : "0 Fincas"}
                     </div>
                   </div>
                 </div>
@@ -286,7 +314,7 @@ export default function Adm3HistoricalRisk({
                 style={{ width: 1 }}
               />
 
-              {/* Derecha */}
+              {/* Derecha - Chart */}
               <div className="md:pl-4 md:min-w-0">
                 <div className="w-full" style={{ height: 260 }}>
                   <ReactApexChart

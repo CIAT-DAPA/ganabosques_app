@@ -155,10 +155,34 @@ export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
   return res.json();
 }
 export async function searchEnterprisesByName(name) {
-  const url = `https://ganaapi.alliance.cgiar.org/enterprise/by-name?name=${encodeURIComponent(
+  const url = `http://localhost:8000/enterprise/by-name?name=${encodeURIComponent(
     name
   )}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Error al buscar empresas por nombre");
+  return res.json();
+}
+
+export async function getEnterpriseRiskDetails(analysisId, enterpriseIds = []) {
+  const url = "http://localhost:8000/enterprise-risk/details/by-enterprise";
+
+  const payload = {
+    analysis_id: analysisId,
+    enterprise_ids: enterpriseIds,
+  };
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    throw new Error("Error al obtener detalles de riesgo de la empresa");
+  }
+
   return res.json();
 }

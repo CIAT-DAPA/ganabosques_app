@@ -38,6 +38,7 @@ export default function NationalRiskMap() {
   const [admResults, setAdmResults] = useState([]);
   const mapRef = useRef();
   const [yearStart, setYearStart] = useState(2023);
+  const [yearEnd, setYearEnd] = useState(2024);
   const [loading, setLoading] = useState(false);
   const [pendingTasks, setPendingTasks] = useState(0);
   const [analysis, setAnalysis] = useState(null);
@@ -171,6 +172,11 @@ useEffect(() => {
   // Actualiza refs
   prevIdsRef.current = currIds;
 }, [foundAdms, risk]);
+  const handleYearStartEndChange = useCallback((start, end) => {
+    setYearStart(start);
+    setYearEnd(end);
+  }, []);
+
   return (
     <>
     <div className="relative">
@@ -196,7 +202,7 @@ useEffect(() => {
         onAdmSearch={handleAdmSearch}
         foundAdms={foundAdms}
         setFoundAdms={setFoundAdms}
-        onYearStartEndChange={() => {}}
+        onYearStartEndChange={handleYearStartEndChange}
         riskOptions={riskOptions}
         period={period}
         setPeriod={setPeriod}
@@ -243,7 +249,7 @@ useEffect(() => {
       </BaseMap>
      
     </div>
-    <Adm3HistoricalRisk adm3RiskHistory={adm3RiskHistory} />
+    <Adm3HistoricalRisk adm3RiskHistory={adm3RiskHistory} yearStart={yearStart} yearEnd={yearEnd} />
     </>
     
   );

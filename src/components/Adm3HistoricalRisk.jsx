@@ -17,8 +17,8 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 });
 
 // Paleta
-const COLOR_TRUE = "#D50000";    // Con Alerta
-const COLOR_FALSE = "#00C853";   // Sin Alerta
+const COLOR_TRUE = "#D50000"; // Con Alerta
+const COLOR_FALSE = "#00C853"; // Sin Alerta
 
 function riskBadgeBool(isRisk) {
   return isRisk
@@ -73,12 +73,12 @@ function sortKeyFromPeriod(it) {
   return ys != null ? ys : ye != null ? ye : 0;
 }
 
-// ⚠️ IMPORTANTE: No ordenamos aquí; respetamos el orden del backend (más reciente → más antiguo)
+// ⚠️ Respetamos el orden del backend
 function normalizeBubbleSeries(items = []) {
   const rows = (items || []).map((it) => ({
     label: buildLabelFromPeriod(it),
     isRisk: Boolean(it?.risk_total),
-    sortKey: sortKeyFromPeriod(it), // ya no se usa para ordenar, pero lo dejamos por si acaso
+    sortKey: sortKeyFromPeriod(it),
     raw: it,
   }));
 
@@ -92,6 +92,55 @@ function normalizeBubbleSeries(items = []) {
 
   return { points, rows };
 }
+
+/* ========= Helpers para las barras ========= */
+function formatNumber(val) {
+  if (typeof val !== "number") return val;
+  try {
+    return val.toLocaleString("es-CO");
+  } catch {
+    return String(val);
+  }
+}
+
+// Construye categorías y una serie desde items, filtrando valores 0
+function buildBarFromItems(items = [], valueKey = "value", seriesName = "Total", { round1Decimal = false } = {}) {
+  const cleaned = (items || []).filter((it) => {
+    const v = Number(it?.[valueKey] ?? 0);
+    return Number.isFinite(v) && v > 0; // 🔥 excluye 0 y no numéricos
+  });
+
+  const categories = cleaned.map((it) => buildLabelFromPeriod(it));
+  const values = cleaned.map((it) => {
+    let v = Number(it?.[valueKey] ?? 0);
+    if (round1Decimal) v = Math.round(v * 10) / 10; // 🔄 redondeo a 1 decimal
+    return v;
+  });
+
+  return {
+    categories,
+    series: [{ name: seriesName, data: values }],
+  };
+}
+
+function baseBarOptions({ title, categories, yTitle, yFormatter }) {
+  return {
+    chart: { type: "bar", toolbar: { show: false }, parentHeightOffset: 0 },
+    title: { text: title, style: { fontWeight: 600 } },
+    xaxis: { categories, title: { text: "Período" }, labels: { rotate: -30 } },
+    yaxis: { title: { text: yTitle } },
+    dataLabels: { enabled: false },
+    grid: { strokeDashArray: 4 },
+    plotOptions: { bar: { borderRadius: 6, columnWidth: "30%" } },
+    tooltip: {
+      y: {
+        formatter: (val) =>
+          typeof yFormatter === "function" ? yFormatter(val) : formatNumber(val),
+      },
+    },
+  };
+}
+/* ========================================== */
 
 export default function Adm3HistoricalRisk({
   adm3RiskHistory = [],
@@ -148,7 +197,7 @@ export default function Adm3HistoricalRisk({
             ? `${selYe}`
             : "—";
 
-        // Estado (badge) — si no hay match => Sin Alerta (verde) y métricas 0
+        // Estado (badge)
         const statusBadge = hasMatch
           ? riskBadgeBool(Boolean(selectedItem?.risk_total))
           : riskBadgeBool(false);
@@ -207,6 +256,42 @@ export default function Adm3HistoricalRisk({
 
         const series = [{ name: "Alerta", data: points }];
 
+        /* ========= Barras con filtros de cero ========= */
+        const items = Array.isArray(group?.items) ? group.items : [];
+
+        // 1) Hectáreas deforestadas (excluye 0 y muestra 1 decimal)
+        const { categories: defoCats, series: defoSeries } = buildBarFromItems(
+          items,
+          "def_ha",
+          "Hectáreas",
+          { round1Decimal: true }
+        );
+        const defoOptions = baseBarOptions({
+          title: "Histórico de hectáreas deforestadas",
+          categories: defoCats,
+          yTitle: "Hectáreas",
+          yFormatter: (val) =>
+            typeof val === "number"
+              ? val.toLocaleString("es-CO", {
+                  minimumFractionDigits: 1,
+                  maximumFractionDigits: 1,
+                })
+              : val,
+        });
+
+        // 2) Número de fincas (excluye 0)
+        const { categories: farmCats, series: farmSeries } = buildBarFromItems(
+          items,
+          "farm_amount",
+          "Fincas"
+        );
+        const farmOptions = baseBarOptions({
+          title: "Histórico de fincas",
+          categories: farmCats,
+          yTitle: "Número de fincas",
+        });
+        /* ============================================= */
+
         return (
           <div
             key={group.adm3_id}
@@ -253,12 +338,12 @@ export default function Adm3HistoricalRisk({
                   </div>
                 </div>
 
-                {/* Periodo + Estado (badge debajo) */}
+                {/* Periodo + Estado */}
                 <div className="flex items-start gap-3">
                   <Activity className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex flex-col gap-1">
                     <div className="text-xs uppercase text-gray-500">
-                      Periodo:{" "}
+                      Periodo Analizado:{" "}
                       <span className="font-medium text-gray-800">
                         {selectedPeriodLabel}
                       </span>
@@ -286,7 +371,10 @@ export default function Adm3HistoricalRisk({
                     </div>
                     <div className="font-medium">
                       {hasMatch && selectedItem?.def_ha != null
-                        ? `${selectedItem.def_ha} ha`
+                        ? `${(Math.round(Number(selectedItem.def_ha) * 10) / 10).toLocaleString("es-CO", {
+                            minimumFractionDigits: 1,
+                            maximumFractionDigits: 1,
+                          })} ha`
                         : "0 ha"}
                     </div>
                   </div>
@@ -301,7 +389,7 @@ export default function Adm3HistoricalRisk({
                     </div>
                     <div className="font-medium">
                       {hasMatch && selectedItem?.farm_amount != null
-                        ? `${selectedItem.farm_amount} Fincas`
+                        ? `${Number(selectedItem.farm_amount).toLocaleString("es-CO")} Fincas`
                         : "0 Fincas"}
                     </div>
                   </div>
@@ -314,8 +402,9 @@ export default function Adm3HistoricalRisk({
                 style={{ width: 1 }}
               />
 
-              {/* Derecha - Chart */}
-              <div className="md:pl-4 md:min-w-0">
+              {/* Derecha: burbuja + barras en columna */}
+              <div className="md:pl-4 md:min-w-0 space-y-6">
+                {/* Burbuja */}
                 <div className="w-full" style={{ height: 260 }}>
                   <ReactApexChart
                     options={options}
@@ -323,6 +412,38 @@ export default function Adm3HistoricalRisk({
                     type="bubble"
                     height="100%"
                   />
+                </div>
+
+                {/* Barra 1: hectáreas (sin ceros, 1 decimal) */}
+                <div className="w-full">
+                  {defoSeries?.[0]?.data?.length ? (
+                    <ReactApexChart
+                      options={defoOptions}
+                      series={defoSeries}
+                      type="bar"
+                      height={260}
+                    />
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      Sin datos de hectáreas deforestadas.
+                    </div>
+                  )}
+                </div>
+
+                {/* Barra 2: fincas (sin ceros) */}
+                <div className="w-full">
+                  {farmSeries?.[0]?.data?.length ? (
+                    <ReactApexChart
+                      options={farmOptions}
+                      series={farmSeries}
+                      type="bar"
+                      height={260}
+                    />
+                  ) : (
+                    <div className="text-sm text-gray-500">
+                      Sin datos de fincas.
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

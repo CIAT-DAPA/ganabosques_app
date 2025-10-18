@@ -1,4 +1,3 @@
-// components/EnterpriseMap.jsx
 "use client";
 
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
@@ -7,6 +6,7 @@ import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EnterpriseChart from "@/components/EnterpriseChart";
+import DownloadPdfButton from "@/components/DownloadPdfButton"; // 👈 agregado
 
 import { searchAdmByName, getEnterpriseRiskDetails } from "@/services/apiService";
 import { useFilteredMovement } from "@/hooks/useFilteredMovement";
@@ -29,13 +29,14 @@ function getEnterprisesArray(enterpriseDetails) {
     return enterpriseDetails.data.enterprises;
   return [];
 }
+
 function hasProviderAlert(p = {}) {
   const r = p?.risk || {};
   return r?.risk_direct === true || r?.risk_input === true || r?.risk_output === true;
 }
 
 // ------------------------------
-// Íconos dinámicos por tipo
+// Íconos dinámicos
 // ------------------------------
 const TYPE_ALIASES = {
   COLLECTIONCENTER: "COLLECTION_CENTER",
@@ -54,12 +55,17 @@ const normalizeType = (type) => {
 };
 const baseForType = (type) => {
   switch (normalizeType(type)) {
-    case "SLAUGHTERHOUSE": return "planta";
-    case "COLLECTION_CENTER": return "acopio";
-    case "CATTLE_FAIR": return "feria";
-    case "FARM": return "finca";
+    case "SLAUGHTERHOUSE":
+      return "planta";
+    case "COLLECTION_CENTER":
+      return "acopio";
+    case "CATTLE_FAIR":
+      return "feria";
+    case "FARM":
+      return "finca";
     case "ENTERPRISE":
-    default: return "empresa";
+    default:
+      return "empresa";
   }
 };
 const iconForType = (type) =>
@@ -72,7 +78,7 @@ const iconForType = (type) =>
   });
 
 // ------------------------------
-// Overlays solo con marcadores (sin GeoJSON, sin flechas)
+// Overlays solo con marcadores
 // ------------------------------
 function EnterpriseOverlays({ enterpriseDetails }) {
   const map = useMap();
@@ -153,7 +159,6 @@ export default function EnterpriseMap() {
   const [period, setPeriod] = useState("");
   const [source, setSource] = useState("smbyc");
   const [search, setSearch] = useState("");
-
   const [selectedEnterprise, setSelectedEnterprise] = useState([]);
   const [foundFarms, setFoundFarms] = useState([]);
   const [foundAdms, setFoundAdms] = useState([]);
@@ -164,15 +169,12 @@ export default function EnterpriseMap() {
   const [yearStart, setYearStart] = useState(2023);
   const [yearEnd, setYearEnd] = useState(2024);
   const [originalMovement, setOriginalMovement] = useState(null);
-
   const [loading, setLoading] = useState(false);
   const [pendingTasks, setPendingTasks] = useState(0);
-
   const [analysis, setAnalysis] = useState(null);
   const [riskFarm, setRiskFarm] = useState(null);
   const [enterpriseDetails, setEnterpriseDetails] = useState(null);
 
-  // Hooks existentes (si los usas)
   const movement = useFilteredMovement(originalMovement, yearStart, yearEnd, risk);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
   useFarmPolygons(foundFarms, setPendingTasks, setOriginalMovement);
@@ -186,7 +188,6 @@ export default function EnterpriseMap() {
       const results = await searchAdmByName(searchText, level);
       if (!results || results.length === 0) return;
       setAdmResults(results);
-
       const geometry = results[0]?.geometry;
       if (geometry && mapRef.current) {
         const Lm = await import("leaflet");
@@ -219,94 +220,114 @@ export default function EnterpriseMap() {
   const yearStartVal = asYear(yearStart);
   const yearEndVal = asYear(yearEnd);
 
-useEffect(() => {
-  const analysisId = year && String(year).trim();
-  const enterpriseIds = Array.isArray(selectedEnterprise)
-    ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
-    : [];
+  useEffect(() => {
+    const analysisId = year && String(year).trim();
+    const enterpriseIds = Array.isArray(selectedEnterprise)
+      ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
+      : [];
 
-  if (!analysisId || enterpriseIds.length === 0) {
-    setEnterpriseDetails(null);
-    return;
-  }
-
-  let cancelled = false;
-  setPendingTasks((p) => p + 1);
-
-  (async () => {
-    try {
-      const data = await getEnterpriseRiskDetails(analysisId, enterpriseIds);
-      if (!cancelled) setEnterpriseDetails(data);
-    } catch (err) {
-      console.error("Error al cargar enterprise risk details:", err);
-      if (!cancelled) setEnterpriseDetails(null);
-    } finally {
-      setPendingTasks((p) => Math.max(0, p - 1));
+    if (!analysisId || enterpriseIds.length === 0) {
+      setEnterpriseDetails(null);
+      return;
     }
-  })();
 
-  return () => {
-    cancelled = true;
-  };
-}, [year, selectedEnterprise, risk]);
+    let cancelled = false;
+    setPendingTasks((p) => p + 1);
+
+    (async () => {
+      try {
+        const data = await getEnterpriseRiskDetails(analysisId, enterpriseIds);
+        if (!cancelled) setEnterpriseDetails(data);
+      } catch (err) {
+        console.error("Error al cargar enterprise risk details:", err);
+        if (!cancelled) setEnterpriseDetails(null);
+      } finally {
+        setPendingTasks((p) => Math.max(0, p - 1));
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [year, selectedEnterprise, risk]);
+
+  // ✅ Condición: mostrar botón solo si hay datos
+  const hasEnterpriseData =
+    Array.isArray(getEnterprisesArray(enterpriseDetails)) &&
+    getEnterprisesArray(enterpriseDetails).length > 0;
 
   return (
     <>
-      <div className="relative">
-        <FilterBar
-          risk={risk}
-          setRisk={setRisk}
-          year={year}
-          setYear={setYear}
-          source={source}
-          setSource={setSource}
-          search={search}
-          setSearch={setSearch}
-          onSearch={(e) => e.preventDefault()}
-          enterpriseRisk={true}
-          farmRisk={false}
-          nationalRisk={false}
-          selectedEnterprise={selectedEnterprise}
-          setSelectedEnterprise={setSelectedEnterprise}
-          foundFarms={foundFarms}
-          setFoundFarms={setFoundFarms}
-          admLevel={admLevel}
-          setAdmLevel={setAdmLevel}
-          onAdmSearch={handleAdmSearch}
-          foundAdms={foundAdms}
-          setFoundAdms={setFoundAdms}
-          onYearStartEndChange={handleYearStartEndChange}
-          riskOptions={riskOptions}
-          period={period}
-          setPeriod={setPeriod}
-        />
+      <div id="enterprise-risk-export">
+        <div className="relative">
+          <FilterBar
+            risk={risk}
+            setRisk={setRisk}
+            year={year}
+            setYear={setYear}
+            source={source}
+            setSource={setSource}
+            search={search}
+            setSearch={setSearch}
+            onSearch={(e) => e.preventDefault()}
+            enterpriseRisk={true}
+            farmRisk={false}
+            nationalRisk={false}
+            selectedEnterprise={selectedEnterprise}
+            setSelectedEnterprise={setSelectedEnterprise}
+            foundFarms={foundFarms}
+            setFoundFarms={setFoundFarms}
+            admLevel={admLevel}
+            setAdmLevel={setAdmLevel}
+            onAdmSearch={handleAdmSearch}
+            foundAdms={foundAdms}
+            setFoundAdms={setFoundAdms}
+            onYearStartEndChange={handleYearStartEndChange}
+            riskOptions={riskOptions}
+            period={period}
+            setPeriod={setPeriod}
+          />
 
-        {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
+          {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
 
-        <RiskLegend enterpriseRisk={true} farmRisk={false} nationalRisk={false} />
+          <RiskLegend enterpriseRisk={true} farmRisk={false} nationalRisk={false} />
 
-        <BaseMap
-          onMapCreated={handleMapCreated}
-          showDeforestation={true}
-          period={period}
-          source={source}
-          risk={risk}
-          enterpriseRisk={true}
-          farmRisk={false}
-          nationalRisk={false}
-          search={search}
-        >
-          {/* Solo marcadores con ícono dinámico */}
-          <EnterpriseOverlays enterpriseDetails={enterpriseDetails} />
-        </BaseMap>
+          <BaseMap
+            onMapCreated={handleMapCreated}
+            showDeforestation={true}
+            period={period}
+            source={source}
+            risk={risk}
+            enterpriseRisk={true}
+            farmRisk={false}
+            nationalRisk={false}
+            search={search}
+          >
+            <EnterpriseOverlays enterpriseDetails={enterpriseDetails} />
+          </BaseMap>
+        </div>
+
+        {/* Gráficas solo si hay datos */}
+        {hasEnterpriseData && (
+          <EnterpriseChart
+            yearStart={yearStartVal}
+            yearEnd={yearEndVal}
+            enterpriseDetails={enterpriseDetails}
+            risk={risk}
+          />
+        )}
       </div>
 
-      <EnterpriseChart
-        yearStart={yearStartVal}
-        yearEnd={yearEndVal}
-        enterpriseDetails={enterpriseDetails}
-        risk={risk}
-      />
+      {/* ✅ Botón visible solo cuando hay datos */}
+      {hasEnterpriseData && (
+        <div className="max-w-7xl mx-auto px-6 md:px-12 mt-4 mb-8 flex justify-end">
+          <DownloadPdfButton
+            targetId="enterprise-risk-export"
+            filename="alerta_empresa.pdf"
+            label="Descargar (PDF)"
+          />
+        </div>
+      )}
     </>
   );
 }

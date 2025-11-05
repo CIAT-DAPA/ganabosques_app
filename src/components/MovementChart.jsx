@@ -114,9 +114,13 @@ const ChartSection = ({
   hasData,
   showLegend,
   onToggleLegend,
+  description
 }) => (
   <div className="space-y-2">
     <h3 className="text-lg font-semibold text-custom-dark">{title}</h3>
+    <p>
+      {description}
+    </p>
     {hasData ? (
       <>
         <Chart
@@ -305,18 +309,20 @@ const FarmYearCard = ({
         {/* PANEL DERECHO - Gráficos */}
         <div className="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6">
           <ChartSection
-            title="Entradas"
+            title="Movilización de entrada"
             chart={entradaChart}
             hasData={hasEntrada}
             showLegend={showLegendEntrada}
             onToggleLegend={() => toggleLegend("entrada", farm.id, year)}
+            description="Muestra los ingresos al predio según las categorías del sector productivo. En ganadería, las movilizaciones se agrupan por edades del hato."
           />
           <ChartSection
-            title="Salidas"
+            title="Movilización de salida"
             chart={salidaChart}
             hasData={hasSalida}
             showLegend={showLegendSalida}
             onToggleLegend={() => toggleLegend("salida", farm.id, year)}
+            description="Indica los movimientos de salida desde el predio, clasificados por tipo de producción o grupo etario en el caso ganadero."
           />
         </div>
       </div>

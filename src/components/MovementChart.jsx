@@ -5,6 +5,7 @@ import {
   faTriangleExclamation,
   faTree,
   faShieldHalved,
+  faSeedling
 } from "@fortawesome/free-solid-svg-icons";
 import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
@@ -170,7 +171,7 @@ const EnvironmentalSection = ({ riskObj }) => (
           suffix="%"
         />
         <InfoItem
-          label="Area"
+          label="Área"
           value={`${riskObj?.deforestation?.ha?.toFixed(1)} ha`}
         />
       </div>
@@ -187,7 +188,7 @@ const EnvironmentalSection = ({ riskObj }) => (
         />
         
         <InfoItem
-          label="Area"
+          label="Área"
           value={`${riskObj?.protected?.ha?.toFixed(1)} ha`}
         />
       </div>
@@ -195,44 +196,38 @@ const EnvironmentalSection = ({ riskObj }) => (
 
     {/* Frontera Agrícola (unificada) */}
     <div className="space-y-2">
-      <SectionHeader icon={faShieldHalved} title="Frontera agrícola" />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Dentro de frontera */}
-        <div className="p-3 rounded-lg border border-gray-200 bg-white/60">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+      <SectionHeader icon={faSeedling} title="Frontera agrícola" />
+      
+      {/* Dentro de frontera */}
+      <div className="space-y-1 text-sm text-custom-dark">
+        <div className="text-xs uppercase text-gray-500">
             Dentro de frontera
-          </div>
-          <div className="space-y-1 text-sm text-custom-dark">
-            <InfoItem
-              label="Prop"
+        </div>
+        <InfoItem
+              label="Proporción"
               value={(riskObj?.farming_in?.prop * 100)?.toFixed(1)}
               suffix="%"
-            />
-            <InfoItem
-              label="Area"
+        />
+        <InfoItem
+              label="Área"
               value={`${riskObj?.farming_in?.ha?.toFixed(1)} ha`}
-            />
-          </div>
-        </div>
+        />
+      </div>
 
-        {/* Fuera de frontera */}
-        <div className="p-3 rounded-lg border border-gray-200 bg-white/60">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+      {/* Fuera de frontera */}
+      <div className="space-y-1 text-sm text-custom-dark">
+        <div className="text-xs uppercase text-gray-500">
             Fuera de frontera
-          </div>
-          <div className="space-y-1 text-sm text-custom-dark">
-            <InfoItem
-              label="Prop"
+        </div>
+        <InfoItem
+              label="Proporción"
               value={(riskObj?.farming_out?.prop * 100)?.toFixed(1)}
               suffix="%"
-            />
-            <InfoItem
-              label="Area"
+        />
+        <InfoItem
+              label="Área"
               value={`${riskObj?.farming_out?.ha?.toFixed(1)} ha`}
-            />
-          </div>
-        </div>
+        />
       </div>
     </div>
   </div>

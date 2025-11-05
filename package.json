@@ -21,10 +21,12 @@
     "keycloak-js": "^26.2.0",
     "lucide-react": "^0.542.0",
     "next": "15.3.5",
+    "proj4": "^2.19.10",
     "react": "^19.0.0",
     "react-apexcharts": "^1.7.0",
     "react-dom": "^19.0.0",
-    "react-leaflet": "^5.0.0-rc.2"
+    "react-leaflet": "^5.0.0-rc.2",
+    "reproject": "^1.2.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

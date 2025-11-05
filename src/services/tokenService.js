@@ -1,8 +1,8 @@
 
-
+const API_URL = "https://ganaapi.alliance.cgiar.org/";
 export const validateToken = async (token) => {
   try {
-    const response = await fetch('https://ganaapi.alliance.cgiar.org/auth/token/validate', {
+    const response = await fetch(API_URL + 'auth/token/validate', {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${token}`,

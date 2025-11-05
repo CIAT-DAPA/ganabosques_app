@@ -35,10 +35,9 @@ export default function RiesgosNacionales() {
           <hr className={CSS_CLASSES.separator} />
 
           <p className={CSS_CLASSES.description}>
-            Una herramienta que muestra la alerta asociada a la ganadería, la
-            deforestación y las áreas protegidas en Colombia. Con
-            visualizaciones simples podrás identificar las regiones más críticas
-            del país, usando datos de distintas fuentes y períodos de monitoreo.
+            Explora las alertas nacionales de deforestación por las diferentes cadenas productivas en Colombia.
+            Este mapa interactivo te permite identificar las veredas con alertas y las áreas protegidas del país,
+            con datos oficiales y actualizados de distintas fuentes de monitoreo ambiental.
           </p>
         </div>
       </header>

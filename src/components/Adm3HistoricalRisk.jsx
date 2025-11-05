@@ -7,9 +7,9 @@ import {
   MapPin,
   Building2,
   Map as MapIcon,
-  Activity,
   Trees,
   Home,
+  Calendar
 } from "lucide-react";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -209,12 +209,6 @@ export default function Adm3HistoricalRisk({
             parentHeightOffset: 0,
             animations: { enabled: true },
           },
-          title: {
-            text: "Alertas históricas",
-            align: "left",
-            offsetY: 6,
-            style: { fontSize: "18px", fontWeight: 600 },
-          },
           grid: { strokeDashArray: 3, padding: { left: 0, right: 0 } },
           dataLabels: { enabled: false },
           xaxis: {
@@ -267,7 +261,6 @@ export default function Adm3HistoricalRisk({
           { round1Decimal: true }
         );
         const defoOptions = baseBarOptions({
-          title: "Histórico de hectáreas deforestadas",
           categories: defoCats,
           yTitle: "Hectáreas",
           yFormatter: (val) =>
@@ -279,16 +272,15 @@ export default function Adm3HistoricalRisk({
               : val,
         });
 
-        // 2) Número de fincas (excluye 0)
+        // 2) Número de predios (excluye 0)
         const { categories: farmCats, series: farmSeries } = buildBarFromItems(
           items,
           "farm_amount",
           "Fincas"
         );
         const farmOptions = baseBarOptions({
-          title: "Histórico de fincas",
           categories: farmCats,
-          yTitle: "Número de fincas",
+          yTitle: "Número de predios",
         });
         /* ============================================= */
 
@@ -317,7 +309,7 @@ export default function Adm3HistoricalRisk({
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <MapIcon className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
                     <div className="text-xs uppercase text-gray-500">
                       Municipio
@@ -329,7 +321,7 @@ export default function Adm3HistoricalRisk({
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <MapIcon className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
                     <div className="text-xs uppercase text-gray-500">
                       Vereda
@@ -340,16 +332,14 @@ export default function Adm3HistoricalRisk({
 
                 {/* Periodo + Estado */}
                 <div className="flex items-start gap-3">
-                  <Activity className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex flex-col gap-1">
                     <div className="text-xs uppercase text-gray-500">
-                      Periodo Analizado:{" "}
-                      <span className="font-medium text-gray-800">
-                        {selectedPeriodLabel}
-                      </span>
+                      Periodo seleccionado
                     </div>
-
-                    <div
+                    <div className="font-medium text-gray-800">
+                      {selectedPeriodLabel} {" "}
+                      <span
                       className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 w-fit"
                       style={{
                         backgroundColor: statusBadge.color,
@@ -358,6 +348,8 @@ export default function Adm3HistoricalRisk({
                       title={statusBadge.desc}
                     >
                       {statusBadge.label}
+                    </span>
+
                     </div>
                   </div>
                 </div>
@@ -367,7 +359,7 @@ export default function Adm3HistoricalRisk({
                   <Trees className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
                     <div className="text-xs uppercase text-gray-500">
-                      Área deforestada
+                      Área deforestada por predios
                     </div>
                     <div className="font-medium">
                       {hasMatch && selectedItem?.def_ha != null
@@ -380,17 +372,17 @@ export default function Adm3HistoricalRisk({
                   </div>
                 </div>
 
-                {/* Cantidad de fincas */}
+                {/* Cantidad de predios */}
                 <div className="flex items-start gap-3">
                   <Home className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
                     <div className="text-xs uppercase text-gray-500">
-                      Cantidad de fincas
+                      Predios con alertas
                     </div>
                     <div className="font-medium">
                       {hasMatch && selectedItem?.farm_amount != null
-                        ? `${Number(selectedItem.farm_amount).toLocaleString("es-CO")} Fincas`
-                        : "0 Fincas"}
+                        ? `${Number(selectedItem.farm_amount).toLocaleString("es-CO")} Predios`
+                        : "0 predios"}
                     </div>
                   </div>
                 </div>
@@ -405,7 +397,13 @@ export default function Adm3HistoricalRisk({
               {/* Derecha: burbuja + barras en columna */}
               <div className="md:pl-4 md:min-w-0 space-y-6">
                 {/* Burbuja */}
-                <div className="w-full" style={{ height: 260 }}>
+                <div className="w-full" style={{ }}>
+                  <h2 style={{ fontSize: "18px", fontWeight: 600 }}>Alertas históricas</h2>
+                  <p className="mt-4 text-sm text-gray-600 leading-relaxed px-4">
+                    Visualiza la tendencia de alertas a lo largo del tiempo.
+                    Cada punto representa un periodo de análisis; el color verde indica ausencia de alertas,
+                    mientras que los rojos señalarán posibles alertas.
+                  </p>
                   <ReactApexChart
                     options={options}
                     series={series}
@@ -417,12 +415,21 @@ export default function Adm3HistoricalRisk({
                 {/* Barra 1: hectáreas (sin ceros, 1 decimal) */}
                 <div className="w-full">
                   {defoSeries?.[0]?.data?.length ? (
-                    <ReactApexChart
-                      options={defoOptions}
-                      series={defoSeries}
-                      type="bar"
-                      height={260}
-                    />
+                    <div>
+                      <h2 style={{ fontSize: "18px", fontWeight: 600 }}>Hectáreas deforestadas</h2>
+                      <p className="mt-4 text-sm text-gray-600 leading-relaxed px-4">
+                        Este gráfico muestra la evolución de la deforestación en el territorio a lo largo
+                        del tiempo relacionado con la cadena productiva.
+                        Cada barra representa el total de hectáreas afectadas en el
+                        periodo indicado.
+                      </p>
+                      <ReactApexChart
+                        options={defoOptions}
+                        series={defoSeries}
+                        type="bar"
+                        height={260}
+                      />
+                    </div>
                   ) : (
                     <div className="text-sm text-gray-500">
                       Sin datos de hectáreas deforestadas.
@@ -430,18 +437,26 @@ export default function Adm3HistoricalRisk({
                   )}
                 </div>
 
-                {/* Barra 2: fincas (sin ceros) */}
+                {/* Barra 2: predios (sin ceros) */}
                 <div className="w-full">
                   {farmSeries?.[0]?.data?.length ? (
-                    <ReactApexChart
+                    <div>
+                      <h2 style={{ fontSize: "18px", fontWeight: 600 }}>Cantidad de predios con alertas</h2>
+                      <p className="mt-4 text-sm text-gray-600 leading-relaxed px-4">
+                        Este gráfico muestra el número de predios donde se han identificado alertas
+                        durante los periodos analizados, dichas alertas pueden ser directas o indirectas. Cada barra representa un período de tiempo con registros
+                        de alerta.
+                      </p>
+                      <ReactApexChart
                       options={farmOptions}
                       series={farmSeries}
                       type="bar"
                       height={260}
                     />
+                    </div>
                   ) : (
                     <div className="text-sm text-gray-500">
-                      Sin datos de fincas.
+                      Sin datos de predios.
                     </div>
                   )}
                 </div>

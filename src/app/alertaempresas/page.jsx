@@ -40,11 +40,9 @@ export default function RiesgosEmpresas() {
           <hr className={CSS_CLASSES.separator} />
 
           <p className={CSS_CLASSES.description}>
-            Consulta el alerta ambiental asociado a un predio
-            específico mediante su código SIT. Este módulo te permite
-            identificar los niveles de alerta y los indicadores ambientales
-            correspondientes por finca. También puedes visualizar la
-            movilización de predios y las relaciones entre ellos.
+            Consulta las alertas ambientales asociadas a empresas del sector productivo mediante su nombre.
+            Este módulo te permite identificar alertas de deforestación de los proveedores, tomando en cuenta
+            sus movimientos y relaciones entre toda la cadena de proveeduría.
           </p>
         </div>
       </header>

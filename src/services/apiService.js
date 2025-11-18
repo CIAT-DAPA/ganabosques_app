@@ -1,12 +1,14 @@
+const API_URL = "https://ganaapi.alliance.cgiar.org/";
+//const API_URL = "http://127.0.0.1:8000//";
 
 export async function fetchEnterprises() {
-  const res = await fetch("https://ganaapi.alliance.cgiar.org/enterprise/");
+  const res = await fetch(API_URL + "enterprise/");
   if (!res.ok) throw new Error("Error al cargar empresas");
   return res.json();
 }
 
 export async function fetchAnalysisYearRanges(source, type) {
-  const res = await fetch("https://ganaapi.alliance.cgiar.org/analysis/");
+  const res = await fetch(API_URL + "analysis/");
   if (!res.ok) throw new Error("No se encontró el analysis");
   const data = await res.json();
   if (!Array.isArray(data)) return [];
@@ -21,7 +23,7 @@ export async function fetchAnalysisYearRanges(source, type) {
 }
 
 export async function fetchYearRanges(source, type) {
-  const res = await fetch("https://ganaapi.alliance.cgiar.org/deforestation/");
+  const res = await fetch(API_URL + "deforestation/");
   if (!res.ok) throw new Error("No se encontró el periodo de tiempo");
   const data = await res.json();
   if (!Array.isArray(data)) return [];
@@ -37,18 +39,18 @@ export async function fetchYearRanges(source, type) {
 
 export async function fetchFarmBySITCode(code) {
   const res = await fetch(
-    `https://ganaapi.alliance.cgiar.org/farm/by-extid?ext_codes=${code}&labels=SIT_CODE`
+    `${API_URL}farm/by-extid?ext_codes=${code}&labels=SIT_CODE`
   );
   if (!res.ok) throw new Error("Error de red al buscar el SIT CODE");
   return res.json();
 }
 
 export async function searchAdmByName(name, level) {
-  /*const url = `https://ganaapi.alliance.cgiar.org/${level}/by-name?name=${encodeURIComponent(name)}`;
+  /*const url = `${API_URL}${level}/by-name?name=${encodeURIComponent(name)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Error al buscar en ${level}`);
   return res.json();*/
-  const url = `https://ganaapi.alliance.cgiar.org/adm3/by-label?label=${encodeURIComponent(name)}`;
+  const url = `${API_URL}adm3/by-label?label=${encodeURIComponent(name)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Error al buscar en sitios`);
   return res.json();
@@ -56,7 +58,7 @@ export async function searchAdmByName(name, level) {
 export async function fetchFarmPolygonsByIds(ids) {
   if (!ids || ids.length === 0) return [];
 
-  const url = `https://ganaapi.alliance.cgiar.org/farmpolygons/by-farm?ids=${ids}`;
+  const url = `${API_URL}farmpolygons/by-farm?ids=${ids}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Error al obtener polígonos de fincas");
   return res.json();
@@ -64,7 +66,7 @@ export async function fetchFarmPolygonsByIds(ids) {
 export async function fetchMovementStatisticsByFarmIds(ids) {
   if (!ids || ids.length === 0) return [];
 
-  const url = `https://ganaapi.alliance.cgiar.org/movement/statistics-by-farmid?ids=${ids.join(",")}`;
+  const url = `${API_URL}movement/statistics-by-farmid?ids=${ids.join(",")}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Error al obtener estadísticas de movimiento");
   return res.json();
@@ -72,7 +74,7 @@ export async function fetchMovementStatisticsByFarmIds(ids) {
 export async function fetchAdm3RisksByAnalysisAndAdm3(analysisId, adm3Ids) {
   if (!analysisId || !Array.isArray(adm3Ids) || adm3Ids.length === 0) return [];
 
-  const url = "https://ganaapi.alliance.cgiar.org/adm3risk/by-analysis-and-adm3";
+  const url = API_URL + "adm3risk/by-analysis-and-adm3";
 
   const res = await fetch(url, {
     method: "POST",
@@ -90,7 +92,7 @@ export async function fetchAdm3RisksByAnalysisAndAdm3(analysisId, adm3Ids) {
 export async function fetchFarmRiskByDeforestationId(deforestationId) {
   if (!deforestationId) return [];
 
-  const url = `https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm?deforestation_id=${deforestationId}`;
+  const url = `${API_URL}farmrisk/by-analysis-and-farm?deforestation_id=${deforestationId}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Error en la respuesta del servidor");
 
@@ -100,7 +102,7 @@ export async function fetchFarmRiskByDeforestationId(deforestationId) {
 export async function fetchAdm3DetailsByIds(ids) {
   if (!Array.isArray(ids) || ids.length === 0) return [];
 
-  const url = `https://ganaapi.alliance.cgiar.org/adm3/by-ids?ids=${ids.join(",")}`;
+  const url = `${API_URL}adm3/by-ids?ids=${ids.join(",")}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Error al obtener detalles de adm3");
 
@@ -110,7 +112,7 @@ export async function fetchAdm3DetailsByIds(ids) {
 export async function fetchFarmRiskByAnalysisAndFarm(analysisId, farmIds) {
   if (!analysisId || !Array.isArray(farmIds) || farmIds.length === 0) return [];
 
-  const url = "https://ganaapi.alliance.cgiar.org/farmrisk/by-analysis-and-farm";
+  const url = API_URL + "farmrisk/by-analysis-and-farm";
 
   const res = await fetch(url, {
     method: "POST",
@@ -132,7 +134,7 @@ export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
     throw new Error("El parámetro 'type' debe ser 'annual' o 'cumulative'");
   }
 
-  const url = "https://ganaapi.alliance.cgiar.org/adm3risk/by-adm3-and-type";
+  const url = API_URL + "adm3risk/by-adm3-and-type";
 
   const res = await fetch(url, {
     method: "POST",
@@ -155,7 +157,7 @@ export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
   return res.json();
 }
 export async function searchEnterprisesByName(name) {
-  const url = `https://ganaapi.alliance.cgiar.org/enterprise/by-name?name=${encodeURIComponent(
+  const url = `${API_URL}enterprise/by-name?name=${encodeURIComponent(
     name
   )}`;
   const res = await fetch(url);
@@ -164,7 +166,7 @@ export async function searchEnterprisesByName(name) {
 }
 
 export async function getEnterpriseRiskDetails(analysisId, enterpriseIds = []) {
-  const url = "https://ganaapi.alliance.cgiar.org/enterprise-risk/details/by-enterprise";
+  const url = API_URL + "enterprise-risk/details/by-enterprise";
 
   const payload = {
     analysis_id: analysisId,

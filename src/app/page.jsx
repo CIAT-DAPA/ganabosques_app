@@ -5,8 +5,8 @@ import Image from "next/image";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faMap,
-  faChartBar,
-  faTractor,
+  faFileLines,
+  faHome,
   faBuilding,
 } from "@fortawesome/free-solid-svg-icons";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,25 +18,25 @@ const FEATURES_DATA = [
     icon: faMap,
     title: "Riesgo nacional",
     description:
-      "Explora el nivel de riesgo de deforestación en Colombia por departamento, municipio o vereda. Una visión clara para tomar decisiones informadas y basadas en evidencia.",
+      "Explora el nivel de riesgo de deforestación en Colombia por vereda.",
   },
   {
-    icon: faTractor,
+    icon: faHome,
     title: "Riesgo de predios",
     description:
-      "Accede a información detallada y georreferenciada sobre el riesgo de deforestación en predios específicos. Una mirada cercana al territorio.",
+      "Accede a información detallada y georreferenciada sobre el riesgo de deforestación en predios específicos.",
   },
   {
     icon: faBuilding,
     title: "Riesgo de empresas",
     description:
-      "Descubre cómo las actividades económicas y empresariales se relacionan con zonas de riesgo y cómo impactan nuestros ecosistemas.",
+      "Descubre el nivel actual de alertas sobre la posible afectación de las empresas en los procesos de deforestación.",
   },
   {
-    icon: faChartBar,
-    title: "Metodología",
+    icon: faFileLines,
+    title: "Reportes",
     description:
-      "Conoce la base técnica y científica detrás de los mapas de riesgo. Transparencia y rigor para entender cómo se priorizan territorios y se analizan los impactos ambientales.",
+      "Genera reportes en diferentes escalas de forma organizada.",
   },
 ];
 
@@ -113,14 +113,14 @@ export default function Home() {
               <span className="text-[#77D094]">Bosques</span>
             </h1>
             <p className={CSS_CLASSES.heroDescription}>
-              Visualiza alertas de deforestación y el movimiento de ganado en
-              Colombia, fácil y en un solo lugar.
+              GanaBosques te conecta con la trazabilidad ambiental de las cadenas productivas en Colombia.
+              Explora mapas con alertas de deforestación, movimientos de ganado y zonas protegidas en un solo lugar.
             </p>
             <button
               onClick={handleExplorarMapas}
               className={CSS_CLASSES.explorarButton}
             >
-              Explorar mapas
+              Explorar
             </button>
           </div>
         </div>

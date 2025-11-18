@@ -103,6 +103,39 @@ const end = period?.deforestation_period_end
           </LayersControl.Overlay>
         )}
 
+        <LayersControl.Overlay name="Departamentos">
+          <WMSTileLayer
+            url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+            layers="administrative:admin_1"
+            format="image/png"
+            transparent={true}
+            attribution=""
+            zIndex={1001}
+          />
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay name="Municipios">
+          <WMSTileLayer
+            url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+            layers="administrative:admin_2"
+            format="image/png"
+            transparent={true}
+            attribution=""
+            zIndex={1001}
+          />
+        </LayersControl.Overlay>
+
+        <LayersControl.Overlay name="Veredas">
+          <WMSTileLayer
+            url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+            layers="administrative:admin_3"
+            format="image/png"
+            transparent={true}
+            attribution=""
+            zIndex={1001}
+          />
+        </LayersControl.Overlay>
+
         <LayersControl.Overlay name="Áreas protegidas">
           <WMSTileLayer
             url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"

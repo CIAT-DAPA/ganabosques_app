@@ -5,6 +5,7 @@ import {
   faTriangleExclamation,
   faTree,
   faShieldHalved,
+  faSeedling
 } from "@fortawesome/free-solid-svg-icons";
 import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
@@ -113,9 +114,13 @@ const ChartSection = ({
   hasData,
   showLegend,
   onToggleLegend,
+  description
 }) => (
   <div className="space-y-2">
     <h3 className="text-lg font-semibold text-custom-dark">{title}</h3>
+    <p>
+      {description}
+    </p>
     {hasData ? (
       <>
         <Chart
@@ -170,7 +175,7 @@ const EnvironmentalSection = ({ riskObj }) => (
           suffix="%"
         />
         <InfoItem
-          label="Area"
+          label="Área"
           value={`${riskObj?.deforestation?.ha?.toFixed(1)} ha`}
         />
       </div>
@@ -187,7 +192,7 @@ const EnvironmentalSection = ({ riskObj }) => (
         />
         
         <InfoItem
-          label="Area"
+          label="Área"
           value={`${riskObj?.protected?.ha?.toFixed(1)} ha`}
         />
       </div>
@@ -195,44 +200,38 @@ const EnvironmentalSection = ({ riskObj }) => (
 
     {/* Frontera Agrícola (unificada) */}
     <div className="space-y-2">
-      <SectionHeader icon={faShieldHalved} title="Frontera agrícola" />
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Dentro de frontera */}
-        <div className="p-3 rounded-lg border border-gray-200 bg-white/60">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+      <SectionHeader icon={faSeedling} title="Frontera agrícola" />
+      
+      {/* Dentro de frontera */}
+      <div className="space-y-1 text-sm text-custom-dark">
+        <div className="text-xs uppercase text-gray-500">
             Dentro de frontera
-          </div>
-          <div className="space-y-1 text-sm text-custom-dark">
-            <InfoItem
-              label="Prop"
+        </div>
+        <InfoItem
+              label="Proporción"
               value={(riskObj?.farming_in?.prop * 100)?.toFixed(1)}
               suffix="%"
-            />
-            <InfoItem
-              label="Area"
+        />
+        <InfoItem
+              label="Área"
               value={`${riskObj?.farming_in?.ha?.toFixed(1)} ha`}
-            />
-          </div>
-        </div>
+        />
+      </div>
 
-        {/* Fuera de frontera */}
-        <div className="p-3 rounded-lg border border-gray-200 bg-white/60">
-          <div className="text-xs uppercase tracking-wide text-gray-500 mb-2">
+      {/* Fuera de frontera */}
+      <div className="space-y-1 text-sm text-custom-dark">
+        <div className="text-xs uppercase text-gray-500">
             Fuera de frontera
-          </div>
-          <div className="space-y-1 text-sm text-custom-dark">
-            <InfoItem
-              label="Prop"
+        </div>
+        <InfoItem
+              label="Proporción"
               value={(riskObj?.farming_out?.prop * 100)?.toFixed(1)}
               suffix="%"
-            />
-            <InfoItem
-              label="Area"
+        />
+        <InfoItem
+              label="Área"
               value={`${riskObj?.farming_out?.ha?.toFixed(1)} ha`}
-            />
-          </div>
-        </div>
+        />
       </div>
     </div>
   </div>
@@ -310,18 +309,20 @@ const FarmYearCard = ({
         {/* PANEL DERECHO - Gráficos */}
         <div className="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6">
           <ChartSection
-            title="Entradas"
+            title="Movilización de entrada"
             chart={entradaChart}
             hasData={hasEntrada}
             showLegend={showLegendEntrada}
             onToggleLegend={() => toggleLegend("entrada", farm.id, year)}
+            description="Muestra los ingresos al predio según las categorías del sector productivo. En ganadería, las movilizaciones se agrupan por edades del hato."
           />
           <ChartSection
-            title="Salidas"
+            title="Movilización de salida"
             chart={salidaChart}
             hasData={hasSalida}
             showLegend={showLegendSalida}
             onToggleLegend={() => toggleLegend("salida", farm.id, year)}
+            description="Indica los movimientos de salida desde el predio, clasificados por tipo de producción o grupo etario en el caso ganadero."
           />
         </div>
       </div>

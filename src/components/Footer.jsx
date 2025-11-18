@@ -7,12 +7,12 @@ const FOOTER_LINKS = [
     name: "Acerca de",
     href: "/acercade",
     external: false,
-  },
+  },/*
   {
     name: "Metodología",
     href: "https://cerodeforestacioncolombia.co/tfa/protocolo-de-monitoreo-reporte-y-verificacion-mrv-de-la-no-deforestacion-asociada-a-predios-de-cadenas-de-suministro-agropecuario-cacao-cafe-leche-carne-palma/",
     external: true,
-  },
+  },*/
 ];
 
 const PARTNERS = [

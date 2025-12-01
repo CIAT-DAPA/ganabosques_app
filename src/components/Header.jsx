@@ -193,10 +193,10 @@ export default function Header() {
   className="flex items-center gap-2 font-heading text-2xl font-bold text-custom-light py-2 hover:text-green-300 transition-colors"
 >
   <Image
-    src="/logo.png"
+    src="/logo-2.png"
     alt="Logo Ganabosques"
-    width={40}   // ajusta tamaño
-    height={40}  // ajusta tamaño
+    width={40}   
+    height={40}  
     priority
   />
   Ganabosques

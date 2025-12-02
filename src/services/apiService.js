@@ -1,14 +1,25 @@
 const API_URL = "https://ganaapi.alliance.cgiar.org/";
-//const API_URL = "http://127.0.0.1:8000//";
+// const API_URL = "http://127.0.0.1:8000//";
 
-export async function fetchEnterprises() {
-  const res = await fetch(API_URL + "enterprise/");
+function authHeaders(token, extra = {}) {
+  return {
+    Authorization: `Bearer ${token}`,
+    ...extra,
+  };
+}
+
+export async function fetchEnterprises(token) {
+  const res = await fetch(API_URL + "enterprise/", {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error("Error al cargar empresas");
   return res.json();
 }
 
-export async function fetchAnalysisYearRanges(source, type) {
-  const res = await fetch(API_URL + "analysis/");
+export async function fetchAnalysisYearRanges(token, source, type) {
+  const res = await fetch(API_URL + "analysis/", {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error("No se encontró el analysis");
   const data = await res.json();
   if (!Array.isArray(data)) return [];
@@ -16,14 +27,22 @@ export async function fetchAnalysisYearRanges(source, type) {
   const s = source ? source.toString().trim().toLowerCase() : null;
   const t = type ? type.toString().trim().toLowerCase() : null;
   return data.filter((item) => {
-    const bySource = !s || (item.deforestation_source && item.deforestation_source.toLowerCase() === s);
-    const byType = !t || (item.deforestation_type && item.deforestation_type.toLowerCase() === t);
+    const bySource =
+      !s ||
+      (item.deforestation_source &&
+        item.deforestation_source.toLowerCase() === s);
+    const byType =
+      !t ||
+      (item.deforestation_type &&
+        item.deforestation_type.toLowerCase() === t);
     return bySource && byType;
   });
 }
 
-export async function fetchYearRanges(source, type) {
-  const res = await fetch(API_URL + "deforestation/");
+export async function fetchYearRanges(token, source, type) {
+  const res = await fetch(API_URL + "deforestation/", {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error("No se encontró el periodo de tiempo");
   const data = await res.json();
   if (!Array.isArray(data)) return [];
@@ -31,54 +50,79 @@ export async function fetchYearRanges(source, type) {
   const s = source ? source.toString().trim().toLowerCase() : null;
   const t = type ? type.toString().trim().toLowerCase() : null;
   return data.filter((item) => {
-    const bySource = !s || (item.deforestation_source && item.deforestation_source.toLowerCase() === s);
-    const byType = !t || (item.deforestation_type && item.deforestation_type.toLowerCase() === t);
+    const bySource =
+      !s ||
+      (item.deforestation_source &&
+        item.deforestation_source.toLowerCase() === s);
+    const byType =
+      !t ||
+      (item.deforestation_type &&
+        item.deforestation_type.toLowerCase() === t);
     return bySource && byType;
   });
 }
 
-export async function fetchFarmBySITCode(code) {
+export async function fetchFarmBySITCode(token, code) {
   const res = await fetch(
-    `${API_URL}farm/by-extid?ext_codes=${code}&labels=SIT_CODE`
+    `${API_URL}farm/by-extid?ext_codes=${code}&labels=SIT_CODE`,
+    {
+      headers: authHeaders(token, { Accept: "application/json" }),
+    }
   );
   if (!res.ok) throw new Error("Error de red al buscar el SIT CODE");
   return res.json();
 }
 
-export async function searchAdmByName(name, level) {
+export async function searchAdmByName(token, name, level) {
   /*const url = `${API_URL}${level}/by-name?name=${encodeURIComponent(name)}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Error al buscar en ${level}`);
   return res.json();*/
   const url = `${API_URL}adm3/by-label?label=${encodeURIComponent(name)}`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error(`Error al buscar en sitios`);
   return res.json();
 }
-export async function fetchFarmPolygonsByIds(ids) {
+
+export async function fetchFarmPolygonsByIds(token, ids) {
   if (!ids || ids.length === 0) return [];
 
   const url = `${API_URL}farmpolygons/by-farm?ids=${ids}`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error("Error al obtener polígonos de fincas");
   return res.json();
 }
-export async function fetchMovementStatisticsByFarmIds(ids) {
+
+export async function fetchMovementStatisticsByFarmIds(token, ids) {
   if (!ids || ids.length === 0) return [];
 
   const url = `${API_URL}movement/statistics-by-farmid?ids=${ids.join(",")}`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error("Error al obtener estadísticas de movimiento");
   return res.json();
 }
-export async function fetchAdm3RisksByAnalysisAndAdm3(analysisId, adm3Ids) {
+
+export async function fetchAdm3RisksByAnalysisAndAdm3(
+  token,
+  analysisId,
+  adm3Ids
+) {
   if (!analysisId || !Array.isArray(adm3Ids) || adm3Ids.length === 0) return [];
 
   const url = API_URL + "adm3risk/by-analysis-and-adm3";
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(token, {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    }),
     body: JSON.stringify({
       analysis_ids: [analysisId],
       adm3_ids: adm3Ids,
@@ -89,34 +133,45 @@ export async function fetchAdm3RisksByAnalysisAndAdm3(analysisId, adm3Ids) {
   return res.json();
 }
 
-export async function fetchFarmRiskByDeforestationId(deforestationId) {
+export async function fetchFarmRiskByDeforestationId(token, deforestationId) {
   if (!deforestationId) return [];
 
-  const url = `${API_URL}farmrisk/by-analysis-and-farm?deforestation_id=${deforestationId}`;
-  const res = await fetch(url);
+  const url = `${API_URL}/analysis/by-deforestation?deforestation_id=${deforestationId}`;
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error("Error en la respuesta del servidor");
 
   return res.json();
 }
 
-export async function fetchAdm3DetailsByIds(ids) {
+export async function fetchAdm3DetailsByIds(token, ids) {
   if (!Array.isArray(ids) || ids.length === 0) return [];
 
   const url = `${API_URL}adm3/by-ids?ids=${ids.join(",")}`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error("Error al obtener detalles de adm3");
 
   return res.json();
 }
 
-export async function fetchFarmRiskByAnalysisAndFarm(analysisId, farmIds) {
+export async function fetchFarmRiskByAnalysisAndFarm(
+  token,
+  analysisId,
+  farmIds
+) {
   if (!analysisId || !Array.isArray(farmIds) || farmIds.length === 0) return [];
 
   const url = API_URL + "farmrisk/by-analysis-and-farm";
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: authHeaders(token, {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    }),
     body: JSON.stringify({
       analysis_ids: [analysisId],
       farm_ids: farmIds,
@@ -127,7 +182,8 @@ export async function fetchFarmRiskByAnalysisAndFarm(analysisId, farmIds) {
 
   return res.json();
 }
-export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
+
+export async function fetchAdm3RiskByAdm3AndType(token, adm3Ids, type) {
   if (!Array.isArray(adm3Ids) || adm3Ids.length === 0) return {};
   const t = (type || "").toString().trim().toLowerCase();
   if (t !== "annual" && t !== "cumulative") {
@@ -138,7 +194,10 @@ export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
 
   const res = await fetch(url, {
     method: "POST",
-    headers: { "Content-Type": "application/json", accept: "application/json" },
+    headers: authHeaders(token, {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    }),
     body: JSON.stringify({
       adm3_ids: adm3Ids,
       type: t,
@@ -156,16 +215,21 @@ export async function fetchAdm3RiskByAdm3AndType(adm3Ids, type) {
 
   return res.json();
 }
-export async function searchEnterprisesByName(name) {
-  const url = `${API_URL}enterprise/by-name?name=${encodeURIComponent(
-    name
-  )}`;
-  const res = await fetch(url);
+
+export async function searchEnterprisesByName(token, name) {
+  const url = `${API_URL}enterprise/by-name?name=${encodeURIComponent(name)}`;
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
   if (!res.ok) throw new Error("Error al buscar empresas por nombre");
   return res.json();
 }
 
-export async function getEnterpriseRiskDetails(analysisId, enterpriseIds = []) {
+export async function getEnterpriseRiskDetails(
+  token,
+  analysisId,
+  enterpriseIds = []
+) {
   const url = API_URL + "enterprise-risk/details/by-enterprise";
 
   const payload = {
@@ -175,10 +239,10 @@ export async function getEnterpriseRiskDetails(analysisId, enterpriseIds = []) {
 
   const res = await fetch(url, {
     method: "POST",
-    headers: {
+    headers: authHeaders(token, {
       "Content-Type": "application/json",
       Accept: "application/json",
-    },
+    }),
     body: JSON.stringify(payload),
   });
 

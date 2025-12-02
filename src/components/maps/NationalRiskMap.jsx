@@ -14,7 +14,8 @@ import NationalRiskLayers from "./NationalRiskLayers";
 import NationalNavigationHelpers from "./NationalNavigationHelpers";
 import { fetchAdm3RiskByAdm3AndType } from "@/services/apiService";
 import Adm3HistoricalRisk from "@/components/Adm3HistoricalRisk";
-import DownloadPdfButton from "@/components/DownloadPdfButton"; // 👈 import
+import DownloadPdfButton from "@/components/DownloadPdfButton";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function NationalRiskMap() {
   const riskOptions = useMemo(
@@ -45,6 +46,8 @@ export default function NationalRiskMap() {
   const [lastCenteredExtId, setLastCenteredExtId] = useState(null);
   const [adm3RiskHistory, setAdm3RiskHistory] = useState([]);
 
+  const { token } = useAuth();
+
   useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
   useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks);
@@ -56,7 +59,6 @@ export default function NationalRiskMap() {
     setLoading(pendingTasks > 0);
   }, [pendingTasks]);
 
-  // limpiar popup
   useEffect(() => {
     if (!foundAdms || foundAdms.length === 0) {
       setPopupData(null);
@@ -67,7 +69,8 @@ export default function NationalRiskMap() {
   const handleAdmSearch = useCallback(
     async (searchText, level) => {
       try {
-        const results = await searchAdmByName(searchText, level);
+        if (!token) return;
+        const results = await searchAdmByName(token, searchText, level);
         if (!results?.length) return;
         setAdmResults(results);
         const geometry = results[0]?.geometry;
@@ -80,13 +83,14 @@ export default function NationalRiskMap() {
         console.error("Error buscando nivel administrativo:", err);
       }
     },
-    [search]
+    [search, token]
   );
 
   const handleMapCreated = (mapInstance) => (mapRef.current = mapInstance);
 
-  // actualizar historial de riesgo
   useEffect(() => {
+    if (!token) return;
+
     const currIds = (foundAdms || [])
       .map((a) => a?.id || a?._id || a?.adm3_id)
       .filter(Boolean);
@@ -106,7 +110,7 @@ export default function NationalRiskMap() {
       setPendingTasks((v) => v + 1);
       (async () => {
         try {
-          const data = await fetchAdm3RiskByAdm3AndType(currIds, risk);
+          const data = await fetchAdm3RiskByAdm3AndType(token, currIds, risk);
           setAdm3RiskHistory(Object.values(data || {}));
         } finally {
           setPendingTasks((v) => v - 1);
@@ -127,7 +131,7 @@ export default function NationalRiskMap() {
       setPendingTasks((v) => v + 1);
       (async () => {
         try {
-          const data = await fetchAdm3RiskByAdm3AndType(added, risk);
+          const data = await fetchAdm3RiskByAdm3AndType(token, added, risk);
           setAdm3RiskHistory((prev) => [
             ...prev,
             ...Object.values(data || {}),
@@ -139,7 +143,7 @@ export default function NationalRiskMap() {
     }
 
     prevIdsRef.current = currIds;
-  }, [foundAdms, risk, adm3RiskHistory.length]);
+  }, [foundAdms, risk, adm3RiskHistory.length, token]);
 
   const handleYearStartEndChange = useCallback((start, end) => {
     setYearStart(start);
@@ -178,9 +182,15 @@ export default function NationalRiskMap() {
             setPeriod={setPeriod}
           />
 
-          {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
+          {loading && (
+            <LoadingSpinner message="Cargando datos y polígonos..." />
+          )}
 
-          <RiskLegend enterpriseRisk={false} farmRisk={false} nationalRisk={true} />
+          <RiskLegend
+            enterpriseRisk={false}
+            farmRisk={false}
+            nationalRisk={true}
+          />
 
           <BaseMap
             onMapCreated={handleMapCreated}
@@ -216,7 +226,6 @@ export default function NationalRiskMap() {
           </BaseMap>
         </div>
 
-        {/* Solo mostrar si hay datos */}
         {adm3RiskHistory?.length > 0 && (
           <Adm3HistoricalRisk
             adm3RiskHistory={adm3RiskHistory}
@@ -226,7 +235,6 @@ export default function NationalRiskMap() {
         )}
       </div>
 
-      {/* 👇 Solo renderiza el botón si hay resultados */}
       {adm3RiskHistory?.length > 0 && (
         <div className="max-w-7xl mx-auto px-6 md:px-12 mt-4 mb-8 flex justify-end">
           <DownloadPdfButton

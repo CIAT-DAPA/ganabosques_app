@@ -1,20 +1,21 @@
 import { useState, useEffect, useCallback } from "react";
-import { 
-  fetchEnterprises, 
-  fetchAnalysisYearRanges, 
-  fetchFarmBySITCode, 
+import {
+  fetchEnterprises,
+  fetchAnalysisYearRanges,
+  fetchFarmBySITCode,
   searchAdmByName,
-  searchEnterprisesByName
+  searchEnterprisesByName,
 } from "@/services/apiService";
+import { useAuth } from "@/hooks/useAuth";
 
 // Hook para manejar empresas
 export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) => {
+  const { token } = useAuth();
   const [enterpriseSuggestions, setEnterpriseSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    // Si no hay búsqueda o no aplica riesgo, vaciamos (igual a ADM)
-    if (!search || !enterpriseRisk) {
+    if (!search || !enterpriseRisk || !token) {
       setEnterpriseSuggestions([]);
       return;
     }
@@ -22,7 +23,7 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) =>
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const results = await searchEnterprisesByName(search);
+        const results = await searchEnterprisesByName(token, search);
         setEnterpriseSuggestions(results || []);
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
@@ -34,15 +35,22 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) =>
       }
     }, delay);
 
-    // Limpieza del debounce
     return () => clearTimeout(timer);
-  }, [search, enterpriseRisk, delay]);
+  }, [search, enterpriseRisk, delay, token]);
 
   return { enterpriseSuggestions, setEnterpriseSuggestions, loading };
 };
 
 // Hook para manejar rangos de años
-export const useYearRanges = (source, risk, year, setYear, setPeriod, onYearStartEndChange) => {
+export const useYearRanges = (
+  source,
+  risk,
+  year,
+  setYear,
+  setPeriod,
+  onYearStartEndChange
+) => {
+  const { token } = useAuth();
   const [yearRanges, setYearRanges] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -50,45 +58,47 @@ export const useYearRanges = (source, risk, year, setYear, setPeriod, onYearStar
   const asId = (v) => (v == null ? "" : String(v));
 
   useEffect(() => {
-  let aborted = false;
+    if (!token) return;
 
-  const loadYears = async () => {
-    setLoading(true);
-    setError(null);
+    let aborted = false;
 
-    try {
-      const data = await fetchAnalysisYearRanges(source, risk);
-      if (aborted) return;
+    const loadYears = async () => {
+      setLoading(true);
+      setError(null);
 
+      try {
+        const data = await fetchAnalysisYearRanges(token, source, risk);
+        if (aborted) return;
 
-      const arr = Array.isArray(data) ? data : [];
-      setYearRanges(arr);
-
-      // ...
-    } catch (err) {
-      if (!aborted) {
-        setError("Error al cargar años disponibles");
-        console.error("Error fetching year ranges:", err);
+        const arr = Array.isArray(data) ? data : [];
+        setYearRanges(arr);
+      } catch (err) {
+        if (!aborted) {
+          setError("Error al cargar años disponibles");
+          console.error("Error fetching year ranges:", err);
+        }
+      } finally {
+        if (!aborted) setLoading(false);
       }
-    } finally {
-      if (!aborted) setLoading(false);
-    }
-  };
+    };
 
-  loadYears();
-  return () => { aborted = true; };
-}, [source, risk, year, setYear, setPeriod, onYearStartEndChange]);
+    loadYears();
+    return () => {
+      aborted = true;
+    };
+  }, [token, source, risk, year, setYear, setPeriod, onYearStartEndChange]);
 
   return { yearRanges, loading, error };
 };
 
 // Hook para manejar sugerencias ADM con debounce
 export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) => {
+  const { token } = useAuth();
   const [admSuggestions, setAdmSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (!search || !nationalRisk) {
+    if (!search || !nationalRisk || !token) {
       setAdmSuggestions([]);
       return;
     }
@@ -96,7 +106,7 @@ export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) =
     const debounceTimer = setTimeout(async () => {
       setLoading(true);
       try {
-        const results = await searchAdmByName(search, admLevel);
+        const results = await searchAdmByName(token, search, admLevel);
         setAdmSuggestions(results || []);
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
@@ -109,15 +119,17 @@ export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) =
     }, delay);
 
     return () => clearTimeout(debounceTimer);
-  }, [search, admLevel, nationalRisk, delay]);
+  }, [search, admLevel, nationalRisk, delay, token]);
 
   return { admSuggestions, setAdmSuggestions, loading };
 };
 
 // Hook para manejar búsqueda diferida de SIT_CODE
 export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast) => {
+  const { token } = useAuth();
+
   useEffect(() => {
-    if (!farmRisk || foundFarms.length === 0) return;
+    if (!farmRisk || foundFarms.length === 0 || !token) return;
 
     const delay = setTimeout(async () => {
       const pendingCodes = foundFarms
@@ -128,7 +140,7 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
       if (!pendingCodes) return;
 
       try {
-        const data = await fetchFarmBySITCode(pendingCodes);
+        const data = await fetchFarmBySITCode(token, pendingCodes);
 
         if (!data || data.length === 0) {
           setToast({
@@ -136,7 +148,6 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
             message: `No se encontraron fincas para: ${pendingCodes}`,
           });
 
-          // Remove invalid SIT CODEs
           setFoundFarms((prev) =>
             prev.filter((f) => !pendingCodes.split(",").includes(f.code))
           );
@@ -144,9 +155,7 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
         }
 
         const updatedFarms = data.map((f) => {
-          const code = f.ext_id.find(
-            (ext) => ext.source === "SIT_CODE"
-          )?.ext_code;
+          const code = f.ext_id.find((ext) => ext.source === "SIT_CODE")?.ext_code;
           return { id: f.id, code };
         });
 
@@ -174,5 +183,5 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
     }, 4000);
 
     return () => clearTimeout(delay);
-  }, [foundFarms, farmRisk, setFoundFarms, setToast]);
+  }, [foundFarms, farmRisk, setFoundFarms, setToast, token]);
 };

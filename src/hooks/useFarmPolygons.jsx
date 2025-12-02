@@ -1,11 +1,16 @@
 import { useEffect } from "react";
 import { fetchFarmPolygonsByIds } from "@/services/apiService";
+import { useAuth } from "@/hooks/useAuth";
 
 export function useFarmPolygons(foundFarms, setFarmPolygons, setPendingTasks, setOriginalMovement) {
+  const { token } = useAuth();
+
   useEffect(() => {
+    if (!token) return;
+
     if (!foundFarms || foundFarms.length === 0) {
       setFarmPolygons([]);
-      if (setOriginalMovement) setOriginalMovement({}); // Limpieza opcional
+      if (setOriginalMovement) setOriginalMovement({});
       return;
     }
 
@@ -15,7 +20,7 @@ export function useFarmPolygons(foundFarms, setFarmPolygons, setPendingTasks, se
     const loadPolygons = async () => {
       setPendingTasks((prev) => prev + 1);
       try {
-        const data = await fetchFarmPolygonsByIds(ids);
+        const data = await fetchFarmPolygonsByIds(token, ids);
         setFarmPolygons(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -27,5 +32,5 @@ export function useFarmPolygons(foundFarms, setFarmPolygons, setPendingTasks, se
     };
 
     loadPolygons();
-  }, [foundFarms, setFarmPolygons, setPendingTasks, setOriginalMovement]);
+  }, [foundFarms, token, setFarmPolygons, setPendingTasks, setOriginalMovement]);
 }

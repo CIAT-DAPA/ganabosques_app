@@ -6,7 +6,7 @@ import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EnterpriseChart from "@/components/EnterpriseChart";
-import DownloadPdfButton from "@/components/DownloadPdfButton"; // 👈 agregado
+import DownloadPdfButton from "@/components/DownloadPdfButton";
 
 import { searchAdmByName, getEnterpriseRiskDetails } from "@/services/apiService";
 import { useFilteredMovement } from "@/hooks/useFilteredMovement";
@@ -17,6 +17,7 @@ import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 
 import { Marker, Popup, useMap } from "react-leaflet";
 import * as L from "leaflet";
+import { useAuth } from "@/hooks/useAuth";
 
 // ------------------------------
 // Utils datos
@@ -48,11 +49,13 @@ const TYPE_ALIASES = {
   EMPRESA: "ENTERPRISE",
   FINCA: "FARM",
 };
+
 const normalizeType = (type) => {
   if (!type) return "ENTERPRISE";
   const t = String(type).trim().toUpperCase().replace(/\s+/g, " ").replace(/-/g, "_");
   return TYPE_ALIASES[t] || t;
 };
+
 const baseForType = (type) => {
   switch (normalizeType(type)) {
     case "SLAUGHTERHOUSE":
@@ -68,6 +71,7 @@ const baseForType = (type) => {
       return "empresa";
   }
 };
+
 const iconForType = (type) =>
   L.icon({
     iconUrl: `/${baseForType(type)}.png`,
@@ -78,7 +82,7 @@ const iconForType = (type) =>
   });
 
 // ------------------------------
-// Overlays solo con marcadores
+// Overlays
 // ------------------------------
 function EnterpriseOverlays({ enterpriseDetails }) {
   const map = useMap();
@@ -175,6 +179,8 @@ export default function EnterpriseMap() {
   const [riskFarm, setRiskFarm] = useState(null);
   const [enterpriseDetails, setEnterpriseDetails] = useState(null);
 
+  const { token } = useAuth();
+
   const movement = useFilteredMovement(originalMovement, yearStart, yearEnd, risk);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
   useFarmPolygons(foundFarms, setPendingTasks, setOriginalMovement);
@@ -183,21 +189,25 @@ export default function EnterpriseMap() {
 
   useEffect(() => setLoading(pendingTasks > 0), [pendingTasks]);
 
-  const handleAdmSearch = useCallback(async (searchText, level) => {
-    try {
-      const results = await searchAdmByName(searchText, level);
-      if (!results || results.length === 0) return;
-      setAdmResults(results);
-      const geometry = results[0]?.geometry;
-      if (geometry && mapRef.current) {
-        const Lm = await import("leaflet");
-        const layer = Lm.geoJSON(geometry);
-        mapRef.current.fitBounds(layer.getBounds());
+  const handleAdmSearch = useCallback(
+    async (searchText, level) => {
+      try {
+        if (!token) return;
+        const results = await searchAdmByName(token, searchText, level);
+        if (!results || results.length === 0) return;
+        setAdmResults(results);
+        const geometry = results[0]?.geometry;
+        if (geometry && mapRef.current) {
+          const Lm = await import("leaflet");
+          const layer = Lm.geoJSON(geometry);
+          mapRef.current.fitBounds(layer.getBounds());
+        }
+      } catch (err) {
+        console.error("Error al buscar nivel administrativo:", err);
       }
-    } catch (err) {
-      console.error("Error al buscar nivel administrativo:", err);
-    }
-  }, []);
+    },
+    [token]
+  );
 
   const handleYearStartEndChange = useCallback((start, end) => {
     setYearStart(start);
@@ -220,7 +230,13 @@ export default function EnterpriseMap() {
   const yearStartVal = asYear(yearStart);
   const yearEndVal = asYear(yearEnd);
 
+  // 🔧 EFECTO ARREGLADO: sin `risk` en deps y siempre decrementa pendingTasks
   useEffect(() => {
+    if (!token) {
+      setEnterpriseDetails(null);
+      return;
+    }
+
     const analysisId = year && String(year).trim();
     const enterpriseIds = Array.isArray(selectedEnterprise)
       ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
@@ -236,12 +252,13 @@ export default function EnterpriseMap() {
 
     (async () => {
       try {
-        const data = await getEnterpriseRiskDetails(analysisId, enterpriseIds);
+        const data = await getEnterpriseRiskDetails(token, analysisId, enterpriseIds);
         if (!cancelled) setEnterpriseDetails(data);
       } catch (err) {
         console.error("Error al cargar enterprise risk details:", err);
         if (!cancelled) setEnterpriseDetails(null);
       } finally {
+        // 👇 Siempre decrementamos, aunque se haya cancelado
         setPendingTasks((p) => Math.max(0, p - 1));
       }
     })();
@@ -249,9 +266,8 @@ export default function EnterpriseMap() {
     return () => {
       cancelled = true;
     };
-  }, [year, selectedEnterprise, risk]);
+  }, [year, selectedEnterprise, token]); // 👈 risk eliminado de las deps
 
-  // ✅ Condición: mostrar botón solo si hay datos
   const hasEnterpriseData =
     Array.isArray(getEnterprisesArray(enterpriseDetails)) &&
     getEnterprisesArray(enterpriseDetails).length > 0;
@@ -307,7 +323,6 @@ export default function EnterpriseMap() {
           </BaseMap>
         </div>
 
-        {/* Gráficas solo si hay datos */}
         {hasEnterpriseData && (
           <EnterpriseChart
             yearStart={yearStartVal}
@@ -318,7 +333,6 @@ export default function EnterpriseMap() {
         )}
       </div>
 
-      {/* ✅ Botón visible solo cuando hay datos */}
       {hasEnterpriseData && (
         <div className="max-w-7xl mx-auto px-6 md:px-12 mt-4 mb-8 flex justify-end">
           <DownloadPdfButton

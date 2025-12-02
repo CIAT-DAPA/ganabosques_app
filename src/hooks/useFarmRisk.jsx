@@ -1,8 +1,12 @@
 import { useEffect } from "react";
 import { fetchFarmRiskByAnalysisAndFarm } from "@/services/apiService";
+import { useAuth } from "@/hooks/useAuth";
 
 export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) {
+  const { token } = useAuth();
+
   useEffect(() => {
+    if (!token) return;
     if (!Array.isArray(analysis) || analysis.length === 0) return;
     if (!Array.isArray(foundFarms) || foundFarms.length === 0) return;
 
@@ -13,7 +17,7 @@ export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) 
     const loadFarmRisk = async () => {
       setPendingTasks((prev) => prev + 1);
       try {
-        const data = await fetchFarmRiskByAnalysisAndFarm(analysisId, farmIds);
+        const data = await fetchFarmRiskByAnalysisAndFarm(token, analysisId, farmIds);
         setRiskFarm(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -25,5 +29,5 @@ export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) 
     };
 
     loadFarmRisk();
-  }, [analysis, foundFarms, setRiskFarm, setPendingTasks]);
+  }, [analysis, foundFarms, token, setRiskFarm, setPendingTasks]);
 }

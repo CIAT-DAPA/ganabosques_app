@@ -1,14 +1,18 @@
 import { useEffect } from "react";
 import { fetchFarmRiskByDeforestationId } from "@/services/apiService";
+import { useAuth } from "@/hooks/useAuth";
 
 export function useDeforestationAnalysis(period, setAnalysis, setPendingTasks) {
+  const { token } = useAuth();
+
   useEffect(() => {
+    if (!token) return;
     if (!period) return;
 
     const loadAnalysis = async () => {
       setPendingTasks((prev) => prev + 1);
       try {
-        const data = await fetchFarmRiskByDeforestationId(period.deforestation_id);
+        const data = await fetchFarmRiskByDeforestationId(token, period.deforestation_id);
         setAnalysis(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -20,5 +24,5 @@ export function useDeforestationAnalysis(period, setAnalysis, setPendingTasks) {
     };
 
     loadAnalysis();
-  }, [period, setAnalysis, setPendingTasks]);
+  }, [period, token, setAnalysis, setPendingTasks]);
 }

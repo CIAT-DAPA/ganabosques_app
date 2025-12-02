@@ -1,9 +1,12 @@
 import { useEffect } from "react";
 import { fetchAdm3DetailsByIds } from "@/services/apiService";
+import { useAuth } from "@/hooks/useAuth";
 
 export function useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks) {
+  const { token } = useAuth();
+
   useEffect(() => {
-    if (!adm3Risk) return;
+    if (!adm3Risk || !token) return;
 
     const flatRisks = Object.values(adm3Risk).flat();
     const adm3Ids = [
@@ -15,7 +18,7 @@ export function useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks) {
     const loadDetails = async () => {
       setPendingTasks((prev) => prev + 1);
       try {
-        const data = await fetchAdm3DetailsByIds(adm3Ids);
+        const data = await fetchAdm3DetailsByIds(token, adm3Ids);
         setAdm3Details(data);
       } catch (err) {
         if (process.env.NODE_ENV !== "production") {
@@ -27,5 +30,5 @@ export function useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks) {
     };
 
     loadDetails();
-  }, [adm3Risk, setAdm3Details, setPendingTasks]);
+  }, [adm3Risk, token, setAdm3Details, setPendingTasks]);
 }

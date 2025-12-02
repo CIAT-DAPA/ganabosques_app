@@ -15,7 +15,8 @@ import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import FarmMovementLayers from "./FarmMovementLayers";
 import FarmRiskLayers from "./FarmRiskLayers";
 import FarmNavigationHelpers from "./FarmNavigationHelpers";
-import DownloadPdfButton from "@/components/DownloadPdfButton"; // ✅ agregado
+import DownloadPdfButton from "@/components/DownloadPdfButton";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function FarmRiskMap() {
   const riskOptions = useMemo(
@@ -32,7 +33,7 @@ export default function FarmRiskMap() {
   const [source, setSource] = useState("smbyc");
   const [search, setSearch] = useState("");
   const [selectedEnterprise, setSelectedEnterprise] = useState(null);
-  const [foundFarms, setFoundFarms] = useState([]); // 👈 aquí se basa la condición
+  const [foundFarms, setFoundFarms] = useState([]);
   const [foundAdms, setFoundAdms] = useState([]);
   const [admLevel, setAdmLevel] = useState("adm1");
   const [admResults, setAdmResults] = useState([]);
@@ -46,6 +47,8 @@ export default function FarmRiskMap() {
   const [analysis, setAnalysis] = useState(null);
   const [riskFarm, setRiskFarm] = useState(null);
 
+  const { token } = useAuth();
+
   const movement = useFilteredMovement(originalMovement, yearStart, yearEnd, risk);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
   useFarmPolygons(foundFarms, setFarmPolygons, setPendingTasks, setOriginalMovement);
@@ -56,21 +59,25 @@ export default function FarmRiskMap() {
     setLoading(pendingTasks > 0);
   }, [pendingTasks]);
 
-  const handleAdmSearch = useCallback(async (searchText, level) => {
-    try {
-      const results = await searchAdmByName(searchText, level);
-      if (!results?.length) return;
-      setAdmResults(results);
-      const geometry = results[0]?.geometry;
-      if (geometry && mapRef.current) {
-        const L = await import("leaflet");
-        const layer = L.geoJSON(geometry);
-        mapRef.current.fitBounds(layer.getBounds());
+  const handleAdmSearch = useCallback(
+    async (searchText, level) => {
+      try {
+        if (!token) return;
+        const results = await searchAdmByName(token, searchText, level);
+        if (!results?.length) return;
+        setAdmResults(results);
+        const geometry = results[0]?.geometry;
+        if (geometry && mapRef.current) {
+          const L = await import("leaflet");
+          const layer = L.geoJSON(geometry);
+          mapRef.current.fitBounds(layer.getBounds());
+        }
+      } catch (err) {
+        console.error("Error al buscar nivel administrativo:", err);
       }
-    } catch (err) {
-      console.error("Error al buscar nivel administrativo:", err);
-    }
-  }, []);
+    },
+    [token]
+  );
 
   const handleYearStartEndChange = useCallback((start, end) => {
     setYearStart(start);
@@ -141,7 +148,6 @@ export default function FarmRiskMap() {
           </BaseMap>
         </div>
 
-        {/* ✅ Solo renderizar si hay predios encontrados */}
         {foundFarms?.length > 0 && (
           <MovementCharts
             summary={movement}
@@ -153,7 +159,6 @@ export default function FarmRiskMap() {
         )}
       </div>
 
-      {/* ✅ Botón visible solo si hay predios */}
       {foundFarms?.length > 0 && (
         <div className="max-w-7xl mx-auto px-6 md:px-12 mt-4 mb-8 flex justify-end">
           <DownloadPdfButton

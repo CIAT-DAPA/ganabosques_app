@@ -9,7 +9,7 @@ import {
   Map as MapIcon,
   Trees,
   Home,
-  Calendar
+  Calendar,
 } from "lucide-react";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
@@ -73,12 +73,11 @@ function sortKeyFromPeriod(it) {
   return ys != null ? ys : ye != null ? ye : 0;
 }
 
-// ⚠️ Respetamos el orden del backend
+// Solo construye puntos/filas: asumimos que items ya vienen ordenados
 function normalizeBubbleSeries(items = []) {
   const rows = (items || []).map((it) => ({
     label: buildLabelFromPeriod(it),
     isRisk: Boolean(it?.risk_total),
-    sortKey: sortKeyFromPeriod(it),
     raw: it,
   }));
 
@@ -104,16 +103,21 @@ function formatNumber(val) {
 }
 
 // Construye categorías y una serie desde items, filtrando valores 0
-function buildBarFromItems(items = [], valueKey = "value", seriesName = "Total", { round1Decimal = false } = {}) {
+function buildBarFromItems(
+  items = [],
+  valueKey = "value",
+  seriesName = "Total",
+  { round1Decimal = false } = {}
+) {
   const cleaned = (items || []).filter((it) => {
     const v = Number(it?.[valueKey] ?? 0);
-    return Number.isFinite(v) && v > 0; // 🔥 excluye 0 y no numéricos
+    return Number.isFinite(v) && v > 0; // excluye 0 y no numéricos
   });
 
   const categories = cleaned.map((it) => buildLabelFromPeriod(it));
   const values = cleaned.map((it) => {
     let v = Number(it?.[valueKey] ?? 0);
-    if (round1Decimal) v = Math.round(v * 10) / 10; // 🔄 redondeo a 1 decimal
+    if (round1Decimal) v = Math.round(v * 10) / 10;
     return v;
   });
 
@@ -135,12 +139,13 @@ function baseBarOptions({ title, categories, yTitle, yFormatter }) {
     tooltip: {
       y: {
         formatter: (val) =>
-          typeof yFormatter === "function" ? yFormatter(val) : formatNumber(val),
+          typeof yFormatter === "function"
+            ? yFormatter(val)
+            : formatNumber(val),
       },
     },
   };
 }
-/* ========================================== */
 
 export default function Adm3HistoricalRisk({
   adm3RiskHistory = [],
@@ -158,7 +163,12 @@ export default function Adm3HistoricalRisk({
   return (
     <div className={`space-y-6 ${className}`}>
       {adm3RiskHistory.map((group, idx) => {
-        const { points, rows } = normalizeBubbleSeries(group.items || []);
+        const itemsRaw = Array.isArray(group?.items) ? group.items : [];
+        const items = [...itemsRaw].sort(
+          (a, b) => sortKeyFromPeriod(a) - sortKeyFromPeriod(b)
+        );
+
+        const { points, rows } = normalizeBubbleSeries(items);
 
         const title =
           group?.name ||
@@ -166,7 +176,6 @@ export default function Adm3HistoricalRisk({
             ? `Vereda de ${group.municipality}`
             : group?.adm3_id);
 
-        // Buscar el periodo exacto (sin hooks dentro del loop)
         let selectedRow = null;
         if (filterStartYear != null && filterEndYear != null) {
           selectedRow =
@@ -187,7 +196,6 @@ export default function Adm3HistoricalRisk({
           ? isoToYear(selectedItem?.period_end)
           : filterEndYear;
 
-        // Periodo en texto
         const selectedPeriodLabel =
           selYs && selYe
             ? `${selYs} - ${selYe}`
@@ -197,7 +205,6 @@ export default function Adm3HistoricalRisk({
             ? `${selYe}`
             : "—";
 
-        // Estado (badge)
         const statusBadge = hasMatch
           ? riskBadgeBool(Boolean(selectedItem?.risk_total))
           : riskBadgeBool(false);
@@ -250,16 +257,13 @@ export default function Adm3HistoricalRisk({
 
         const series = [{ name: "Alerta", data: points }];
 
-        /* ========= Barras con filtros de cero ========= */
-        const items = Array.isArray(group?.items) ? group.items : [];
-
-        // 1) Hectáreas deforestadas (excluye 0 y muestra 1 decimal)
         const { categories: defoCats, series: defoSeries } = buildBarFromItems(
           items,
           "def_ha",
           "Hectáreas",
           { round1Decimal: true }
         );
+
         const defoOptions = baseBarOptions({
           categories: defoCats,
           yTitle: "Hectáreas",
@@ -272,17 +276,17 @@ export default function Adm3HistoricalRisk({
               : val,
         });
 
-        // 2) Número de predios (excluye 0)
         const { categories: farmCats, series: farmSeries } = buildBarFromItems(
           items,
           "farm_amount",
           "Fincas"
         );
+
         const farmOptions = baseBarOptions({
           categories: farmCats,
           yTitle: "Número de predios",
         });
-        /* ============================================= */
+        // ===============================================================
 
         return (
           <div
@@ -338,18 +342,17 @@ export default function Adm3HistoricalRisk({
                       Periodo seleccionado
                     </div>
                     <div className="font-medium text-gray-800">
-                      {selectedPeriodLabel} {" "}
+                      {selectedPeriodLabel}{" "}
                       <span
-                      className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 w-fit"
-                      style={{
-                        backgroundColor: statusBadge.color,
-                        color: badgeTextColor(statusBadge.color),
-                      }}
-                      title={statusBadge.desc}
-                    >
-                      {statusBadge.label}
-                    </span>
-
+                        className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 w-fit"
+                        style={{
+                          backgroundColor: statusBadge.color,
+                          color: badgeTextColor(statusBadge.color),
+                        }}
+                        title={statusBadge.desc}
+                      >
+                        {statusBadge.label}
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -363,7 +366,9 @@ export default function Adm3HistoricalRisk({
                     </div>
                     <div className="font-medium">
                       {hasMatch && selectedItem?.def_ha != null
-                        ? `${(Math.round(Number(selectedItem.def_ha) * 10) / 10).toLocaleString("es-CO", {
+                        ? `${(
+                            Math.round(Number(selectedItem.def_ha) * 10) / 10
+                          ).toLocaleString("es-CO", {
                             minimumFractionDigits: 1,
                             maximumFractionDigits: 1,
                           })} ha`
@@ -372,7 +377,6 @@ export default function Adm3HistoricalRisk({
                   </div>
                 </div>
 
-                {/* Cantidad de predios */}
                 <div className="flex items-start gap-3">
                   <Home className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
@@ -381,7 +385,9 @@ export default function Adm3HistoricalRisk({
                     </div>
                     <div className="font-medium">
                       {hasMatch && selectedItem?.farm_amount != null
-                        ? `${Number(selectedItem.farm_amount).toLocaleString("es-CO")} Predios`
+                        ? `${Number(selectedItem.farm_amount).toLocaleString(
+                            "es-CO"
+                          )} Predios`
                         : "0 predios"}
                     </div>
                   </div>
@@ -394,15 +400,18 @@ export default function Adm3HistoricalRisk({
                 style={{ width: 1 }}
               />
 
-              {/* Derecha: burbuja + barras en columna */}
+              {/* Derecha: burbuja + barras */}
               <div className="md:pl-4 md:min-w-0 space-y-6">
                 {/* Burbuja */}
-                <div className="w-full" style={{ }}>
-                  <h2 style={{ fontSize: "18px", fontWeight: 600 }}>Alertas históricas</h2>
+                <div className="w-full">
+                  <h2 style={{ fontSize: "18px", fontWeight: 600 }}>
+                    Alertas históricas
+                  </h2>
                   <p className="mt-4 text-sm text-gray-600 leading-relaxed px-4">
                     Visualiza la tendencia de alertas a lo largo del tiempo.
-                    Cada punto representa un periodo de análisis; el color verde indica ausencia de alertas,
-                    mientras que los rojos señalarán posibles alertas.
+                    Cada punto representa un periodo de análisis; el color verde
+                    indica ausencia de alertas, mientras que los rojos señalarán
+                    posibles alertas.
                   </p>
                   <ReactApexChart
                     options={options}
@@ -412,16 +421,18 @@ export default function Adm3HistoricalRisk({
                   />
                 </div>
 
-                {/* Barra 1: hectáreas (sin ceros, 1 decimal) */}
+                {/* Barra 1: hectáreas */}
                 <div className="w-full">
                   {defoSeries?.[0]?.data?.length ? (
                     <div>
-                      <h2 style={{ fontSize: "18px", fontWeight: 600 }}>Hectáreas deforestadas</h2>
+                      <h2 style={{ fontSize: "18px", fontWeight: 600 }}>
+                        Hectáreas deforestadas
+                      </h2>
                       <p className="mt-4 text-sm text-gray-600 leading-relaxed px-4">
-                        Este gráfico muestra la evolución de la deforestación en el territorio a lo largo
-                        del tiempo relacionado con la cadena productiva.
-                        Cada barra representa el total de hectáreas afectadas en el
-                        periodo indicado.
+                        Este gráfico muestra la evolución de la deforestación en
+                        el territorio a lo largo del tiempo relacionado con la
+                        cadena productiva. Cada barra representa el total de
+                        hectáreas afectadas en el periodo indicado.
                       </p>
                       <ReactApexChart
                         options={defoOptions}
@@ -437,22 +448,26 @@ export default function Adm3HistoricalRisk({
                   )}
                 </div>
 
-                {/* Barra 2: predios (sin ceros) */}
+                {/* Barra 2: predios */}
                 <div className="w-full">
                   {farmSeries?.[0]?.data?.length ? (
                     <div>
-                      <h2 style={{ fontSize: "18px", fontWeight: 600 }}>Cantidad de predios con alertas</h2>
+                      <h2 style={{ fontSize: "18px", fontWeight: 600 }}>
+                        Cantidad de predios con alertas
+                      </h2>
                       <p className="mt-4 text-sm text-gray-600 leading-relaxed px-4">
-                        Este gráfico muestra el número de predios donde se han identificado alertas
-                        durante los periodos analizados, dichas alertas pueden ser directas o indirectas. Cada barra representa un período de tiempo con registros
-                        de alerta.
+                        Este gráfico muestra el número de predios donde se han
+                        identificado alertas durante los periodos analizados,
+                        dichas alertas pueden ser directas o indirectas. Cada
+                        barra representa un período de tiempo con registros de
+                        alerta.
                       </p>
                       <ReactApexChart
-                      options={farmOptions}
-                      series={farmSeries}
-                      type="bar"
-                      height={260}
-                    />
+                        options={farmOptions}
+                        series={farmSeries}
+                        type="bar"
+                        height={260}
+                      />
                     </div>
                   ) : (
                     <div className="text-sm text-gray-500">

@@ -1,14 +1,14 @@
 "use client";
 
-import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import {
-  faTriangleExclamation,
-  faTree,
-  faShieldHalved,
-  faSeedling
-} from "@fortawesome/free-solid-svg-icons";
 import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
+import {
+  AlertTriangle,
+  Trees,
+  Shield,
+  Sprout,
+  Calendar
+} from "lucide-react";
 
 // Constantes
 const BASE_COLORS = [
@@ -61,9 +61,9 @@ const formatValue = (value, decimals = 2) => (value || 0).toFixed(decimals);
 const getFarmLabel = (farm) => farm?.sit_code || farm.code || farm.id;
 
 // Componentes reutilizables
-const SectionHeader = ({ icon, title }) => (
+const SectionHeader = ({ icon: Icon, title }) => (
   <div className="flex items-center gap-2 text-custom-dark">
-    <FontAwesomeIcon icon={icon} />
+    <Icon className="h-4 w-4" />
     <span className="font-semibold">{title}</span>
   </div>
 );
@@ -114,13 +114,11 @@ const ChartSection = ({
   hasData,
   showLegend,
   onToggleLegend,
-  description
+  description,
 }) => (
   <div className="space-y-2">
     <h3 className="text-lg font-semibold text-custom-dark">{title}</h3>
-    <p>
-      {description}
-    </p>
+    <p>{description}</p>
     {hasData ? (
       <>
         <Chart
@@ -146,7 +144,7 @@ const ChartSection = ({
 // Componente para la información de alertas
 const AlertSection = ({ risks }) => (
   <div className="space-y-3">
-    <SectionHeader icon={faTriangleExclamation} title="Alertas" />
+    <SectionHeader icon={AlertTriangle} title="Alertas" />
     <div className="space-y-2">
       {[
         { label: "Directa:", level: risks.direct },
@@ -167,7 +165,7 @@ const EnvironmentalSection = ({ riskObj }) => (
   <div className="space-y-4">
     {/* Deforestación */}
     <div className="space-y-2">
-      <SectionHeader icon={faTree} title="Deforestación" />
+      <SectionHeader icon={Trees} title="Deforestación" />
       <div className="space-y-1 text-sm text-custom-dark">
         <InfoItem
           label="Proporción"
@@ -183,14 +181,14 @@ const EnvironmentalSection = ({ riskObj }) => (
 
     {/* Área Protegida */}
     <div className="space-y-2">
-      <SectionHeader icon={faShieldHalved} title="Área protegida" />
+      <SectionHeader icon={Shield} title="Área protegida" />
       <div className="space-y-1 text-sm text-custom-dark">
         <InfoItem
           label="Proporción"
           value={(riskObj?.protected?.prop * 100)?.toFixed(1)}
           suffix="%"
         />
-        
+
         <InfoItem
           label="Área"
           value={`${riskObj?.protected?.ha?.toFixed(1)} ha`}
@@ -200,37 +198,37 @@ const EnvironmentalSection = ({ riskObj }) => (
 
     {/* Frontera Agrícola (unificada) */}
     <div className="space-y-2">
-      <SectionHeader icon={faSeedling} title="Frontera agrícola" />
-      
+      <SectionHeader icon={Sprout} title="Frontera agrícola" />
+
       {/* Dentro de frontera */}
       <div className="space-y-1 text-sm text-custom-dark">
         <div className="text-xs uppercase text-gray-500">
-            Dentro de frontera
+          Dentro de frontera
         </div>
         <InfoItem
-              label="Proporción"
-              value={(riskObj?.farming_in?.prop * 100)?.toFixed(1)}
-              suffix="%"
+          label="Proporción"
+          value={(riskObj?.farming_in?.prop * 100)?.toFixed(1)}
+          suffix="%"
         />
         <InfoItem
-              label="Área"
-              value={`${riskObj?.farming_in?.ha?.toFixed(1)} ha`}
+          label="Área"
+          value={`${riskObj?.farming_in?.ha?.toFixed(1)} ha`}
         />
       </div>
 
       {/* Fuera de frontera */}
       <div className="space-y-1 text-sm text-custom-dark">
         <div className="text-xs uppercase text-gray-500">
-            Fuera de frontera
+          Fuera de frontera
         </div>
         <InfoItem
-              label="Proporción"
-              value={(riskObj?.farming_out?.prop * 100)?.toFixed(1)}
-              suffix="%"
+          label="Proporción"
+          value={(riskObj?.farming_out?.prop * 100)?.toFixed(1)}
+          suffix="%"
         />
         <InfoItem
-              label="Área"
-              value={`${riskObj?.farming_out?.ha?.toFixed(1)} ha`}
+          label="Área"
+          value={`${riskObj?.farming_out?.ha?.toFixed(1)} ha`}
         />
       </div>
     </div>
@@ -275,6 +273,7 @@ const FarmYearCard = ({
   const label = getFarmLabel(farm);
   const riskObj = riskData[farm.id];
   const risks = getFarmRiskLevels(farm.id);
+  console.log(riskObj);
 
   const hasEntrada = entradaChart?.series[0]?.data?.some((d) => d > 0);
   const hasSalida = salidaChart?.series[0]?.data?.some((d) => d > 0);
@@ -293,9 +292,12 @@ const FarmYearCard = ({
                   <div className="w-4 h-4 bg-custom-dark rounded-full"></div>
                   <h2 className="text-lg font-bold">Predio {label}</h2>
                 </div>
-                <div className="text-lg text-custom-dark text-medium">
-                  Periodo: {String(yearStart).slice(0, 4)} - {String(yearEnd).slice(0, 4)}
-                </div>
+                <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
+  <Calendar className="h-4 w-4" />
+  <span>
+    Periodo: {String(yearStart).slice(0, 4)} - {String(yearEnd).slice(0, 4)}
+  </span>
+</div>
               </div>
 
               <AlertSection risks={risks} />
@@ -389,10 +391,8 @@ export default function MovementCharts({
       }
 
       if (typeof speciesGroup === "object") {
-        // OBJETO anidado: { Grupo: { Subcat: { headcount } } }
         for (const [group, sub] of Object.entries(speciesGroup)) {
           if (typeof sub === "number") {
-            // raro, pero sumamos bajo el nombre del grupo
             addToAgg(group, sub);
             continue;
           }
@@ -405,13 +405,11 @@ export default function MovementCharts({
               (typeof values.amount === "number" && values.amount) ??
               (typeof values.total === "number" && values.total) ??
               0;
-            // ⬅️ usamos la SUBCATEGORÍA como etiqueta (lo de antes)
             addToAgg(String(subcat), v);
           }
         }
         return;
       }
-      // Otros tipos: ignorar
     });
 
     const categories = Object.keys(aggregated);
@@ -446,6 +444,7 @@ export default function MovementCharts({
 
     return { options, series };
   };
+
   // Memoizar datos de alerta para optimizar rendimiento
   const riskData = useMemo(() => {
     const flatRisk = Object.values(riskFarm || {}).flat();
@@ -470,7 +469,6 @@ export default function MovementCharts({
         const farmData = summary[farm.id];
         if (!farmData) return null;
 
-        // ✅ Solo claves de año válidas, ordenadas numéricamente
         const allYears = Object.keys(farmData?.inputs?.statistics || {})
           .filter((k) => /^\d{4}$/.test(String(k)))
           .sort((a, b) => Number(a) - Number(b));

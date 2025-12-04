@@ -180,7 +180,7 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
           message: "Error de red al buscar los SIT CODE",
         });
       }
-    }, 4000);
+    }, 0.5);
 
     return () => clearTimeout(delay);
   }, [foundFarms, farmRisk, setFoundFarms, setToast, token]);

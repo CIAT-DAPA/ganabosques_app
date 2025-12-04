@@ -10,7 +10,6 @@ import L from "leaflet";
 import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
 
-// Configuración de iconos de Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl:
@@ -19,7 +18,6 @@ L.Icon.Default.mergeOptions({
   shadowUrl: "https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png",
 });
 
-// Componente para mover controles de zoom a la derecha superior
 function ZoomControlTopRight() {
   const { useMap } = require("react-leaflet");
   const map = useMap();

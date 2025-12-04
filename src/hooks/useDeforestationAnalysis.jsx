@@ -21,23 +21,19 @@ export function useDeforestationAnalysis(period, setAnalysis, setPendingTasks) {
     const loadAnalysis = async () => {
       setPendingTasks((prev) => prev + 1);
       try {
-        const data = await fetchFarmRiskByDeforestationId(
-          token,
-          period.deforestation_id
-        );
+        const data = await fetchFarmRiskByDeforestationId(token, period.deforestation_id);
         if (!cancelled) {
           setAnalysis(data);
         }
       } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error obteniendo análisis por deforestación:", err);
-        }
         if (!cancelled) {
+          console.error("Error obteniendo análisis por deforestación:", err);
           setAnalysis([]);
         }
       } finally {
-        // 👇 siempre se decrementa
-        setPendingTasks((prev) => Math.max(0, prev - 1));
+ 
+          setPendingTasks((prev) => Math.max(0, prev - 1));
+        
       }
     };
 

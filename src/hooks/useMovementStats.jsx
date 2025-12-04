@@ -16,10 +16,7 @@ export function useMovementStats(foundFarms, setOriginalMovement, setPendingTask
       return;
     }
 
-    const ids = foundFarms
-      .map((farm) => farm && farm.id)
-      .filter(Boolean);
-
+    const ids = foundFarms.map((farm) => farm && farm.id).filter(Boolean);
     if (ids.length === 0) {
       setOriginalMovement({});
       return;
@@ -28,21 +25,19 @@ export function useMovementStats(foundFarms, setOriginalMovement, setPendingTask
     let cancelled = false;
 
     const loadStats = async () => {
-      setPendingTasks((prev) => prev + 1);
+      setPendingTasks((prev) => prev + 1);  
+
       try {
         const data = await fetchMovementStatisticsByFarmIds(token, ids);
         if (!cancelled) {
           setOriginalMovement(data || {});
         }
       } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error obteniendo estadísticas de movimiento:", err);
-        }
         if (!cancelled) {
+          console.error("❗ Error obteniendo estadísticas:", err);
           setOriginalMovement({});
         }
       } finally {
-        // 👇 SIEMPRE se decrementa, aunque esté cancelado
         setPendingTasks((prev) => Math.max(0, prev - 1));
       }
     };

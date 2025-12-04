@@ -270,10 +270,18 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
   }, [movement]);
 
   const createPopupContent = useCallback(
-    (type, sitCode, name) => (
+    (type, extIds, name) => (
       <div className="p-3 bg-white text-sm space-y-2">
         <div><span className="font-semibold">Tipo:</span> {getTypeLabel(type)}</div>
-        {sitCode && <div><span className="font-semibold">Código SIT:</span> {sitCode}</div>}
+        {extIds && Array.isArray(extIds) && extIds.length > 0 && (
+          <div className="space-y-1">
+            {extIds.map((ext, idx) => (
+              <div key={idx}>
+                <span className="font-semibold">{ext.source}:</span> {ext.ext_code}
+              </div>
+            ))}
+          </div>
+        )}
         {name && <div><span className="font-semibold">Nombre:</span> {name}</div>}
       </div>
     ),
@@ -347,7 +355,7 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
         .filter((m) => m?.destination?.latitude && m?.destination?.longitud && m?.destination?.farm_id)
         .map((m, idx) => {
           const { destination: dest } = m;
-          const { latitude: lat, longitud: lon, farm_id: targetFarmId } = dest;
+          const { latitude: lat, longitud: lon, farm_id: targetFarmId, ext_id: ext_id } = dest;
 
           const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
           const yearKey = String(yearStart);
@@ -356,12 +364,11 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
           const icon = getFarmIcon();
           const finalLineColor = mixed ? "purple" : lineColor;
           const farm_tmp = farm_main?.[0];
-          const sitCode = getGeojsonName(dest.geojson);
 
           return (
             <div key={`farm-${idx}-${targetFarmId || "noid"}`}>
               <Marker position={[lat, lon]} icon={icon}>
-                <Popup>{createPopupContent("FARM", sitCode)}</Popup>
+                <Popup>{createPopupContent("FARM", ext_id)}</Popup>
               </Marker>
 
               {farm_tmp &&

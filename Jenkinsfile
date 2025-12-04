@@ -46,7 +46,7 @@ pipeline {
                         cd /opt/ganabosques/front/ganabosques_app
                         npm install
                         npm run build
-                        pm2 serve out 5000 --name gana
+                        PORT=5000 NODE_ENV=production pm2 start npm --name gana -- start
                     '''
                 }
             }

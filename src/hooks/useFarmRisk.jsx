@@ -39,15 +39,14 @@ export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) 
           setRiskFarm(data);
         }
       } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error al obtener farmRisk:", err);
-        }
         if (!cancelled) {
+          console.error("Error al obtener farmRisk:", err);
           setRiskFarm([]);
         }
       } finally {
-        // 👇 siempre se decrementa
-        setPendingTasks((prev) => Math.max(0, prev - 1));
+
+          setPendingTasks((prev) => Math.max(0, prev - 1));
+        
       }
     };
 

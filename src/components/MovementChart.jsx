@@ -2,13 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
-import {
-  AlertTriangle,
-  Trees,
-  Shield,
-  Sprout,
-  Calendar
-} from "lucide-react";
+import { AlertTriangle, Trees, Shield, Sprout, Calendar,Building2,MapPin,MapIcon } from "lucide-react";
 
 // Constantes
 const BASE_COLORS = [
@@ -218,9 +212,7 @@ const EnvironmentalSection = ({ riskObj }) => (
 
       {/* Fuera de frontera */}
       <div className="space-y-1 text-sm text-custom-dark">
-        <div className="text-xs uppercase text-gray-500">
-          Fuera de frontera
-        </div>
+        <div className="text-xs uppercase text-gray-500">Fuera de frontera</div>
         <InfoItem
           label="Proporción"
           value={(riskObj?.farming_out?.prop * 100)?.toFixed(1)}
@@ -273,7 +265,7 @@ const FarmYearCard = ({
   const label = getFarmLabel(farm);
   const riskObj = riskData[farm.id];
   const risks = getFarmRiskLevels(farm.id);
-  console.log(riskObj);
+  console.log(farm);
 
   const hasEntrada = entradaChart?.series[0]?.data?.some((d) => d > 0);
   const hasSalida = salidaChart?.series[0]?.data?.some((d) => d > 0);
@@ -293,11 +285,30 @@ const FarmYearCard = ({
                   <h2 className="text-lg font-bold">Predio {label}</h2>
                 </div>
                 <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
-  <Calendar className="h-4 w-4" />
-  <span>
-    Periodo: {String(yearStart).slice(0, 4)} - {String(yearEnd).slice(0, 4)}
-  </span>
-</div>
+                  <Calendar className="h-4 w-4" />
+                  <span>
+                    Periodo: {String(yearStart).slice(0, 4)} -{" "}
+                    {String(yearEnd).slice(0, 4)}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
+                  <Building2 className="h-4 w-4" />
+                  <span>
+                    Departamento: {riskObj?.department || "N/A"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
+                  <MapIcon className="h-5 w-5" />
+                  <span>
+                    Municipio: {riskObj?.municipality || "N/A"}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
+                  <Building2 className="h-4 w-4" />
+                  <span>
+                    vereda: {riskObj?.vereda || "N/A"}
+                  </span>
+                </div>
               </div>
 
               <AlertSection risks={risks} />
@@ -341,7 +352,6 @@ export default function MovementCharts({
 }) {
   const [legendEntradaMap, setLegendEntradaMap] = useState({});
   const [legendSalidaMap, setLegendSalidaMap] = useState({});
-
   const toggleLegend = (type, id, year) => {
     const setterMap = {
       entrada: setLegendEntradaMap,

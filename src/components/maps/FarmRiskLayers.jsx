@@ -12,7 +12,6 @@ proj4.defs("EPSG:4326", "+proj=longlat +datum=WGS84 +no_defs +type=crs");
 
 const toWGS84 = (xy) => proj4("EPSG:3116", "EPSG:4326", xy);
 
-// Heurística: si parece ya estar en grados, no transformar
 const isLikelyWGS84 = (xy) => {
   const [x, y] = xy || [];
   return (
@@ -104,8 +103,6 @@ export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
 
       // Reproyectar 3116 → 4326
       const geojson4326 = reprojectGeoJSON3116to4326(geojson3116);
-      console.log(geojson3116);
-      console.log(geojson4326);
       const farmId = farm.farm_id || farm.id;
 
       // Buscar riesgo

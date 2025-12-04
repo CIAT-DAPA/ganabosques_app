@@ -46,7 +46,7 @@ pipeline {
                         cd /opt/ganabosques/front/ganabosques_app
                         npm install
                         npm run build
-                        pm2 serve out 5000 --name gana --spa
+                        pm2 serve out 5000 --name gana
                     '''
                 }
             }

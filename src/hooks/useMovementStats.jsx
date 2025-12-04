@@ -6,13 +6,11 @@ export function useMovementStats(foundFarms, setOriginalMovement, setPendingTask
   const { token } = useAuth();
 
   useEffect(() => {
-    // Si no hay token, reseteamos y salimos
     if (!token) {
       setOriginalMovement({});
       return;
     }
 
-    // Asegurarnos de que foundFarms sea SIEMPRE un array
     if (!Array.isArray(foundFarms) || foundFarms.length === 0) {
       setOriginalMovement({});
       return;
@@ -44,15 +42,13 @@ export function useMovementStats(foundFarms, setOriginalMovement, setPendingTask
           setOriginalMovement({});
         }
       } finally {
-        if (!cancelled) {
-          setPendingTasks((prev) => Math.max(0, prev - 1));
-        }
+        // 👇 SIEMPRE se decrementa, aunque esté cancelado
+        setPendingTasks((prev) => Math.max(0, prev - 1));
       }
     };
 
     loadStats();
 
-    // Cleanup para evitar actualizar estado si el efecto ya se desmontó
     return () => {
       cancelled = true;
     };

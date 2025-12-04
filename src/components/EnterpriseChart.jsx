@@ -2,13 +2,57 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { MapPin, Building2, Activity, Briefcase, Tag, AlertTriangle } from "lucide-react";
+import {
+  Building2,
+  Briefcase,
+  Tag,
+  AlertTriangle,
+  MapIcon,
+  Calendar,
+} from "lucide-react";
 
 const COLOR_TRUE = "#D50000";   // rojo alerta
 const COLOR_FALSE = "#00C853";  // verde sin alerta
 
 // ================================
-// Utilidades
+// 🔵 Traducción de tipos de empresa con alias
+// ================================
+const TYPE_ALIASES = {
+  COLLECTIONCENTER: "COLLECTION_CENTER",
+  "CENTRO_ACOPIO": "COLLECTION_CENTER",
+  "CENTRO DE ACOPIO": "COLLECTION_CENTER",
+  ACOPIO: "COLLECTION_CENTER",
+
+  PLANTA: "SLAUGHTERHOUSE",
+
+  FERIA: "CATTLE_FAIR",
+
+  EMPRESA: "ENTERPRISE",
+
+  FINCA: "FARM",
+};
+
+// Valor normalizado → texto en español
+const ENTERPRISE_TYPES = {
+  FARM: "Finca",
+  COLLECTION_CENTER: "Centro de acopio",
+  SLAUGHTERHOUSE: "Planta de beneficio",
+  CATTLE_FAIR: "Feria ganadera",
+  ENTERPRISE: "Empresa",
+};
+
+// Función traductora
+function translateEnterpriseType(type) {
+  if (!type) return "—";
+
+  const raw = type.toString().trim().toUpperCase();
+  const normalized = TYPE_ALIASES[raw] || raw;
+
+  return ENTERPRISE_TYPES[normalized] || type;
+}
+
+// ================================
+// 🧰 Utilidades
 // ================================
 function getExtCodeBySource(item, source = "SIT_CODE") {
   const arr = item?.ext_id || item?.extId || [];
@@ -17,6 +61,7 @@ function getExtCodeBySource(item, source = "SIT_CODE") {
     : null;
   return found?.ext_code ?? null;
 }
+
 function getProducerId(item) {
   const arr = item?.ext_id || item?.extId || [];
   const found = Array.isArray(arr)
@@ -39,6 +84,7 @@ function hasAnyAlert(provider = {}) {
   const f = providerAlertFlags(provider);
   return f.direct || f.input || f.output;
 }
+
 function hasAnyAlertInArray(arr = []) {
   return (arr || []).some(hasAnyAlert);
 }
@@ -77,9 +123,13 @@ function fmtHa(v) {
 }
 
 // ================================
-// Componente principal
+// 🟢 Componente principal
 // ================================
-export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails = [] }) {
+export default function EnterpriseChart({
+  yearStart,
+  yearEnd,
+  enterpriseDetails = [],
+}) {
   if (!enterpriseDetails || enterpriseDetails.length === 0)
     return <p className="text-sm text-gray-500"></p>;
 
@@ -87,7 +137,10 @@ export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails 
   const department = ent?.adm1?.name || "—";
   const municipality = ent?.adm2?.name || "—";
   const enterpriseName = ent?.name || "—";
-  const enterpriseType = ent?.type_enterprise || ent?.type || "—";
+
+  // Traducción correcta del tipo
+  const rawType = ent?.type_enterprise || ent?.type || null;
+  const enterpriseType = translateEnterpriseType(rawType);
 
   const inputs = ent?.providers?.inputs ?? [];
   const outputs = ent?.providers?.outputs ?? [];
@@ -97,31 +150,25 @@ export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails 
 
   const inputsRows = useMemo(
     () =>
-      (inputs || []).map((p) => {
-        const flags = providerAlertFlags(p);
-        return {
-          scope: "entrada",
-          sit: getExtCodeBySource(p, "SIT_CODE"),
-          producerId: getProducerId(p),
-          ...flags,
-          _id: p?._id,
-        };
-      }),
+      (inputs || []).map((p) => ({
+        scope: "entrada",
+        sit: getExtCodeBySource(p, "SIT_CODE"),
+        producerId: getProducerId(p),
+        ...providerAlertFlags(p),
+        _id: p?._id,
+      })),
     [inputs]
   );
 
   const outputsRows = useMemo(
     () =>
-      (outputs || []).map((p) => {
-        const flags = providerAlertFlags(p);
-        return {
-          scope: "salida",
-          sit: getExtCodeBySource(p, "SIT_CODE"),
-          producerId: getProducerId(p),
-          ...flags,
-          _id: p?._id,
-        };
-      }),
+      (outputs || []).map((p) => ({
+        scope: "salida",
+        sit: getExtCodeBySource(p, "SIT_CODE"),
+        producerId: getProducerId(p),
+        ...providerAlertFlags(p),
+        _id: p?._id,
+      })),
     [outputs]
   );
 
@@ -161,12 +208,19 @@ export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails 
                     <td className="px-3 py-2">
                       {(hasSit || hasProd) && (
                         <div className="text-xs text-gray-500 mt-0.5">
-                          {hasSit && <><span className="font-semibold">SIT:</span> {r.sit}</>}
+                          {hasSit && (
+                            <>
+                              <span className="font-semibold">SIT:</span> {r.sit}
+                            </>
+                          )}
                           {hasSit && hasProd && <span>, </span>}
-                          {hasProd && <><span className="font-semibold">PRODUCER_ID:</span> {r.producerId}</>}
+                          {hasProd && (
+                            <>
+                              <span className="font-semibold">PRODUCER_ID:</span> {r.producerId}
+                            </>
+                          )}
                         </div>
                       )}
-                      
                     </td>
                     <td className="px-3 py-2"><CellChip active={r.direct} title="Alerta directa" /></td>
                     <td className="px-3 py-2"><CellChip active={r.input} title="Alerta de entrada" /></td>
@@ -213,7 +267,7 @@ export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails 
             </div>
 
             <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
+              <MapIcon className="h-5 w-5 text-gray-500 mt-0.5" />
               <div>
                 <div className="text-xs uppercase text-gray-500">Municipio</div>
                 <div className="font-medium">{municipality}</div>
@@ -221,7 +275,7 @@ export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails 
             </div>
 
             <div className="flex items-start gap-3">
-              <Activity className="h-5 w-5 text-gray-500 mt-0.5" />
+              <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
               <div>
                 <div className="text-xs uppercase text-gray-500">Período</div>
                 <div className="font-medium">
@@ -231,7 +285,7 @@ export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails 
             </div>
 
             <div className="flex items-start gap-3">
-              <Activity className="h-5 w-5 text-gray-500 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
               <div>
                 <div className="text-xs uppercase text-gray-500">Alerta de entrada</div>
                 <Badge active={inputAlert} className="mt-1" />
@@ -239,7 +293,7 @@ export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails 
             </div>
 
             <div className="flex items-start gap-3">
-              <Activity className="h-5 w-5 text-gray-500 mt-0.5" />
+              <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
               <div>
                 <div className="text-xs uppercase text-gray-500">Alerta de salida</div>
                 <Badge active={outputAlert} className="mt-1" />

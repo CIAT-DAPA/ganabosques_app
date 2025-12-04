@@ -60,11 +60,7 @@ export default function FarmRiskMap() {
     setLoading(pendingTasks > 0);
   }, [pendingTasks]);
 
-  // ✅ Cada vez que cambian los predios encontrados,
-  // consideramos que terminó la "tarea" de búsqueda de predios
-  useEffect(() => {
-    setPendingTasks((prev) => Math.max(0, prev - 1)); // 👈 resta 1 a la tarea manual de búsqueda (si existía)
-  }, [foundFarms]);
+  
 
   const handleAdmSearch = useCallback(
     async (searchText, level) => {
@@ -95,17 +91,7 @@ export default function FarmRiskMap() {
     mapRef.current = mapInstance;
   };
 
-  // 👇 Nuevo: cuando el usuario da clic en Buscar, contamos una tarea más
-  const handleSearchSubmit = useCallback(
-    (e) => {
-      e.preventDefault();
-      setPendingTasks((prev) => prev + 1); // 👈 dispara el loading de inmediato
-      // FilterBar hará su lógica y actualizará foundFarms; cuando eso pase,
-      // el useEffect de arriba restará 1 a pendingTasks.
-    },
-    []
-  );
-console.log(handleSearchSubmit)
+  
   return (
     <>
       <div id="farm-risk-export">
@@ -119,7 +105,6 @@ console.log(handleSearchSubmit)
   setSource={setSource}
   search={search}
   setSearch={setSearch}
-  onSearch={handleSearchSubmit} 
   enterpriseRisk={false}
   farmRisk={true}
   selectedEnterprise={selectedEnterprise}

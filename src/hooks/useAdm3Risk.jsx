@@ -20,20 +20,30 @@ export function useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks) {
 
     if (!analysisId || adm3Ids.length === 0) return;
 
+    let cancelled = false;
+
     const loadAdm3Risks = async () => {
       setPendingTasks((prev) => prev + 1);
       try {
         const data = await fetchAdm3RisksByAnalysisAndAdm3(token, analysisId, adm3Ids);
-        setAdm3Risk(data);
+        if (!cancelled) {
+          setAdm3Risk(data);
+        }
       } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
+        if (!cancelled) {
           console.error("Error adm3 risks:", err);
         }
       } finally {
-        setPendingTasks((prev) => prev - 1);
+
+          setPendingTasks((prev) => Math.max(0, prev - 1));
+
       }
     };
 
     loadAdm3Risks();
+
+    return () => {
+      cancelled = true;
+    };
   }, [analysis, foundAdms, token, setAdm3Risk, setPendingTasks]);
 }

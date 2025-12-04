@@ -35,15 +35,14 @@ export function useFarmPolygons(foundFarms, setFarmPolygons, setPendingTasks, se
           setFarmPolygons(data);
         }
       } catch (err) {
-        if (process.env.NODE_ENV !== "production") {
-          console.error("Error obteniendo polígonos de fincas:", err);
-        }
         if (!cancelled) {
+          console.error("Error obteniendo polígonos de fincas:", err);
           setFarmPolygons([]);
         }
       } finally {
-        // 👇 siempre se decrementa
-        setPendingTasks((prev) => Math.max(0, prev - 1));
+
+          setPendingTasks((prev) => Math.max(0, prev - 1));
+        
       }
     };
 

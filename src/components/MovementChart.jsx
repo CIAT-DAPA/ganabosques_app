@@ -304,7 +304,7 @@ const FarmYearCard = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
-                  <Building2 className="h-4 w-4" />
+                  <MapPin className="h-4 w-4" />
                   <span>
                     vereda: {riskObj?.vereda || "N/A"}
                   </span>

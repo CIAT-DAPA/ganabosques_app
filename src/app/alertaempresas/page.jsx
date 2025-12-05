@@ -26,10 +26,10 @@ export default function RiesgosEmpresas() {
     document.title = "Ganabosques - Alertas de empresas";
   }, []);
 
-  //const { validatedPayload } = useAuth();
-  // if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
-  // return <UnauthorizedPage />;
-  // }
+const { validatedPayload } = useAuth();
+if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
+return <UnauthorizedPage />;
+   }
   return (
     <main className={CSS_CLASSES.pageContainer}>
       {/* Sección de encabezado */}

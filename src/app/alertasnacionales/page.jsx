@@ -3,6 +3,8 @@
 import { useEffect } from "react";
 import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
+import { useAuth } from "@/hooks/useAuth";
+import UnauthorizedPage from "@/components/Unauthorized";
 
 // Importación dinámica del componente Map
 const Map = dynamic(() => import("@/components/Map"), {
@@ -24,7 +26,10 @@ export default function RiesgosNacionales() {
   useEffect(() => {
     document.title = "Ganabosques - Alertas nacionales";
   }, []);
-
+const { validatedPayload } = useAuth();
+ if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
+return <UnauthorizedPage />;
+  }
   return (
     <main className={CSS_CLASSES.pageContainer}>
       {/* Sección de encabezado */}

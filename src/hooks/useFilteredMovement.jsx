@@ -9,12 +9,8 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
       return;
     }
 
-    
-
     const baseDate =
       risk === "cumulative" ? (yearEnd ?? yearStart) : (yearStart ?? yearEnd);
-
-    
 
     if (!baseDate) { setFilteredMovement({}); return; }
 
@@ -135,11 +131,12 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
     const filtered = {};
 
     Object.entries(originalMovement).forEach(([farmId, data]) => {
-      const yearsToUse = risk === "cumulative" ? getYearRange(yearStart, yearEnd) : [yearKey];
-      const finalYearKey = (risk === "cumulative" && yearsToUse.length) ? yearsToUse[yearsToUse.length - 1] : yearKey;
+      const yearsToUse = [yearKey];
 
+      const finalYearKey = (risk === "cumulative" && yearsToUse.length)
+        ? yearsToUse[yearsToUse.length - 1]
+        : yearKey;
 
-      // INPUTS
       const inputStatsList = yearsToUse.map(y => data?.inputs?.statistics?.[y]).filter(Boolean);
       const inputStatsMerged = risk === "cumulative"
         ? (inputStatsList.length ? mergeStats(inputStatsList) : {})
@@ -153,14 +150,6 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
         ? collectInvolved(data?.inputs?.statistics, yearsToUse, 'enterprises')
         : (inputStatsMerged?.enterprises?.map(String) || data?.inputs?.statistics?.[yearKey]?.enterprises?.map(String) || []);
 
-      const perYearCounts = yearsToUse.map(y => ({
-        y,
-        inFarms: (data?.inputs?.statistics?.[y]?.farms || []).length,
-        inEnts:  (data?.inputs?.statistics?.[y]?.enterprises || []).length,
-        outFarms:(data?.outputs?.statistics?.[y]?.farms || []).length,
-        outEnts: (data?.outputs?.statistics?.[y]?.enterprises || []).length,
-      }));
-
       const filteredInputs = {
         ...data?.inputs,
         statistics: { [finalYearKey]: inputStatsMerged },
@@ -172,7 +161,6 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
           ?.filter(e => involvedInputEnterprises.includes(String(e?.destination?._id))) || [],
       };
 
-      // OUTPUTS
       const outputStatsList = yearsToUse.map(y => data?.outputs?.statistics?.[y]).filter(Boolean);
       const outputStatsMerged = risk === "cumulative"
         ? (outputStatsList.length ? mergeStats(outputStatsList) : {})
@@ -186,15 +174,12 @@ export function useFilteredMovement(originalMovement, yearStart, yearEnd, risk) 
         ? collectInvolved(data?.outputs?.statistics, yearsToUse, 'enterprises')
         : (outputStatsMerged?.enterprises?.map(String) || data?.outputs?.statistics?.[yearKey]?.enterprises?.map(String) || []);
 
-      
-
-      
-
       const filteredMixed = {
-        [finalYearKey]: risk === "cumulative" ? mergeMixed(data?.mixed, yearsToUse) : (data?.mixed?.[finalYearKey] || {}),
+        [finalYearKey]: risk === "cumulative"
+          ? mergeMixed(data?.mixed, yearsToUse)
+          : (data?.mixed?.[finalYearKey] || {}),
       };
 
-      // ✅ ENSAMBLE FINAL
       filtered[farmId] = {
         ...data,
         inputs: filteredInputs,

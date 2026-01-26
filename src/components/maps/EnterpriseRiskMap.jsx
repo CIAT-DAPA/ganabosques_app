@@ -7,6 +7,7 @@ import RiskLegend from "@/components/Legend";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import EnterpriseChart from "@/components/EnterpriseChart";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
+import EnterpriseMovementLayers from "./EnterpriseMovementLayers";
 
 import { searchAdmByName, getEnterpriseRiskDetails } from "@/services/apiService";
 import { useFilteredMovement } from "@/hooks/useFilteredMovement";
@@ -14,6 +15,7 @@ import { useMovementStats } from "@/hooks/useMovementStats";
 import { useFarmPolygons } from "@/hooks/useFarmPolygons";
 import { useFarmRisk } from "@/hooks/useFarmRisk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
+import { useEnterpriseMovementStats } from "@/hooks/useEnterpriseMovementStats";
 
 import { Marker, Popup, useMap } from "react-leaflet";
 import * as L from "leaflet";
@@ -181,11 +183,19 @@ export default function EnterpriseMap() {
 
   const { token } = useAuth();
 
-  const movement = useFilteredMovement(originalMovement, yearStart, yearEnd, risk);
-  useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
+  const movement = useFilteredMovement(originalMovement);
+  useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period);
   useFarmPolygons(foundFarms, setPendingTasks, setOriginalMovement);
   useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
+
+  // Hook para obtener estadísticas de movilización por empresa
+  const enterpriseIds = useMemo(() => {
+    return Array.isArray(selectedEnterprise)
+      ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
+      : [];
+  }, [selectedEnterprise]);
+  const enterpriseMovementStats = useEnterpriseMovementStats(enterpriseIds, period, setPendingTasks);
 
   useEffect(() => setLoading(pendingTasks > 0), [pendingTasks]);
 
@@ -320,6 +330,10 @@ export default function EnterpriseMap() {
             search={search}
           >
             <EnterpriseOverlays enterpriseDetails={enterpriseDetails} />
+            <EnterpriseMovementLayers
+              movementStats={enterpriseMovementStats}
+              enterpriseDetails={enterpriseDetails}
+            />
           </BaseMap>
         </div>
 
@@ -329,6 +343,7 @@ export default function EnterpriseMap() {
             yearEnd={yearEndVal}
             enterpriseDetails={enterpriseDetails}
             risk={risk}
+            movementStats={enterpriseMovementStats}
           />
         )}
       </div>

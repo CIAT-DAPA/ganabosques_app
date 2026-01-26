@@ -17,7 +17,7 @@ const NAV_ITEMS = [
   { name: "Alertas nacionales", path: "/alertasnacionales", loginRequired: true },
   { name: "Alertas de predio", path: "/alertapredios", loginRequired: true },
   {name: "Alertas de empresa", path: "/alertaempresas", loginRequired: true },
-  { name: "Reporte", path: "/reporte", loginRequired: true },
+  { name: "Reporte", path: "/reporte", loginRequired: true }, 
   /*
   {
     name: "Metodología",
@@ -26,7 +26,7 @@ const NAV_ITEMS = [
     loginRequired: false,
   },
   */
-  { name: "Acerca de", path: "/acercade", loginRequired: false },
+
 ];
 
 // ===== Clases CSS =====
@@ -193,10 +193,10 @@ export default function Header() {
   className="flex items-center gap-2 font-heading text-2xl font-bold text-custom-light py-2 hover:text-green-300 transition-colors"
 >
   <Image
-    src="/logo-2.png"
+    src="/logobyg.png"
     alt="Logo Ganabosques"
-    width={40}   
-    height={40}  
+    width={50}   
+    height={50}  
     priority
   />
   Ganabosques

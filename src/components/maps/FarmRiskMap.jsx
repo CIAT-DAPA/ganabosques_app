@@ -49,8 +49,8 @@ export default function FarmRiskMap() {
 
   const { token } = useAuth();
 
-  const movement = useFilteredMovement(originalMovement, yearStart, yearEnd, risk);
-  useMovementStats(foundFarms, setOriginalMovement, setPendingTasks);
+  const movement = useFilteredMovement(originalMovement);
+  useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period);
   useFarmPolygons(foundFarms, setFarmPolygons, setPendingTasks, setOriginalMovement);
   useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);

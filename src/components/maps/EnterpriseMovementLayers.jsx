@@ -39,14 +39,11 @@ const ENTERPRISE_BASES = {
   FARM: "finca",
 };
 
-// Aliases -> tipo canónico
 const TYPE_ALIASES = {
-  // Centro de acopio
   "COLLECTIONCENTER": "COLLECTION_CENTER",
   "CENTRO_ACOPIO": "COLLECTION_CENTER",
   "CENTRO DE ACOPIO": "COLLECTION_CENTER",
   "ACOPIO": "COLLECTION_CENTER",
-  // Otras variantes comunes
   "PLANTA": "SLAUGHTERHOUSE",
   "FERIA": "CATTLE_FAIR",
   "EMPRESA": "ENTERPRISE",
@@ -63,7 +60,6 @@ const normalizeType = (type) => {
 const getEnterpriseBase = (type) => {
   const canon = normalizeType(type);
   const base = ENTERPRISE_BASES[canon];
-  if (!base) console.warn("[Enterprise Icon] Tipo desconocido:", type, "→ canon:", canon);
   return base || "empresa";
 };
 
@@ -77,30 +73,11 @@ const createIcon = (iconUrl, className) =>
   });
 
 const getEnterpriseIcon = (type) => {
-  const base = getEnterpriseBase(type); // planta | acopio | feria | empresa | finca
+  const base = getEnterpriseBase(type);
   return createIcon(`/${base}.png`, "enterprise-marker");
 };
 
 const getFarmIcon = () => createIcon(`/finca.png`, "farm-marker");
-
-// ------------------------------
-// Utilidades varias
-// ------------------------------
-const getGeojsonName = (geojson) => {
-  try {
-    const data = typeof geojson === "string" ? JSON.parse(geojson) : geojson;
-    if (!data) return null;
-    return (
-      data.name ||
-      data.properties?.name ||
-      (Array.isArray(data.features) && data.features[0]?.properties?.name) ||
-      null
-    );
-  } catch (e) {
-    console.warn("Error al parsear geojson para name:", e);
-    return null;
-  }
-};
 
 const getTypeLabel = (type) => TYPE_LABELS[normalizeType(type)] || type;
 
@@ -212,7 +189,6 @@ const ArrowLayer = ({
 
   useEffect(() => {
     if (!fromLat || !fromLon || !toLat || !toLon) {
-      console.warn("Invalid coordinates provided to ArrowLayer");
       return;
     }
 
@@ -252,22 +228,39 @@ const ArrowLayer = ({
 // ------------------------------
 // Componente principal
 // ------------------------------
-const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = true }) => {
+const EnterpriseMovementLayers = ({ movementStats, enterpriseDetails, useArrows = true }) => {
+  // Obtener la posición de la empresa principal
+  const mainEnterprise = useMemo(() => {
+    if (!enterpriseDetails || enterpriseDetails.length === 0) return null;
+    const ent = enterpriseDetails[0];
+    return {
+      id: ent?._id || ent?.id,
+      latitude: ent?.latitude ?? ent?.lat,
+      longitud: ent?.longitud ?? ent?.lng ?? ent?.lon,
+      name: ent?.name,
+      type: ent?.type_enterprise || ent?.type,
+    };
+  }, [enterpriseDetails]);
+
+  // Extraer todos los inputs y outputs de las estadísticas de movimiento
   const { allInputs, allOutputs } = useMemo(() => {
-    if (!movement) return { allInputs: [], allOutputs: [] };
+    if (!movementStats || !mainEnterprise?.id) return { allInputs: [], allOutputs: [] };
 
-    const inputs = Object.entries(movement).flatMap(([farmId, m]) => [
-      ...(m.inputs?.farms || []).map((e) => ({ ...e, __farmId: farmId })),
-      ...(m.inputs?.enterprises || []).map((e) => ({ ...e, __farmId: farmId })),
-    ]);
+    const data = movementStats[mainEnterprise.id];
+    if (!data) return { allInputs: [], allOutputs: [] };
 
-    const outputs = Object.entries(movement).flatMap(([farmId, m]) => [
-      ...(m.outputs?.farms || []).map((e) => ({ ...e, __farmId: farmId })),
-      ...(m.outputs?.enterprises || []).map((e) => ({ ...e, __farmId: farmId })),
-    ]);
+    const inputs = [
+      ...(data.inputs?.farms || []).map((e) => ({ ...e, __enterpriseId: mainEnterprise.id })),
+      ...(data.inputs?.enterprises || []).map((e) => ({ ...e, __enterpriseId: mainEnterprise.id })),
+    ];
+
+    const outputs = [
+      ...(data.outputs?.farms || []).map((e) => ({ ...e, __enterpriseId: mainEnterprise.id })),
+      ...(data.outputs?.enterprises || []).map((e) => ({ ...e, __enterpriseId: mainEnterprise.id })),
+    ];
 
     return { allInputs: inputs, allOutputs: outputs };
-  }, [movement]);
+  }, [movementStats, mainEnterprise]);
 
   const createPopupContent = useCallback(
     (type, extIds, name) => (
@@ -277,7 +270,7 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
           <div className="space-y-1">
             {extIds.map((ext, idx) => (
               <div key={idx}>
-                <span className="font-semibold">{ext.source}:</span> {ext.ext_code}
+                <span className="font-semibold">{ext.source || ext.label}:</span> {ext.ext_code}
               </div>
             ))}
           </div>
@@ -289,46 +282,41 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
   );
 
   const isMixedMovement = useCallback(
-    (originFarmId, targetId, kind) => {
-      if (!originFarmId || !targetId || !movement?.[originFarmId]?.mixed) return false;
-      // La nueva estructura no tiene año, mixed es directamente { farms: [], enterprises: [] }
-      const mixedData = movement[originFarmId].mixed;
+    (targetId, kind) => {
+      if (!mainEnterprise?.id || !targetId || !movementStats?.[mainEnterprise.id]?.mixed) return false;
+      const mixedData = movementStats[mainEnterprise.id].mixed;
       const mixedItems =
         kind === "enterprise"
           ? mixedData.enterprises || []
           : mixedData.farms || [];
       return mixedItems.map(String).includes(String(targetId));
     },
-    [movement]
+    [movementStats, mainEnterprise]
   );
 
   const renderEnterpriseMarkers = useCallback(
-    (movements, flow, lineColor, farm_main) =>
+    (movements, flow, lineColor) =>
       movements
         .filter((m) => m?.destination?.latitude && m?.destination?.longitud && !m?.destination?.farm_id)
         .map((m, idx) => {
           const { destination: dest } = m;
           const { latitude: lat, longitud: lon, _id: id, type_enterprise: type, name } = dest;
 
-          const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
-          const mixed = isMixedMovement(originFarmId, id, "enterprise");
-
+          const mixed = isMixedMovement(id, "enterprise");
           const icon = getEnterpriseIcon(type);
           const finalLineColor = mixed ? "purple" : lineColor;
-          const farm_tmp = farm_main?.[0];
-          const sitFromGeojson = getGeojsonName(dest.geojson);
 
           return (
             <div key={`ent-${idx}-${id || "noid"}`}>
               <Marker position={[lat, lon]} icon={icon}>
-                <Popup>{createPopupContent(type, sitFromGeojson, name)}</Popup>
+                <Popup>{createPopupContent(type, dest.ext_id, name)}</Popup>
               </Marker>
 
-              {farm_tmp &&
+              {mainEnterprise?.latitude && mainEnterprise?.longitud &&
                 (useArrows ? (
                   <ArrowLayer
-                    fromLat={farm_tmp.latitude}
-                    fromLon={farm_tmp.longitud}
+                    fromLat={mainEnterprise.latitude}
+                    fromLon={mainEnterprise.longitud}
                     toLat={lat}
                     toLon={lon}
                     color={finalLineColor}
@@ -338,7 +326,7 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
                 ) : (
                   <Polyline
                     positions={[
-                      [farm_tmp.latitude, farm_tmp.longitud],
+                      [mainEnterprise.latitude, mainEnterprise.longitud],
                       [lat, lon],
                     ]}
                     pathOptions={{ color: finalLineColor }}
@@ -347,23 +335,20 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
             </div>
           );
         }),
-    [useArrows, createPopupContent, isMixedMovement]
+    [useArrows, createPopupContent, isMixedMovement, mainEnterprise]
   );
 
   const renderFarmMarkers = useCallback(
-    (movements, flow, lineColor, farm_main) =>
+    (movements, flow, lineColor) =>
       movements
         .filter((m) => m?.destination?.latitude && m?.destination?.longitud && m?.destination?.farm_id)
         .map((m, idx) => {
           const { destination: dest } = m;
-          const { latitude: lat, longitud: lon, farm_id: targetFarmId, ext_id: ext_id } = dest;
+          const { latitude: lat, longitud: lon, farm_id: targetFarmId, ext_id } = dest;
 
-          const originFarmId = String(m.__farmId ?? m.source?.farm_id ?? "");
-          const mixed = isMixedMovement(originFarmId, targetFarmId, "farm");
-
+          const mixed = isMixedMovement(targetFarmId, "farm");
           const icon = getFarmIcon();
           const finalLineColor = mixed ? "purple" : lineColor;
-          const farm_tmp = farm_main?.[0];
 
           return (
             <div key={`farm-${idx}-${targetFarmId || "noid"}`}>
@@ -371,11 +356,11 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
                 <Popup>{createPopupContent("FARM", ext_id)}</Popup>
               </Marker>
 
-              {farm_tmp &&
+              {mainEnterprise?.latitude && mainEnterprise?.longitud &&
                 (useArrows ? (
                   <ArrowLayer
-                    fromLat={farm_tmp.latitude}
-                    fromLon={farm_tmp.longitud}
+                    fromLat={mainEnterprise.latitude}
+                    fromLon={mainEnterprise.longitud}
                     toLat={lat}
                     toLon={lon}
                     color={finalLineColor}
@@ -385,7 +370,7 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
                 ) : (
                   <Polyline
                     positions={[
-                      [farm_tmp.latitude, farm_tmp.longitud],
+                      [mainEnterprise.latitude, mainEnterprise.longitud],
                       [lat, lon],
                     ]}
                     pathOptions={{ color: finalLineColor }}
@@ -394,22 +379,22 @@ const FarmMovementLayers = ({ movement, farmPolygons, yearStart, useArrows = tru
             </div>
           );
         }),
-    [useArrows, createPopupContent, isMixedMovement]
+    [useArrows, createPopupContent, isMixedMovement, mainEnterprise]
   );
 
-  if (!movement) return null;
+  if (!movementStats || !mainEnterprise) return null;
 
   return (
     <>
       {/* ENTRADAS */}
-      {renderEnterpriseMarkers(allInputs, "entrada", "#8B4513", farmPolygons)}
-      {renderFarmMarkers(allInputs, "entrada", "#8B4513", farmPolygons)}
+      {renderEnterpriseMarkers(allInputs, "entrada", "#8B4513")}
+      {renderFarmMarkers(allInputs, "entrada", "#8B4513")}
 
       {/* SALIDAS */}
-      {renderEnterpriseMarkers(allOutputs, "salida", "purple", farmPolygons)}
-      {renderFarmMarkers(allOutputs, "salida", "purple", farmPolygons)}
+      {renderEnterpriseMarkers(allOutputs, "salida", "purple")}
+      {renderFarmMarkers(allOutputs, "salida", "purple")}
     </>
   );
 };
 
-export default FarmMovementLayers;
+export default EnterpriseMovementLayers;

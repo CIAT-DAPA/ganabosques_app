@@ -1,5 +1,5 @@
-// const API_URL = "https://ganaapi.alliance.cgiar.org/";
-const API_URL = "http://127.0.0.1:8000/";
+const API_URL = "https://ganaapi.alliance.cgiar.org/";
+//const API_URL = "http://127.0.0.1:8000/";
 
 function authHeaders(token, extra = {}) {
   return {

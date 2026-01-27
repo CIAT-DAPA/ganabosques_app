@@ -185,10 +185,30 @@ function TabButton({ active, onClick, children, icon: Icon }) {
   );
 }
 
+// Botón de toggle leyenda estilo "flechita abajo"
+const ToggleButton = ({ isVisible, onToggle, label }) => (
+  <button
+    onClick={onToggle}
+    className="text-xs text-gray-700 hover:text-[#082C14] hover:underline flex items-center gap-1 transition-colors cursor-pointer"
+  >
+    {isVisible ? `Ocultar ${label}` : `Mostrar ${label}`}
+    <span
+      className={`transition-transform duration-200 ${
+        isVisible ? "rotate-180" : "rotate-0"
+      }`}
+    >
+      ▼
+    </span>
+  </button>
+);
+
 // ================================
 // 🔵 Componente de Movilizaciones
 // ================================
 function MovementSection({ movementStats, enterpriseId }) {
+  const [showLegendInput, setShowLegendInput] = useState(false);
+  const [showLegendOutput, setShowLegendOutput] = useState(false);
+  
   const data = movementStats?.[enterpriseId];
   
   if (!data) {
@@ -202,7 +222,7 @@ function MovementSection({ movementStats, enterpriseId }) {
   const { summary, inputs, outputs } = data;
 
   // Construir datos para gráficos
-  const buildChartData = (speciesData, title) => {
+  const buildChartData = (speciesData, title, showLegend = false) => {
     const aggregated = {};
     const addToAgg = (label, value) => {
       const v = Number.isFinite(value) ? value : 0;
@@ -254,7 +274,7 @@ function MovementSection({ movementStats, enterpriseId }) {
       },
       yaxis: { labels: { style: { colors: "#082C14" } } },
       colors: categories.map((_, i) => BASE_COLORS[i % BASE_COLORS.length]),
-      legend: { show: true, labels: { colors: "#082C14" } },
+      legend: { show: showLegend, labels: { colors: "#082C14" } },
       plotOptions: {
         bar: { distributed: true, borderRadius: 4, horizontal: false },
       },
@@ -266,8 +286,8 @@ function MovementSection({ movementStats, enterpriseId }) {
     return { options, series };
   };
 
-  const inputChart = buildChartData(inputs?.statistics?.species, "Entradas");
-  const outputChart = buildChartData(outputs?.statistics?.species, "Salidas");
+  const inputChart = buildChartData(inputs?.statistics?.species, "Entradas", showLegendInput);
+  const outputChart = buildChartData(outputs?.statistics?.species, "Salidas", showLegendOutput);
   
   const hasInputData = inputChart?.series[0]?.data?.some((d) => d > 0);
   const hasOutputData = outputChart?.series[0]?.data?.some((d) => d > 0);
@@ -295,6 +315,21 @@ function MovementSection({ movementStats, enterpriseId }) {
           </div>
         </div>
 
+        {/* Desglose por tipo de origen (Entradas) */}
+        {summary?.inputs?.by_destination_type && (
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="text-xs font-medium text-gray-600 mb-2">Entradas por tipo de origen:</div>
+            <div className="flex flex-wrap gap-2">
+              {Object.entries(summary.inputs.by_destination_type).map(([type, data]) => (
+                <span key={type} className="inline-flex items-center px-2 py-1 bg-white rounded-md text-xs border border-gray-200">
+                  <span className="font-medium">{translateDestinationType(type)}: </span>
+                  <span className="ml-1">{data.count} ({formatValue(data.percentage_of_total)}%)</span>
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Desglose por tipo de destino */}
         {summary?.outputs?.by_destination_type && (
           <div className="mt-4 pt-4 border-t border-gray-200">
@@ -315,15 +350,28 @@ function MovementSection({ movementStats, enterpriseId }) {
       <div className="grid md:grid-cols-2 gap-6">
         {/* Entradas */}
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-gray-700">Movilización de entrada</h4>
-          <p className="text-xs text-gray-500">Ingresos a la empresa por categorías</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700">Movilización de entrada</h4>
+              <p className="text-xs text-gray-500">Ingresos a la empresa por categorías</p>
+            </div>
+          </div>
           {hasInputData ? (
-            <Chart
-              options={inputChart.options}
-              series={inputChart.series}
-              type="bar"
-              height={250}
-            />
+            <>
+              <Chart
+                options={inputChart.options}
+                series={inputChart.series}
+                type="bar"
+                height={250}
+              />
+              <div className="flex justify-end mt-1">
+                <ToggleButton
+                  isVisible={showLegendInput}
+                  onToggle={() => setShowLegendInput(!showLegendInput)}
+                  label="leyenda"
+                />
+              </div>
+            </>
           ) : (
             <div className="h-[250px] flex items-center justify-center bg-gray-50 rounded-lg">
               <p className="text-gray-500 text-sm">No hay datos de entradas</p>
@@ -333,15 +381,28 @@ function MovementSection({ movementStats, enterpriseId }) {
 
         {/* Salidas */}
         <div className="space-y-2">
-          <h4 className="text-sm font-semibold text-gray-700">Movilización de salida</h4>
-          <p className="text-xs text-gray-500">Salidas de la empresa por categorías</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h4 className="text-sm font-semibold text-gray-700">Movilización de salida</h4>
+              <p className="text-xs text-gray-500">Salidas de la empresa por categorías</p>
+            </div>
+          </div>
           {hasOutputData ? (
-            <Chart
-              options={outputChart.options}
-              series={outputChart.series}
-              type="bar"
-              height={250}
-            />
+            <>
+              <Chart
+                options={outputChart.options}
+                series={outputChart.series}
+                type="bar"
+                height={250}
+              />
+              <div className="flex justify-end mt-1">
+                <ToggleButton
+                  isVisible={showLegendOutput}
+                  onToggle={() => setShowLegendOutput(!showLegendOutput)}
+                  label="leyenda"
+                />
+              </div>
+            </>
           ) : (
             <div className="h-[250px] flex items-center justify-center bg-gray-50 rounded-lg">
               <p className="text-gray-500 text-sm">No hay datos de salidas</p>

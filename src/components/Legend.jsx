@@ -20,7 +20,7 @@ export default function RiskLegend({ enterpriseRisk = false, nationalRisk = fals
     : ENTERPRISE_TYPES;
 
   return (
-    <div className="absolute bottom-6 right-4 z-[1000] flex flex-col gap-3">
+    <div className="absolute bottom-20 right-16 z-[1000] flex flex-col gap-3">
       {/* Leyenda de Niveles de Riesgo (solo si NO es enterpriseRisk) */}
       {!enterpriseRisk && (
         <div className="bg-custom rounded-xl shadow-lg border border-gray-200/50 px-4 py-3 backdrop-blur-sm space-y-1">

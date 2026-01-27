@@ -285,7 +285,7 @@ export default function EnterpriseMap() {
   return (
     <>
       <div id="enterprise-risk-export">
-        <div className="relative">
+        <div className="relative px-6 md:px-12">
           <FilterBar
             risk={risk}
             setRisk={setRisk}

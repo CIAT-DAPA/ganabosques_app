@@ -95,7 +95,7 @@ export default function FarmRiskMap() {
   return (
     <>
       <div id="farm-risk-export">
-        <div className="relative">
+        <div className="relative px-6 md:px-12">
           <FilterBar
   risk={risk}
   setRisk={setRisk}

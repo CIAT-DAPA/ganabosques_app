@@ -264,6 +264,17 @@ const MovementSummarySection = ({ summary }) => {
             <div className="text-xs uppercase text-gray-500">Entradas</div>
             <InfoItem label="Cantidad" value={summary.inputs.count || 0} />
             <InfoItem label="Porcentaje" value={formatValue(summary.inputs.percentage)} suffix="%" />
+            
+            {summary.inputs.by_destination_type && (
+              <div className="mt-1 ml-2">
+                {Object.entries(summary.inputs.by_destination_type).map(([type, data]) => (
+                  <div key={type} className="text-xs">
+                    <span>{translateDestinationType(type)}: </span>
+                    <span>{data.count} ({formatValue(data.percentage_of_total)}%)</span>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
         

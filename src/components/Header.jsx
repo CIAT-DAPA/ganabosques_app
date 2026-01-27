@@ -16,7 +16,8 @@ import Image from "next/image";
 const NAV_ITEMS = [
   { name: "Alertas nacionales", path: "/alertasnacionales", loginRequired: true },
   { name: "Alertas de predio", path: "/alertapredios", loginRequired: true },
-  {name: "Alertas de empresa", path: "/alertaempresas", loginRequired: true },
+  { name: "Alertas de empresa", path: "/alertaempresas", loginRequired: true },
+  { name: "Dashboard", path: "/dashboard", loginRequired: true },
   { name: "Reporte", path: "/reporte", loginRequired: true }, 
   /*
   {

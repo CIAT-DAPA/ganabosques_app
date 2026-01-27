@@ -270,3 +270,14 @@ export async function getEnterpriseRiskDetails(
 
   return res.json();
 }
+
+export async function fetchFarmRiskByAnalysisId(token, analysisId, pageSize = 20, page = 1) {
+  if (!analysisId) return { items: [], page: 1, page_size: pageSize };
+
+  const url = `${API_URL}farmrisk/by-analysis-id?analysis_id=${analysisId}&page=${page}&page_size=${pageSize}`;
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
+  if (!res.ok) throw new Error("Error al obtener farm risks por analysis ID");
+  return res.json();
+}

@@ -25,8 +25,10 @@ export default function FilterBar({
   enterpriseRisk = false,
   farmRisk = false,
   nationalRisk = false,
+  dashboardRisk = false,
   report = false,
   multiPeriod = false,
+  hideSearch = false,
   admLevel,
   onAdmSearch,
   selectedEnterprise,
@@ -108,8 +110,8 @@ export default function FilterBar({
         onPeriodsChange={onPeriodsChange}
       />
 
-      {/* Buscador + chips (solo cuando no es modo reporte) */}
-      {!report && (
+      {/* Buscador + chips (solo cuando no es modo reporte y hideSearch es false) */}
+      {!report && !hideSearch && (
         <div className="flex flex-col gap-2 flex-grow">
           <SearchBar
             search={search}

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
-import { AlertTriangle, Trees, Shield, Sprout, Calendar,Building2,MapPin,MapIcon } from "lucide-react";
+import { AlertTriangle, Trees, Shield, Sprout, Calendar, Building2, MapPin, MapIcon } from "lucide-react";
 
 // Constantes
 const BASE_COLORS = [
@@ -53,6 +53,28 @@ const getAlertLevel = (flag) => (flag ? ALERT_LEVELS.TRUE : ALERT_LEVELS.FALSE);
 const formatValue = (value, decimals = 2) => (value || 0).toFixed(decimals);
 
 const getFarmLabel = (farm) => farm?.sit_code || farm.code || farm.id;
+
+// Mapeo para traducir tipos de destino del API a español
+const DESTINATION_TYPE_LABELS = {
+  SLAUGHTERHOUSE: "Planta de beneficio",
+  COLLECTION_CENTER: "Centro de acopio",
+  CATTLE_FAIR: "Feria ganadera",
+  ENTERPRISE: "Empresa",
+  FARM: "Finca",
+  COLLECTIONCENTER: "Centro de acopio",
+  CENTRO_ACOPIO: "Centro de acopio",
+  ACOPIO: "Centro de acopio",
+  PLANTA: "Planta de beneficio",
+  FERIA: "Feria ganadera",
+  EMPRESA: "Empresa",
+  FINCA: "Finca",
+};
+
+const translateDestinationType = (type) => {
+  if (!type) return "Otro";
+  const normalized = String(type).trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_");
+  return DESTINATION_TYPE_LABELS[normalized] || type;
+};
 
 // Componentes reutilizables
 const SectionHeader = ({ icon: Icon, title }) => (
@@ -227,10 +249,61 @@ const EnvironmentalSection = ({ riskObj }) => (
   </div>
 );
 
-// Componente principal para cada farm/year
-const FarmYearCard = ({
+// Componente para mostrar el resumen de movimientos
+const MovementSummarySection = ({ summary }) => {
+  if (!summary) return null;
+  
+  return (
+    <div className="space-y-3 mt-4">
+      <SectionHeader icon={MapIcon} title="Resumen de Movilizaciones" />
+      <div className="space-y-1 text-sm text-custom-dark">
+        <InfoItem label="Total movimientos" value={summary.total_movements || 0} />
+        
+        {summary.inputs && (
+          <div className="mt-2">
+            <div className="text-xs uppercase text-gray-500">Entradas</div>
+            <InfoItem label="Cantidad" value={summary.inputs.count || 0} />
+            <InfoItem label="Porcentaje" value={formatValue(summary.inputs.percentage)} suffix="%" />
+            
+            {summary.inputs.by_destination_type && (
+              <div className="mt-1 ml-2">
+                {Object.entries(summary.inputs.by_destination_type).map(([type, data]) => (
+                  <div key={type} className="text-xs">
+                    <span>{translateDestinationType(type)}: </span>
+                    <span>{data.count} ({formatValue(data.percentage_of_total)}%)</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        
+        {summary.outputs && (
+          <div className="mt-2">
+            <div className="text-xs uppercase text-gray-500">Salidas</div>
+            <InfoItem label="Cantidad" value={summary.outputs.count || 0} />
+            <InfoItem label="Porcentaje" value={formatValue(summary.outputs.percentage)} suffix="%" />
+            
+            {summary.outputs.by_destination_type && (
+              <div className="mt-1 ml-2">
+                {Object.entries(summary.outputs.by_destination_type).map(([type, data]) => (
+                  <div key={type} className="text-xs">
+                    <span>{translateDestinationType(type)}: </span>
+                    <span>{data.count} ({formatValue(data.percentage_of_total)}%)</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Componente principal para cada farm
+const FarmCard = ({
   farm,
-  year,
   farmData,
   riskData,
   getFarmRiskLevels,
@@ -241,31 +314,23 @@ const FarmYearCard = ({
   yearStart,
   yearEnd,
 }) => {
-  const statsEntrada = farmData?.inputs?.statistics?.[year];
-  const statsSalida = farmData?.outputs?.statistics?.[year];
-  const showLegendEntrada = legendEntradaMap[`${farm.id}-${year}`] || false;
-  const showLegendSalida = legendSalidaMap[`${farm.id}-${year}`] || false;
+  // La nueva estructura tiene inputs.statistics.species directamente (sin año)
+  const statsEntrada = farmData?.inputs?.statistics;
+  const statsSalida = farmData?.outputs?.statistics;
+  const showLegendEntrada = legendEntradaMap[farm.id] || false;
+  const showLegendSalida = legendSalidaMap[farm.id] || false;
 
-  const entradaChart = statsEntrada
-    ? buildChartData(
-        { [year]: statsEntrada.species },
-        "Entradas",
-        showLegendEntrada
-      )
+  const entradaChart = statsEntrada?.species
+    ? buildChartData(statsEntrada.species, "Entradas", showLegendEntrada)
     : null;
 
-  const salidaChart = statsSalida
-    ? buildChartData(
-        { [year]: statsSalida.species },
-        "Salidas",
-        showLegendSalida
-      )
+  const salidaChart = statsSalida?.species
+    ? buildChartData(statsSalida.species, "Salidas", showLegendSalida)
     : null;
 
   const label = getFarmLabel(farm);
   const riskObj = riskData[farm.id];
   const risks = getFarmRiskLevels(farm.id);
-  console.log(farm);
 
   const hasEntrada = entradaChart?.series[0]?.data?.some((d) => d > 0);
   const hasSalida = salidaChart?.series[0]?.data?.some((d) => d > 0);
@@ -312,6 +377,9 @@ const FarmYearCard = ({
               </div>
 
               <AlertSection risks={risks} />
+              
+              {/* Resumen de movilizaciones */}
+              <MovementSummarySection summary={farmData?.summary} />
             </div>
 
             {/* COLUMNA 2: Información Ambiental */}
@@ -326,7 +394,7 @@ const FarmYearCard = ({
             chart={entradaChart}
             hasData={hasEntrada}
             showLegend={showLegendEntrada}
-            onToggleLegend={() => toggleLegend("entrada", farm.id, year)}
+            onToggleLegend={() => toggleLegend("entrada", farm.id)}
             description="Muestra los ingresos al predio según las categorías del sector productivo. En ganadería, las movilizaciones se agrupan por edades del hato."
           />
           <ChartSection
@@ -334,7 +402,7 @@ const FarmYearCard = ({
             chart={salidaChart}
             hasData={hasSalida}
             showLegend={showLegendSalida}
-            onToggleLegend={() => toggleLegend("salida", farm.id, year)}
+            onToggleLegend={() => toggleLegend("salida", farm.id)}
             description="Indica los movimientos de salida desde el predio, clasificados por tipo de producción o grupo etario en el caso ganadero."
           />
         </div>
@@ -352,7 +420,8 @@ export default function MovementCharts({
 }) {
   const [legendEntradaMap, setLegendEntradaMap] = useState({});
   const [legendSalidaMap, setLegendSalidaMap] = useState({});
-  const toggleLegend = (type, id, year) => {
+  
+  const toggleLegend = (type, id) => {
     const setterMap = {
       entrada: setLegendEntradaMap,
       salida: setLegendSalidaMap,
@@ -360,67 +429,63 @@ export default function MovementCharts({
     const setter = setterMap[type];
     setter((prev) => ({
       ...prev,
-      [`${id}-${year}`]: !prev[`${id}-${year}`],
+      [id]: !prev[id],
     }));
   };
 
-  // ✅ buildChartData parcheado: soporta species como OBJETO o ARRAY
-  const buildChartData = (dataByYear, title, showLegend) => {
-    // dataByYear: { [year]: species }
+  // buildChartData: soporta species como OBJETO { grupo: { subcat: { headcount, movements } } }
+  const buildChartData = (speciesData, title, showLegend) => {
     const aggregated = {};
     const addToAgg = (label, value) => {
       const v = Number.isFinite(value) ? value : 0;
       aggregated[label] = (aggregated[label] || 0) + v;
     };
 
-    Object.values(dataByYear || {}).forEach((speciesGroup) => {
-      if (!speciesGroup) return;
+    if (!speciesData) {
+      return { options: {}, series: [{ name: title, data: [] }] };
+    }
 
-      if (Array.isArray(speciesGroup)) {
-        // ARRAY: intenta usar 'subcategory' (si existe) y cae a 'name'
-        for (const it of speciesGroup) {
-          if (!it) continue;
-          const label = String(
-            it?.subcategory ??
-              it?.name ??
-              it?.species_name ??
-              it?.category ??
-              it?._id ??
-              it?.id ??
-              it?.species_id ??
-              "N/A"
-          );
-          const val =
-            (typeof it.headcount === "number" && it.headcount) ??
-            (typeof it.amount === "number" && it.amount) ??
-            (typeof it.total === "number" && it.total) ??
+    if (Array.isArray(speciesData)) {
+      // ARRAY: intenta usar 'subcategory' (si existe) y cae a 'name'
+      for (const it of speciesData) {
+        if (!it) continue;
+        const label = String(
+          it?.subcategory ??
+            it?.name ??
+            it?.species_name ??
+            it?.category ??
+            it?._id ??
+            it?.id ??
+            it?.species_id ??
+            "N/A"
+        );
+        const val =
+          (typeof it.headcount === "number" && it.headcount) ??
+          (typeof it.amount === "number" && it.amount) ??
+          (typeof it.total === "number" && it.total) ??
+          0;
+        addToAgg(label, val);
+      }
+    } else if (typeof speciesData === "object") {
+      // OBJETO: { bovinos: { "MACHOS MAYORES A 3 ANIOS": { headcount: 493, movements: 11 } } }
+      for (const [group, sub] of Object.entries(speciesData)) {
+        if (typeof sub === "number") {
+          addToAgg(group, sub);
+          continue;
+        }
+        if (!sub || typeof sub !== "object") continue;
+
+        for (const [subcat, values] of Object.entries(sub)) {
+          if (!values || typeof values !== "object") continue;
+          const v =
+            (typeof values.headcount === "number" && values.headcount) ??
+            (typeof values.amount === "number" && values.amount) ??
+            (typeof values.total === "number" && values.total) ??
             0;
-          addToAgg(label, val);
+          addToAgg(String(subcat), v);
         }
-        return;
       }
-
-      if (typeof speciesGroup === "object") {
-        for (const [group, sub] of Object.entries(speciesGroup)) {
-          if (typeof sub === "number") {
-            addToAgg(group, sub);
-            continue;
-          }
-          if (!sub || typeof sub !== "object") continue;
-
-          for (const [subcat, values] of Object.entries(sub)) {
-            if (!values || typeof values !== "object") continue;
-            const v =
-              (typeof values.headcount === "number" && values.headcount) ??
-              (typeof values.amount === "number" && values.amount) ??
-              (typeof values.total === "number" && values.total) ??
-              0;
-            addToAgg(String(subcat), v);
-          }
-        }
-        return;
-      }
-    });
+    }
 
     const categories = Object.keys(aggregated);
     const series = [
@@ -479,17 +544,10 @@ export default function MovementCharts({
         const farmData = summary[farm.id];
         if (!farmData) return null;
 
-        const allYears = Object.keys(farmData?.inputs?.statistics || {})
-          .filter((k) => /^\d{4}$/.test(String(k)))
-          .sort((a, b) => Number(a) - Number(b));
-
-        return allYears.map((year) => (
-          <FarmYearCard
-            key={`${farm.id}-${year}`}
+        return (
+          <FarmCard
+            key={farm.id}
             farm={farm}
-            year={year}
-            yearStart={yearStart}
-            yearEnd={yearEnd}
             farmData={farmData}
             riskData={riskData}
             getFarmRiskLevels={getFarmRiskLevels}
@@ -497,8 +555,10 @@ export default function MovementCharts({
             legendEntradaMap={legendEntradaMap}
             legendSalidaMap={legendSalidaMap}
             toggleLegend={toggleLegend}
+            yearStart={yearStart}
+            yearEnd={yearEnd}
           />
-        ));
+        );
       })}
     </>
   );

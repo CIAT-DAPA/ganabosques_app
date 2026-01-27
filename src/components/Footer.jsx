@@ -79,7 +79,6 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-16 mb-12">
           {/* Secciones */}
           <div>
-            <h3 className={CSS_CLASSES.sectionTitle}>Secciones</h3>
             <ul className="space-y-3">
               {FOOTER_LINKS.map((link, index) => (
                 <li key={index}>{renderFooterLink(link)}</li>
@@ -102,7 +101,7 @@ export default function Footer() {
         {/* Copyright */}
         <div className="text-center">
           <p className={CSS_CLASSES.copyright}>
-            &copy; Ganabosques {currentYear} Todos los derechos reservados.
+            &copy; Ministerio de Agricultura y Desarrollo Rural y Alliance Bioversity CIAT {currentYear} Todos los derechos reservados.
           </p>
         </div>
       </div>

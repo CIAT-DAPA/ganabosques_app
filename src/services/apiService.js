@@ -1,5 +1,5 @@
-const API_URL = "https://ganaapi.alliance.cgiar.org/";
-// const API_URL = "http://127.0.0.1:8000/";
+// const API_URL = "https://ganaapi.alliance.cgiar.org/";
+const API_URL = "http://127.0.0.1:8000/";
 
 function authHeaders(token, extra = {}) {
   return {
@@ -97,14 +97,31 @@ export async function fetchFarmPolygonsByIds(token, ids) {
   return res.json();
 }
 
-export async function fetchMovementStatisticsByFarmIds(token, ids) {
-  if (!ids || ids.length === 0) return [];
+export async function fetchMovementStatisticsByFarmIds(token, ids, startDate, endDate) {
+  if (!ids || ids.length === 0) return {};
 
-  const url = `${API_URL}movement/statistics-by-farmid?ids=${ids.join(",")}`;
+  let url = `${API_URL}movement/statistics-by-farmid?ids=${ids.join(",")}`;
+  if (startDate) url += `&start_date=${startDate}`;
+  if (endDate) url += `&end_date=${endDate}`;
+  
   const res = await fetch(url, {
     headers: authHeaders(token, { Accept: "application/json" }),
   });
   if (!res.ok) throw new Error("Error al obtener estadísticas de movimiento");
+  return res.json();
+}
+
+export async function fetchMovementStatisticsByEnterpriseIds(token, ids, startDate, endDate) {
+  if (!ids || ids.length === 0) return {};
+
+  let url = `${API_URL}movement/statistics-by-enterpriseid?ids=${ids.join(",")}`;
+  if (startDate) url += `&start_date=${startDate}`;
+  if (endDate) url += `&end_date=${endDate}`;
+  
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
+  if (!res.ok) throw new Error("Error al obtener estadísticas de movimiento por empresa");
   return res.json();
 }
 
@@ -135,8 +152,9 @@ export async function fetchAdm3RisksByAnalysisAndAdm3(
 
 export async function fetchFarmRiskByDeforestationId(token, deforestationId) {
   if (!deforestationId) return [];
+  console.log(deforestationId); 
 
-  const url = `${API_URL}/analysis/by-deforestation?deforestation_id=${deforestationId}`;
+  const url = `${API_URL}analysis/by-deforestation?deforestation_id=${deforestationId}`;
   const res = await fetch(url, {
     headers: authHeaders(token, { Accept: "application/json" }),
   });
@@ -250,5 +268,16 @@ export async function getEnterpriseRiskDetails(
     throw new Error("Error al obtener detalles de riesgo de la empresa");
   }
 
+  return res.json();
+}
+
+export async function fetchFarmRiskByAnalysisId(token, analysisId, pageSize = 20, page = 1) {
+  if (!analysisId) return { items: [], page: 1, page_size: pageSize };
+
+  const url = `${API_URL}farmrisk/by-analysis-id?analysis_id=${analysisId}&page=${page}&page_size=${pageSize}`;
+  const res = await fetch(url, {
+    headers: authHeaders(token, { Accept: "application/json" }),
+  });
+  if (!res.ok) throw new Error("Error al obtener farm risks por analysis ID");
   return res.json();
 }

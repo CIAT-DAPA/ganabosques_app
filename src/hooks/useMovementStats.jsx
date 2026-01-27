@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { fetchMovementStatisticsByFarmIds } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
 
-export function useMovementStats(foundFarms, setOriginalMovement, setPendingTasks) {
+export function useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period) {
   const { token } = useAuth();
 
   useEffect(() => {
@@ -22,13 +22,24 @@ export function useMovementStats(foundFarms, setOriginalMovement, setPendingTask
       return;
     }
 
+    // Extraer fechas del period en formato YYYY-MM-DD
+    const formatDate = (dateStr) => {
+      if (!dateStr) return null;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return null;
+      return d.toISOString().split('T')[0]; // YYYY-MM-DD
+    };
+
+    const startDate = formatDate(period?.deforestation_period_start);
+    const endDate = formatDate(period?.deforestation_period_end);
+
     let cancelled = false;
 
     const loadStats = async () => {
       setPendingTasks((prev) => prev + 1);  
 
       try {
-        const data = await fetchMovementStatisticsByFarmIds(token, ids);
+        const data = await fetchMovementStatisticsByFarmIds(token, ids, startDate, endDate);
         if (!cancelled) {
           setOriginalMovement(data || {});
         }
@@ -47,5 +58,5 @@ export function useMovementStats(foundFarms, setOriginalMovement, setPendingTask
     return () => {
       cancelled = true;
     };
-  }, [foundFarms, token, setOriginalMovement, setPendingTasks]);
+  }, [foundFarms, token, setOriginalMovement, setPendingTasks, period]);
 }

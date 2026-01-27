@@ -33,10 +33,24 @@ function ZoomControlTopRight() {
   return null;
 }
 
+// Component to capture map reference using useMap hook
+function MapRefHandler({ onMapCreated }) {
+  const { useMap } = require("react-leaflet");
+  const map = useMap();
+
+  useEffect(() => {
+    if (onMapCreated && map) {
+      onMapCreated(map);
+    }
+  }, [map, onMapCreated]);
+
+  return null;
+}
+
 export default function BaseMap({ 
   center = [4.5709, -74.2973], 
   zoom = 6,
-  className = "h-[80vh] w-full",
+  className = "h-[80vh] w-full rounded-xl overflow-hidden",
   children,
   onMapCreated,
   showDeforestation = false,
@@ -75,12 +89,14 @@ const end = period?.deforestation_period_end
       scrollWheelZoom={true}
       zoomControl={false}
       className={className}
-      whenCreated={handleMapCreated}
     >
       <TileLayer
         attribution='&copy; <a href="http://osm.org/copyright">OpenStreetMap</a>'
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
+
+      {/* Capture map reference */}
+      <MapRefHandler onMapCreated={handleMapCreated} />
 
       <LayersControl position="topright">
         {showDeforestation && (

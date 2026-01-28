@@ -48,12 +48,13 @@ export default function FilterBar({
   const [toast, setToast] = useState(null);
 
   // 🔎 Empresas por nombre (debounce). Mapeamos a los nombres esperados por SearchBar:
+  const shouldSearchEnterprise = enterpriseRisk || (report && reportType === "empresa");
   const {
     enterpriseSuggestions,
     setEnterpriseSuggestions,
     loading: enterpriseLoading,
     error: enterpriseError, // si tu hook devuelve null, igual funciona
-  } = useEnterpriseSuggestions(search,enterpriseRisk);
+  } = useEnterpriseSuggestions(search, shouldSearchEnterprise);
 
   // 🔁 Años disponibles
   const { yearRanges, error: yearError } = useYearRanges(
@@ -66,14 +67,16 @@ export default function FilterBar({
   );
 
   // 🗺️ ADM por nombre (debounce)
+  const shouldSearchAdm = nationalRisk || (report && reportType === "vereda");
   const { admSuggestions, setAdmSuggestions } = useAdmSuggestions(
     search,
     admLevel,
-    nationalRisk
+    shouldSearchAdm
   );
 
   // 🧷 Búsqueda diferida de SIT_CODE
-  useFarmCodeSearch(farmRisk, foundFarms, setFoundFarms, setToast);
+  const shouldSearchFarm = farmRisk || (report && reportType === "finca");
+  useFarmCodeSearch(shouldSearchFarm, foundFarms, setFoundFarms, setToast);
 
   // 🛎️ Toasts de error
   useEffect(() => {
@@ -110,16 +113,17 @@ export default function FilterBar({
         onPeriodsChange={onPeriodsChange}
       />
 
-      {/* Buscador + chips (solo cuando no es modo reporte y hideSearch es false) */}
-      {!report && !hideSearch && (
+      {/* Buscador + chips (cuando no es modo reporte, O cuando es reporte con cualquier tipo) */}
+      {((!report && !hideSearch) || (report && reportType !== "")) && (
         <div className="flex flex-col gap-2 flex-grow">
           <SearchBar
             search={search}
             setSearch={setSearch}
             onSearch={onSearch}
-            farmRisk={farmRisk}
-            enterpriseRisk={enterpriseRisk}
-            nationalRisk={nationalRisk}
+            farmRisk={report ? reportType === "finca" : farmRisk}
+            enterpriseRisk={report ? reportType === "empresa" : enterpriseRisk}
+            nationalRisk={report ? reportType === "vereda" : nationalRisk}
+            report={report}
             /* ⬇️ Mantenemos las props que espera SearchBar pero alimentadas del nuevo hook */
             filteredEnterprises={enterpriseSuggestions}
             setFilteredEnterprises={setEnterpriseSuggestions}
@@ -142,9 +146,9 @@ export default function FilterBar({
           />
 
           <FilterChips
-            farmRisk={farmRisk}
-            enterpriseRisk={enterpriseRisk}
-            nationalRisk={nationalRisk}
+            farmRisk={report ? reportType === "finca" : farmRisk}
+            enterpriseRisk={report ? reportType === "empresa" : enterpriseRisk}
+            nationalRisk={report ? reportType === "vereda" : nationalRisk}
             foundFarms={foundFarms}
             setFoundFarms={setFoundFarms}
             selectedEnterprise={selectedEnterprise}

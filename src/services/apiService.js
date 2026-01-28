@@ -281,3 +281,51 @@ export async function fetchFarmRiskByAnalysisId(token, analysisId, pageSize = 20
   if (!res.ok) throw new Error("Error al obtener farm risks por analysis ID");
   return res.json();
 }
+
+export async function fetchRiskGlobal(
+  token,
+  entityType,          // "adm3" | "farm" | "enterprise"
+  ids = [],            // array de ids
+  { type = null, analysisIds = null, deforestationIds = null } = {}
+) {
+  if (!entityType) throw new Error("entityType es requerido");
+  if (!Array.isArray(ids) || ids.length === 0) return {};
+
+  const url = API_URL + "risk/by-ids-and-type";
+
+  const payload = {
+    entity_type: entityType,
+    ids,
+  };
+
+  // Prioridad: analysisIds > deforestationIds > type
+  if (Array.isArray(analysisIds) && analysisIds.length > 0) {
+    payload.analysis_ids = analysisIds;
+  } else if (Array.isArray(deforestationIds) && deforestationIds.length > 0) {
+    payload.deforestation_ids = deforestationIds;
+  } else {
+    const t = (type || "").toString().trim().toLowerCase();
+    if (!t) throw new Error("Debes enviar type o analysisIds o deforestationIds");
+    payload.type = t;
+  }
+
+  const res = await fetch(url, {
+    method: "POST",
+    headers: authHeaders(token, {
+      "Content-Type": "application/json",
+      Accept: "application/json",
+    }),
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    let detail = "";
+    try {
+      const err = await res.json();
+      detail = err?.detail ? `: ${err.detail}` : "";
+    } catch (_) {}
+    throw new Error(`Error al obtener riesgos globales${detail}`);
+  }
+
+  return res.json();
+}

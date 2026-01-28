@@ -9,6 +9,7 @@ export default function SearchBar({
   farmRisk = false,
   enterpriseRisk = false,
   nationalRisk = false,
+  report = false,
   filteredEnterprises = [],
   setFilteredEnterprises,
   selectedEnterprise,            // ahora es array: lista de empresas completas
@@ -85,7 +86,8 @@ export default function SearchBar({
   );
 
   const validateFarmRiskSearch = () => {
-    if (!risk || !year || !source) {
+    // En modo reporte no requerimos year/source, solo validamos cantidad
+    if (!report && (!risk || !year || !source)) {
       setToast({
         type: "warning",
         message: "Debes seleccionar Riesgo, Año y Fuente antes de buscar",

@@ -204,7 +204,11 @@ export default function FilterSelects({
   );
 
   const reportTypeOptions = useMemo(
-    () => [{ value: "vereda", label: "Vereda" }],
+    () => [
+      { value: "vereda", label: "Vereda" },
+      { value: "finca", label: "Finca" },
+      { value: "empresa", label: "Empresa" },
+    ],
     []
   );
 

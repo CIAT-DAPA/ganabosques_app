@@ -184,7 +184,7 @@ export default function EnterpriseMap() {
   const { token } = useAuth();
 
   const movement = useFilteredMovement(originalMovement);
-  useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period);
+  useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period, risk);
   useFarmPolygons(foundFarms, setPendingTasks, setOriginalMovement);
   useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
@@ -195,7 +195,7 @@ export default function EnterpriseMap() {
       ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
       : [];
   }, [selectedEnterprise]);
-  const enterpriseMovementStats = useEnterpriseMovementStats(enterpriseIds, period, setPendingTasks);
+  const enterpriseMovementStats = useEnterpriseMovementStats(enterpriseIds, period, risk, setPendingTasks);
 
   useEffect(() => setLoading(pendingTasks > 0), [pendingTasks]);
 

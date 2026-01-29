@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { fetchMovementStatisticsByEnterpriseIds } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
 
-export function useEnterpriseMovementStats(enterpriseIds, period, setPendingTasks) {
+export function useEnterpriseMovementStats(enterpriseIds, period, risk, setPendingTasks) {
   const { token } = useAuth();
   const [movementStats, setMovementStats] = useState({});
 
@@ -23,16 +23,50 @@ export function useEnterpriseMovementStats(enterpriseIds, period, setPendingTask
       return;
     }
 
-    // Extraer fechas del period en formato YYYY-MM-DD
+    // Helper para obtener el año de una fecha
+    const getYear = (dateStr) => {
+      if (!dateStr) return null;
+      const d = new Date(dateStr);
+      if (isNaN(d.getTime())) return null;
+      return d.getFullYear();
+    };
+
+    // Helper original por si acaso
     const formatDate = (dateStr) => {
       if (!dateStr) return null;
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
-      return d.toISOString().split('T')[0]; // YYYY-MM-DD
+      return d.toISOString().split('T')[0];
     };
 
-    const startDate = formatDate(period?.deforestation_period_start);
-    const endDate = formatDate(period?.deforestation_period_end);
+    let startDate, endDate;
+    const r = (risk || "").toLowerCase();
+
+    if (r === "annual") {
+      const y = getYear(period?.deforestation_period_start);
+      if (y) {
+        startDate = `${y}-01-01`;
+        endDate = `${y}-12-31`;
+      } else {
+        startDate = formatDate(period?.deforestation_period_start);
+        endDate = formatDate(period?.deforestation_period_end);
+      }
+    } else if (r === "cumulative") {
+      const yEnd = getYear(period?.deforestation_period_end);
+      if (yEnd) {
+        // user req: end year - 1
+        const targetYear = yEnd - 1;
+        startDate = `${targetYear}-01-01`;
+        endDate = `${targetYear}-12-31`;
+      } else {
+        startDate = formatDate(period?.deforestation_period_start);
+        endDate = formatDate(period?.deforestation_period_end);
+      }
+    } else {
+      // Default / Fallback
+      startDate = formatDate(period?.deforestation_period_start);
+      endDate = formatDate(period?.deforestation_period_end);
+    }
 
     let cancelled = false;
 
@@ -59,7 +93,7 @@ export function useEnterpriseMovementStats(enterpriseIds, period, setPendingTask
     return () => {
       cancelled = true;
     };
-  }, [enterpriseIds, token, period, setPendingTasks]);
+  }, [enterpriseIds, token, period, risk, setPendingTasks]);
 
   return movementStats;
 }

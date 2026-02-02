@@ -71,6 +71,8 @@ export default function BaseMap({
     }
   };
 
+  console.log(period);
+
 const start = period?.deforestation_period_start
   ? period.deforestation_period_start.slice(0, 4)
   : null;
@@ -82,6 +84,10 @@ const end = period?.deforestation_period_end
   const defLabel = hasPeriod
     ? `Deforestación ${start}-${end}`
     : "Deforestación";
+
+  const defName = period?.deforestation_name ?? null;
+  const timeValue = defName ? defName.split("_").pop() : null;
+  console.log(timeValue);  
   return (
     <MapContainer
       center={center}
@@ -111,7 +117,7 @@ const end = period?.deforestation_period_end
               format="image/png"
               transparent
               version="1.1.1"
-              params={{ time: start + "-" + end }}
+              params={{ time: timeValue }}
               zIndex={1000}
             />
           </LayersControl.Overlay>

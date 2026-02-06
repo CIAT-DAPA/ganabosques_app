@@ -12,7 +12,7 @@ import {
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
 
-// ===== Navegación =====
+// Navigation items
 const NAV_ITEMS = [
   { name: "Alertas nacionales", path: "/alertasnacionales", loginRequired: true },
   { name: "Alertas de predio", path: "/alertapredios", loginRequired: true },
@@ -30,7 +30,7 @@ const NAV_ITEMS = [
 
 ];
 
-// ===== Clases CSS =====
+// CSS classes
 const CSS_CLASSES = {
   primaryButton:
     "px-4 py-2 border-2 border-[#C5F642] text-[#FCFFF5] rounded-full flex items-center justify-center font-body font-semibold text-sm hover:bg-[#C5F642] hover:text-[#082C14] transition-all duration-200 cursor-pointer",

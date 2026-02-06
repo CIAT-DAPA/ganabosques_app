@@ -9,6 +9,8 @@ import Adm3RiskTable from "@/components/Adm3RiskTable";
 import FarmRiskTable from "@/components/FarmRiskTable";
 import EnterpriseRiskTable from "@/components/EnterpriseRiskTable";
 import { useAuth } from "@/hooks/useAuth";
+import { yearFromDateLike } from "@/utils";
+import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
@@ -25,13 +27,6 @@ const CSS_CLASSES = {
 /* ============
    Helpers de filtro
    ============ */
-function yearFromDateLike(v) {
-  if (!v) return null;
-  const d = new Date(v);
-  if (!Number.isNaN(d.getTime())) return d.getFullYear();
-  const m = String(v).match(/(\d{4})/);
-  return m ? Number(m[1]) : null;
-}
 
 function yearsFromLabels(labels, pick) {
   const years = new Set();
@@ -78,13 +73,8 @@ export default function Reporte() {
     document.title = "Ganabosques - Reportes";
   }, []);
 
-  const riskOptions = useMemo(
-    () => [
-      { value: "annual", label: "Alerta anual" },
-      { value: "cumulative", label: "Alerta acumulada" },
-    ],
-    []
-  );
+  // Use centralized RISK_OPTIONS constant
+  const riskOptions = RISK_OPTIONS;
 
   const [risk, setRisk] = useState(riskOptions[0]?.value || "annual");
   const [year, setYear] = useState("");

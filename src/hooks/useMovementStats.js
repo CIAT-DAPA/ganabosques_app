@@ -1,29 +1,29 @@
-import { useEffect, useState } from "react";
-import { fetchMovementStatisticsByEnterpriseIds } from "@/services/apiService";
+// Movement statistics hook for farms
+import { useEffect } from "react";
+import { fetchMovementStatisticsByFarmIds } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
 
-export function useEnterpriseMovementStats(enterpriseIds, period, risk, setPendingTasks) {
+export function useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period, risk) {
   const { token } = useAuth();
-  const [movementStats, setMovementStats] = useState({});
 
   useEffect(() => {
     if (!token) {
-      setMovementStats({});
+      setOriginalMovement({});
       return;
     }
 
-    if (!Array.isArray(enterpriseIds) || enterpriseIds.length === 0) {
-      setMovementStats({});
+    if (!Array.isArray(foundFarms) || foundFarms.length === 0) {
+      setOriginalMovement({});
       return;
     }
 
-    const ids = enterpriseIds.filter(Boolean);
+    const ids = foundFarms.map((farm) => farm && farm.id).filter(Boolean);
     if (ids.length === 0) {
-      setMovementStats({});
+      setOriginalMovement({});
       return;
     }
 
-    // Helper para obtener el año de una fecha
+    // Get year from date
     const getYear = (dateStr) => {
       if (!dateStr) return null;
       const d = new Date(dateStr);
@@ -31,7 +31,7 @@ export function useEnterpriseMovementStats(enterpriseIds, period, risk, setPendi
       return d.getFullYear();
     };
 
-    // Helper original por si acaso
+    // Format date to ISO
     const formatDate = (dateStr) => {
       if (!dateStr) return null;
       const d = new Date(dateStr);
@@ -54,7 +54,6 @@ export function useEnterpriseMovementStats(enterpriseIds, period, risk, setPendi
     } else if (r === "cumulative") {
       const yEnd = getYear(period?.deforestation_period_end);
       if (yEnd) {
-        // user req: end year - 1
         const targetYear = yEnd - 1;
         startDate = `${targetYear}-01-01`;
         endDate = `${targetYear}-12-31`;
@@ -63,7 +62,6 @@ export function useEnterpriseMovementStats(enterpriseIds, period, risk, setPendi
         endDate = formatDate(period?.deforestation_period_end);
       }
     } else {
-      // Default / Fallback
       startDate = formatDate(period?.deforestation_period_start);
       endDate = formatDate(period?.deforestation_period_end);
     }
@@ -71,20 +69,20 @@ export function useEnterpriseMovementStats(enterpriseIds, period, risk, setPendi
     let cancelled = false;
 
     const loadStats = async () => {
-      setPendingTasks?.((prev) => prev + 1);  
+      setPendingTasks((prev) => prev + 1);  
 
       try {
-        const data = await fetchMovementStatisticsByEnterpriseIds(token, ids, startDate, endDate);
+        const data = await fetchMovementStatisticsByFarmIds(token, ids, startDate, endDate);
         if (!cancelled) {
-          setMovementStats(data || {});
+          setOriginalMovement(data || {});
         }
       } catch (err) {
         if (!cancelled) {
-          console.error("❗ Error obteniendo estadísticas de movilización por empresa:", err);
-          setMovementStats({});
+          console.error("Error obteniendo estadísticas:", err);
+          setOriginalMovement({});
         }
       } finally {
-        setPendingTasks?.((prev) => Math.max(0, prev - 1));
+        setPendingTasks((prev) => Math.max(0, prev - 1));
       }
     };
 
@@ -93,7 +91,5 @@ export function useEnterpriseMovementStats(enterpriseIds, period, risk, setPendi
     return () => {
       cancelled = true;
     };
-  }, [enterpriseIds, token, period, risk, setPendingTasks]);
-
-  return movementStats;
+  }, [foundFarms, token, setOriginalMovement, setPendingTasks, period, risk]);
 }

@@ -2,17 +2,7 @@
 
 import { useState, useCallback } from "react";
 
-/**
- * DownloadPdfButton
- * Props:
- * - targetId     (string, requerido): id del elemento DOM a capturar.
- * - filename     (string, opcional): nombre del archivo PDF. Por defecto: "report.pdf".
- * - label        (string, opcional): texto del botón. Por defecto: "Download PDF".
- * - className    (string, opcional): clases Tailwind/extra para el botón.
- * - scale        (number, opcional): factor de escala para html2canvas. Por defecto: 2.
- * - backgroundColor (string, opcional): fondo del canvas. Por defecto: "#ffffff".
- * - onError      (fn, opcional): callback si ocurre un error.
- */
+// PDF download button component
 export default function DownloadPdfButton({
   targetId,
   filename = "report.pdf",
@@ -40,7 +30,6 @@ export default function DownloadPdfButton({
       const { jsPDF } = await import("jspdf");
       const html2canvas = (await import("html2canvas-pro")).default;
 
-      // Render del nodo a canvas
       const canvas = await html2canvas(el, {
         scale,
         useCORS: true,
@@ -81,7 +70,7 @@ export default function DownloadPdfButton({
   return (
     <button
       type="button"
-      onClick={handleDownload} quich
+      onClick={handleDownload}
       disabled={downloading}
       className={[
         "inline-flex items-center gap-2 rounded-xl px-5 py-2.5",

@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect, useRef, useContext } from "react";
+import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
 import Keycloak from "keycloak-js";
 import { validateToken } from "@/services/tokenService";
 
@@ -9,9 +9,10 @@ export const AuthProvider = ({ children }) => {
   const [userInfo, setUserInfo] = useState(null);
   const [token, setToken] = useState(null);
   const [tokenParsed, setTokenParsed] = useState(null);
+  const [validatedPayload, setValidatedPayload] = useState(null);
   const isRun = useRef(false);
   const keycloak = useRef(null);
-  const [validatedPayload, setValidatedPayload] = useState(null);
+
   useEffect(() => {
     if (isRun.current) return;
     isRun.current = true;
@@ -29,15 +30,14 @@ export const AuthProvider = ({ children }) => {
           setToken(keycloak.current.token);
           setTokenParsed(keycloak.current.tokenParsed);
           keycloak.current.loadUserInfo().then(setUserInfo);
+
+          // Validate token with backend
           const validate = async () => {
-  const validation = await validateToken(keycloak.current.token);
-
-  if (validation.valid) {
-    setValidatedPayload(validation.payload);
-  }
-};
-
-
+            const validation = await validateToken(keycloak.current.token);
+            if (validation.valid) {
+              setValidatedPayload(validation.payload);
+            }
+          };
           validate();
         }
       })
@@ -46,6 +46,7 @@ export const AuthProvider = ({ children }) => {
       });
   }, []);
 
+  // Token refresh interval
   useEffect(() => {
     const interval = setInterval(() => {
       if (keycloak.current) {
@@ -77,14 +78,18 @@ export const AuthProvider = ({ children }) => {
     setTokenParsed(null);
   };
 
-  const contextValue = {
-    userInfo,
-    token,
-    tokenParsed,
-    login,
-    logout,
-    validatedPayload
-  };
+  // Memoize context value to prevent unnecessary re-renders
+  const contextValue = useMemo(
+    () => ({
+      userInfo,
+      token,
+      tokenParsed,
+      login,
+      logout,
+      validatedPayload,
+    }),
+    [userInfo, token, tokenParsed, validatedPayload]
+  );
 
   return (
     <AuthContext.Provider value={contextValue}>{children}</AuthContext.Provider>

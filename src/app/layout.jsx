@@ -3,6 +3,7 @@ import "./globals.css";
 import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { AuthProvider } from "@/hooks/useAuth";
+import { MapFiltersProvider } from "@/contexts/MapFiltersContext";
 
 const raleway = Raleway({
   variable: "--font-raleway",
@@ -33,9 +34,11 @@ export default function RootLayout({ children }) {
     <html lang="en">
       <body className={`${raleway.variable} ${plusJakartaSans.variable} antialiased`}>
         <AuthProvider>
-          <Header />
-          {children}
-          <Footer />
+          <MapFiltersProvider>
+            <Header />
+            {children}
+            <Footer />
+          </MapFiltersProvider>
         </AuthProvider>
       </body>
     </html>

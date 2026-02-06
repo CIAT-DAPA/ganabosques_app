@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useRef, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import BaseMap from "./BaseMap";
 import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
@@ -8,7 +8,6 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import EnterpriseChart from "@/components/EnterpriseChart";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
 import EnterpriseMovementLayers from "./EnterpriseMovementLayers";
-
 import { searchAdmByName, getEnterpriseRiskDetails } from "@/services/apiService";
 import { useFilteredMovement } from "@/hooks/useFilteredMovement";
 import { useMovementStats } from "@/hooks/useMovementStats";
@@ -16,14 +15,13 @@ import { useFarmPolygons } from "@/hooks/useFarmPolygons";
 import { useFarmRisk } from "@/hooks/useFarmRisk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { useEnterpriseMovementStats } from "@/hooks/useEnterpriseMovementStats";
+import { useMapState } from "@/hooks/useMapState";
+import { asYear, RISK_OPTIONS, getEnterpriseIcon } from "@/components/shared";
 
 import { Marker, Popup, useMap } from "react-leaflet";
-import * as L from "leaflet";
 import { useAuth } from "@/hooks/useAuth";
 
-// ------------------------------
-// Utils datos
-// ------------------------------
+// Utils
 function getEnterprisesArray(enterpriseDetails) {
   if (!enterpriseDetails) return [];
   if (Array.isArray(enterpriseDetails)) return enterpriseDetails;
@@ -38,54 +36,7 @@ function hasProviderAlert(p = {}) {
   return r?.risk_direct === true || r?.risk_input === true || r?.risk_output === true;
 }
 
-// ------------------------------
-// Íconos dinámicos
-// ------------------------------
-const TYPE_ALIASES = {
-  COLLECTIONCENTER: "COLLECTION_CENTER",
-  "CENTRO_ACOPIO": "COLLECTION_CENTER",
-  "CENTRO DE ACOPIO": "COLLECTION_CENTER",
-  ACOPIO: "COLLECTION_CENTER",
-  PLANTA: "SLAUGHTERHOUSE",
-  FERIA: "CATTLE_FAIR",
-  EMPRESA: "ENTERPRISE",
-  FINCA: "FARM",
-};
-
-const normalizeType = (type) => {
-  if (!type) return "ENTERPRISE";
-  const t = String(type).trim().toUpperCase().replace(/\s+/g, " ").replace(/-/g, "_");
-  return TYPE_ALIASES[t] || t;
-};
-
-const baseForType = (type) => {
-  switch (normalizeType(type)) {
-    case "SLAUGHTERHOUSE":
-      return "planta";
-    case "COLLECTION_CENTER":
-      return "acopio";
-    case "CATTLE_FAIR":
-      return "feria";
-    case "FARM":
-      return "finca";
-    case "ENTERPRISE":
-    default:
-      return "empresa";
-  }
-};
-
-const iconForType = (type) =>
-  L.icon({
-    iconUrl: `/${baseForType(type)}.png`,
-    iconSize: [42, 57],
-    iconAnchor: [21, 57],
-    popupAnchor: [0, -36],
-    className: "enterprise-marker",
-  });
-
-// ------------------------------
-// Overlays
-// ------------------------------
+// Overlays component
 function EnterpriseOverlays({ enterpriseDetails }) {
   const map = useMap();
 
@@ -132,7 +83,7 @@ function EnterpriseOverlays({ enterpriseDetails }) {
   return (
     <>
       {markers.map((m, i) => (
-        <Marker key={`mk-${i}`} position={m.pos} icon={iconForType(m.iconType)}>
+        <Marker key={`mk-${i}`} position={m.pos} icon={getEnterpriseIcon(m.iconType)}>
           <Popup>
             <div style={{ fontWeight: 600, marginBottom: 4 }}>{m.name}</div>
             <div style={{ fontSize: 12, opacity: 0.85 }}>
@@ -148,19 +99,15 @@ function EnterpriseOverlays({ enterpriseDetails }) {
   );
 }
 
-// ------------------------------
-// Componente principal
-// ------------------------------
-export default function EnterpriseMap() {
-  const riskOptions = useMemo(
-    () => [
-      { value: "annual", label: "Alerta anual" },
-      { value: "cumulative", label: "Alerta acumulada" },
-    ],
-    []
-  );
 
-  const [risk, setRisk] = useState(riskOptions[0]?.value || "");
+
+// Main component
+export default function EnterpriseMap() {
+  const { token } = useAuth();
+  const { mapRef, handleMapCreated } = useMapState();
+
+  // Filter states
+  const [risk, setRisk] = useState(RISK_OPTIONS[0]?.value || "");
   const [year, setYear] = useState("");
   const [period, setPeriod] = useState("");
   const [source, setSource] = useState("smbyc");
@@ -171,7 +118,6 @@ export default function EnterpriseMap() {
   const [admLevel, setAdmLevel] = useState("adm1");
   const [admResults, setAdmResults] = useState([]);
 
-  const mapRef = useRef();
   const [yearStart, setYearStart] = useState(2023);
   const [yearEnd, setYearEnd] = useState(2024);
   const [originalMovement, setOriginalMovement] = useState(null);
@@ -181,15 +127,13 @@ export default function EnterpriseMap() {
   const [riskFarm, setRiskFarm] = useState(null);
   const [enterpriseDetails, setEnterpriseDetails] = useState(null);
 
-  const { token } = useAuth();
-
   const movement = useFilteredMovement(originalMovement);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period, risk);
   useFarmPolygons(foundFarms, setPendingTasks, setOriginalMovement);
   useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
 
-  // Hook para obtener estadísticas de movilización por empresa
+  // Enterprise movement stats
   const enterpriseIds = useMemo(() => {
     return Array.isArray(selectedEnterprise)
       ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
@@ -216,7 +160,7 @@ export default function EnterpriseMap() {
         console.error("Error al buscar nivel administrativo:", err);
       }
     },
-    [token]
+    [token, mapRef]
   );
 
   const handleYearStartEndChange = useCallback((start, end) => {
@@ -224,23 +168,10 @@ export default function EnterpriseMap() {
     setYearEnd(end);
   }, []);
 
-  const handleMapCreated = (mapInstance) => {
-    mapRef.current = mapInstance;
-  };
-
-  const asYear = (v) =>
-    v instanceof Date
-      ? v.getFullYear()
-      : typeof v === "number"
-      ? v
-      : typeof v === "string"
-      ? parseInt(v.slice(0, 4), 10)
-      : NaN;
-
   const yearStartVal = asYear(yearStart);
   const yearEndVal = asYear(yearEnd);
 
-  // 🔧 EFECTO ARREGLADO: sin `risk` en deps y siempre decrementa pendingTasks
+  // Fetch enterprise details
   useEffect(() => {
     if (!token) {
       setEnterpriseDetails(null);
@@ -248,11 +179,11 @@ export default function EnterpriseMap() {
     }
 
     const analysisId = year && String(year).trim();
-    const enterpriseIds = Array.isArray(selectedEnterprise)
+    const entIds = Array.isArray(selectedEnterprise)
       ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
       : [];
 
-    if (!analysisId || enterpriseIds.length === 0) {
+    if (!analysisId || entIds.length === 0) {
       setEnterpriseDetails(null);
       return;
     }
@@ -262,13 +193,12 @@ export default function EnterpriseMap() {
 
     (async () => {
       try {
-        const data = await getEnterpriseRiskDetails(token, analysisId, enterpriseIds);
+        const data = await getEnterpriseRiskDetails(token, analysisId, entIds);
         if (!cancelled) setEnterpriseDetails(data);
       } catch (err) {
         console.error("Error al cargar enterprise risk details:", err);
         if (!cancelled) setEnterpriseDetails(null);
       } finally {
-        // 👇 Siempre decrementamos, aunque se haya cancelado
         setPendingTasks((p) => Math.max(0, p - 1));
       }
     })();
@@ -276,7 +206,7 @@ export default function EnterpriseMap() {
     return () => {
       cancelled = true;
     };
-  }, [year, selectedEnterprise, token]); // 👈 risk eliminado de las deps
+  }, [year, selectedEnterprise, token]);
 
   const hasEnterpriseData =
     Array.isArray(getEnterprisesArray(enterpriseDetails)) &&
@@ -309,7 +239,7 @@ export default function EnterpriseMap() {
             foundAdms={foundAdms}
             setFoundAdms={setFoundAdms}
             onYearStartEndChange={handleYearStartEndChange}
-            riskOptions={riskOptions}
+            riskOptions={RISK_OPTIONS}
             period={period}
             setPeriod={setPeriod}
           />
@@ -324,10 +254,6 @@ export default function EnterpriseMap() {
             period={period}
             source={source}
             risk={risk}
-            enterpriseRisk={true}
-            farmRisk={false}
-            nationalRisk={false}
-            search={search}
           >
             <EnterpriseOverlays enterpriseDetails={enterpriseDetails} />
             <EnterpriseMovementLayers

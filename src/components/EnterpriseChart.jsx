@@ -1,4 +1,4 @@
-// components/EnterpriseChart.jsx
+// Enterprise Chart component
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -8,69 +8,21 @@ import {
   Briefcase,
   Tag,
   AlertTriangle,
-  MapIcon,
+  Map as MapIcon,
   Calendar,
   TrendingUp,
   ArrowRightLeft,
 } from "lucide-react";
+import {
+  CHART_COLORS,
+  MOVEMENT_CHART_COLORS,
+  translateEnterpriseType,
+  translateDestinationType,
+  formatValue,
+  formatHa,
+} from "./shared";
 
-const COLOR_TRUE = "#D50000";   // rojo alerta
-const COLOR_FALSE = "#00C853";  // verde sin alerta
-
-// Colores para gráficos
-const BASE_COLORS = [
-  "#a3d977",
-  "#7ab86b",
-  "#568c5e",
-  "#366f50",
-  "#1f5043",
-  "#e9a25f",
-  "#de7c48",
-  "#cc5a33",
-  "#b3411f",
-  "#993014",
-];
-
-// ================================
-// 🔵 Traducción de tipos de empresa con alias
-// ================================
-const TYPE_ALIASES = {
-  COLLECTIONCENTER: "COLLECTION_CENTER",
-  "CENTRO_ACOPIO": "COLLECTION_CENTER",
-  "CENTRO DE ACOPIO": "COLLECTION_CENTER",
-  ACOPIO: "COLLECTION_CENTER",
-
-  PLANTA: "SLAUGHTERHOUSE",
-
-  FERIA: "CATTLE_FAIR",
-
-  EMPRESA: "ENTERPRISE",
-
-  FINCA: "FARM",
-};
-
-// Valor normalizado → texto en español
-const ENTERPRISE_TYPES = {
-  FARM: "Finca",
-  COLLECTION_CENTER: "Centro de acopio",
-  SLAUGHTERHOUSE: "Planta de beneficio",
-  CATTLE_FAIR: "Feria ganadera",
-  ENTERPRISE: "Empresa",
-};
-
-// Función traductora
-function translateEnterpriseType(type) {
-  if (!type) return "—";
-
-  const raw = type.toString().trim().toUpperCase();
-  const normalized = TYPE_ALIASES[raw] || raw;
-
-  return ENTERPRISE_TYPES[normalized] || type;
-}
-
-// ================================
-// 🧰 Utilidades
-// ================================
+// Get ext code by source
 function getExtCodeBySource(item, source = "SIT_CODE") {
   const arr = item?.ext_id || item?.extId || [];
   const found = Array.isArray(arr)
@@ -79,6 +31,7 @@ function getExtCodeBySource(item, source = "SIT_CODE") {
   return found?.ext_code ?? null;
 }
 
+// Get producer ID
 function getProducerId(item) {
   const arr = item?.ext_id || item?.extId || [];
   const found = Array.isArray(arr)
@@ -87,6 +40,7 @@ function getProducerId(item) {
   return found?.ext_code ?? null;
 }
 
+// Get provider alert flags
 function providerAlertFlags(provider = {}) {
   const r = provider?.risk || {};
   return {
@@ -97,17 +51,20 @@ function providerAlertFlags(provider = {}) {
   };
 }
 
+// Check if provider has any alert
 function hasAnyAlert(provider = {}) {
   const f = providerAlertFlags(provider);
   return f.direct || f.input || f.output;
 }
 
+// Check if array has any alert
 function hasAnyAlertInArray(arr = []) {
   return (arr || []).some(hasAnyAlert);
 }
 
+// Badge component
 function Badge({ active, className = "" }) {
-  const color = active ? COLOR_TRUE : COLOR_FALSE;
+  const color = active ? CHART_COLORS.RISK : CHART_COLORS.OK;
   const label = active ? "Con Alerta" : "Sin Alerta";
   return (
     <span
@@ -119,8 +76,9 @@ function Badge({ active, className = "" }) {
   );
 }
 
+// Cell chip component
 function CellChip({ active, title }) {
-  const color = active ? COLOR_TRUE : COLOR_FALSE;
+  const color = active ? CHART_COLORS.RISK : CHART_COLORS.OK;
   const label = active ? "Con alerta" : "Sin alerta";
   return (
     <span
@@ -133,42 +91,7 @@ function CellChip({ active, title }) {
   );
 }
 
-function fmtHa(v) {
-  if (v == null || Number.isNaN(Number(v))) return "—";
-  const n = Number(v);
-  return n >= 100 ? n.toFixed(0) : n >= 10 ? n.toFixed(1) : n.toFixed(2);
-}
-
-function formatValue(value, decimals = 2) {
-  return (value || 0).toFixed(decimals);
-}
-
-// Mapeo para traducir tipos de destino del API a español
-const DESTINATION_TYPE_LABELS = {
-  SLAUGHTERHOUSE: "Planta de beneficio",
-  COLLECTION_CENTER: "Centro de acopio",
-  CATTLE_FAIR: "Feria ganadera",
-  ENTERPRISE: "Empresa",
-  FARM: "Finca",
-  // Aliases
-  COLLECTIONCENTER: "Centro de acopio",
-  CENTRO_ACOPIO: "Centro de acopio",
-  ACOPIO: "Centro de acopio",
-  PLANTA: "Planta de beneficio",
-  FERIA: "Feria ganadera",
-  EMPRESA: "Empresa",
-  FINCA: "Finca",
-};
-
-function translateDestinationType(type) {
-  if (!type) return "Otro";
-  const normalized = String(type).trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_");
-  return DESTINATION_TYPE_LABELS[normalized] || type;
-}
-
-// ================================
-// 🔵 Componente de Tabs
-// ================================
+// Tab button component
 function TabButton({ active, onClick, children, icon: Icon }) {
   return (
     <button
@@ -185,43 +108,29 @@ function TabButton({ active, onClick, children, icon: Icon }) {
   );
 }
 
-// Botón de toggle leyenda estilo "flechita abajo"
+// Toggle button component
 const ToggleButton = ({ isVisible, onToggle, label }) => (
   <button
     onClick={onToggle}
     className="text-xs text-gray-700 hover:text-[#082C14] hover:underline flex items-center gap-1 transition-colors cursor-pointer"
   >
     {isVisible ? `Ocultar ${label}` : `Mostrar ${label}`}
-    <span
-      className={`transition-transform duration-200 ${
-        isVisible ? "rotate-180" : "rotate-0"
-      }`}
-    >
-      ▼
-    </span>
+    <span className={`transition-transform duration-200 ${isVisible ? "rotate-180" : "rotate-0"}`}>▼</span>
   </button>
 );
 
-// ================================
-// 🔵 Componente de Movilizaciones
-// ================================
+// Movement section component
 function MovementSection({ movementStats, enterpriseId }) {
   const [showLegendInput, setShowLegendInput] = useState(false);
   const [showLegendOutput, setShowLegendOutput] = useState(false);
-  
+
   const data = movementStats?.[enterpriseId];
-  
   if (!data) {
-    return (
-      <div className="text-center py-8 text-gray-500">
-        No hay datos de movilizaciones disponibles
-      </div>
-    );
+    return <div className="text-center py-8 text-gray-500">No hay datos de movilizaciones disponibles</div>;
   }
 
   const { summary, inputs, outputs } = data;
 
-  // Construir datos para gráficos
   const buildChartData = (speciesData, title, showLegend = false) => {
     const aggregated = {};
     const addToAgg = (label, value) => {
@@ -229,57 +138,31 @@ function MovementSection({ movementStats, enterpriseId }) {
       aggregated[label] = (aggregated[label] || 0) + v;
     };
 
-    if (!speciesData) {
-      return { options: {}, series: [{ name: title, data: [] }] };
-    }
+    if (!speciesData) return { options: {}, series: [{ name: title, data: [] }] };
 
     if (typeof speciesData === "object" && !Array.isArray(speciesData)) {
       for (const [group, sub] of Object.entries(speciesData)) {
-        if (typeof sub === "number") {
-          addToAgg(group, sub);
-          continue;
-        }
+        if (typeof sub === "number") { addToAgg(group, sub); continue; }
         if (!sub || typeof sub !== "object") continue;
-
         for (const [subcat, values] of Object.entries(sub)) {
           if (!values || typeof values !== "object") continue;
-          const v =
-            (typeof values.headcount === "number" && values.headcount) ??
-            (typeof values.amount === "number" && values.amount) ??
-            (typeof values.total === "number" && values.total) ??
-            0;
+          const v = values.headcount ?? values.amount ?? values.total ?? 0;
           addToAgg(String(subcat), v);
         }
       }
     }
 
     const categories = Object.keys(aggregated);
-    const series = [
-      { name: title, data: categories.map((label) => aggregated[label]) },
-    ];
+    const series = [{ name: title, data: categories.map((l) => aggregated[l]) }];
 
     const options = {
-      chart: {
-        type: "bar",
-        height: 250,
-        toolbar: { show: false },
-        background: "transparent",
-      },
-      title: { text: "" },
-      xaxis: {
-        categories,
-        labels: { show: false, style: { colors: "#082C14" } },
-        axisTicks: { show: false },
-        axisBorder: { show: false },
-      },
+      chart: { type: "bar", height: 250, toolbar: { show: false }, background: "transparent" },
+      xaxis: { categories, labels: { show: false } },
       yaxis: { labels: { style: { colors: "#082C14" } } },
-      colors: categories.map((_, i) => BASE_COLORS[i % BASE_COLORS.length]),
+      colors: categories.map((_, i) => MOVEMENT_CHART_COLORS[i % MOVEMENT_CHART_COLORS.length]),
       legend: { show: showLegend, labels: { colors: "#082C14" } },
-      plotOptions: {
-        bar: { distributed: true, borderRadius: 4, horizontal: false },
-      },
+      plotOptions: { bar: { distributed: true, borderRadius: 4, horizontal: false } },
       dataLabels: { enabled: false },
-      tooltip: { x: { show: true }, theme: "light" },
       grid: { borderColor: "#f1f1f1", strokeDashArray: 3 },
     };
 
@@ -288,13 +171,11 @@ function MovementSection({ movementStats, enterpriseId }) {
 
   const inputChart = buildChartData(inputs?.statistics?.species, "Entradas", showLegendInput);
   const outputChart = buildChartData(outputs?.statistics?.species, "Salidas", showLegendOutput);
-  
   const hasInputData = inputChart?.series[0]?.data?.some((d) => d > 0);
   const hasOutputData = outputChart?.series[0]?.data?.some((d) => d > 0);
 
   return (
     <div className="space-y-6">
-      {/* Resumen */}
       <div className="bg-gray-50 rounded-lg p-4">
         <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
           <TrendingUp className="h-4 w-4" />
@@ -315,7 +196,6 @@ function MovementSection({ movementStats, enterpriseId }) {
           </div>
         </div>
 
-        {/* Desglose por tipo de origen (Entradas) */}
         {summary?.inputs?.by_destination_type && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="text-xs font-medium text-gray-600 mb-2">Entradas por tipo de origen:</div>
@@ -330,7 +210,6 @@ function MovementSection({ movementStats, enterpriseId }) {
           </div>
         )}
 
-        {/* Desglose por tipo de destino */}
         {summary?.outputs?.by_destination_type && (
           <div className="mt-4 pt-4 border-t border-gray-200">
             <div className="text-xs font-medium text-gray-600 mb-2">Salidas por tipo de destino:</div>
@@ -346,30 +225,17 @@ function MovementSection({ movementStats, enterpriseId }) {
         )}
       </div>
 
-      {/* Gráficos */}
       <div className="grid md:grid-cols-2 gap-6">
-        {/* Entradas */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-semibold text-gray-700">Movilización de entrada</h4>
-              <p className="text-xs text-gray-500">Ingresos a la empresa por categorías</p>
-            </div>
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700">Movilización de entrada</h4>
+            <p className="text-xs text-gray-500">Ingresos a la empresa por categorías</p>
           </div>
           {hasInputData ? (
             <>
-              <Chart
-                options={inputChart.options}
-                series={inputChart.series}
-                type="bar"
-                height={250}
-              />
+              <Chart options={inputChart.options} series={inputChart.series} type="bar" height={250} />
               <div className="flex justify-end mt-1">
-                <ToggleButton
-                  isVisible={showLegendInput}
-                  onToggle={() => setShowLegendInput(!showLegendInput)}
-                  label="leyenda"
-                />
+                <ToggleButton isVisible={showLegendInput} onToggle={() => setShowLegendInput(!showLegendInput)} label="leyenda" />
               </div>
             </>
           ) : (
@@ -379,28 +245,16 @@ function MovementSection({ movementStats, enterpriseId }) {
           )}
         </div>
 
-        {/* Salidas */}
         <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <h4 className="text-sm font-semibold text-gray-700">Movilización de salida</h4>
-              <p className="text-xs text-gray-500">Salidas de la empresa por categorías</p>
-            </div>
+          <div>
+            <h4 className="text-sm font-semibold text-gray-700">Movilización de salida</h4>
+            <p className="text-xs text-gray-500">Salidas de la empresa por categorías</p>
           </div>
           {hasOutputData ? (
             <>
-              <Chart
-                options={outputChart.options}
-                series={outputChart.series}
-                type="bar"
-                height={250}
-              />
+              <Chart options={outputChart.options} series={outputChart.series} type="bar" height={250} />
               <div className="flex justify-end mt-1">
-                <ToggleButton
-                  isVisible={showLegendOutput}
-                  onToggle={() => setShowLegendOutput(!showLegendOutput)}
-                  label="leyenda"
-                />
+                <ToggleButton isVisible={showLegendOutput} onToggle={() => setShowLegendOutput(!showLegendOutput)} label="leyenda" />
               </div>
             </>
           ) : (
@@ -414,69 +268,46 @@ function MovementSection({ movementStats, enterpriseId }) {
   );
 }
 
-// ================================
-// 🟢 Componente principal
-// ================================
-export default function EnterpriseChart({
-  yearStart,
-  yearEnd,
-  enterpriseDetails = [],
-  movementStats = {},
-}) {
-  const [activeTab, setActiveTab] = useState("alertas");
+// Enterprise card component
+function EnterpriseCard({ ent, yearStart, yearEnd, movementStats, defaultActiveTab = "alertas" }) {
+  const [activeTab, setActiveTab] = useState(defaultActiveTab);
 
-  if (!enterpriseDetails || enterpriseDetails.length === 0)
-    return <p className="text-sm text-gray-500"></p>;
-
-  const ent = enterpriseDetails[0];
   const enterpriseId = ent?._id || ent?.id;
   const department = ent?.adm1?.name || "—";
   const municipality = ent?.adm2?.name || "—";
   const enterpriseName = ent?.name || "—";
-
-  // Traducción correcta del tipo
   const rawType = ent?.type_enterprise || ent?.type || null;
   const enterpriseType = translateEnterpriseType(rawType);
 
   const inputs = ent?.providers?.inputs ?? [];
   const outputs = ent?.providers?.outputs ?? [];
-
   const inputAlert = hasAnyAlertInArray(inputs);
   const outputAlert = hasAnyAlertInArray(outputs);
 
-  const inputsRows = useMemo(
-    () =>
-      (inputs || []).map((p) => ({
-        scope: "entrada",
-        sit: getExtCodeBySource(p, "SIT_CODE"),
-        producerId: getProducerId(p),
-        ...providerAlertFlags(p),
-        _id: p?._id,
-      })),
-    [inputs]
-  );
+  const inputsRows = useMemo(() =>
+    (inputs || []).map((p) => ({
+      scope: "entrada",
+      sit: getExtCodeBySource(p, "SIT_CODE"),
+      producerId: getProducerId(p),
+      ...providerAlertFlags(p),
+      _id: p?._id,
+    })), [inputs]);
 
-  const outputsRows = useMemo(
-    () =>
-      (outputs || []).map((p) => ({
-        scope: "salida",
-        sit: getExtCodeBySource(p, "SIT_CODE"),
-        producerId: getProducerId(p),
-        ...providerAlertFlags(p),
-        _id: p?._id,
-      })),
-    [outputs]
-  );
+  const outputsRows = useMemo(() =>
+    (outputs || []).map((p) => ({
+      scope: "salida",
+      sit: getExtCodeBySource(p, "SIT_CODE"),
+      producerId: getProducerId(p),
+      ...providerAlertFlags(p),
+      _id: p?._id,
+    })), [outputs]);
 
   const Table = ({ title, rows }) => (
     <section>
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
-          <h4 className="text-sm font-semibold text-gray-700">{title}</h4>
-        </div>
+      <div className="flex items-center gap-2 mb-2">
+        <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <h4 className="text-sm font-semibold text-gray-700">{title}</h4>
       </div>
-
       <div className="rounded-xl border border-gray-200 overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="bg-gray-50">
@@ -490,41 +321,25 @@ export default function EnterpriseChart({
           </thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 ? (
-              <tr>
-                <td colSpan={5} className="px-3 py-3 text-gray-500">
-                  No hay predios para mostrar.
-                </td>
-              </tr>
+              <tr><td colSpan={5} className="px-3 py-3 text-gray-500">No hay predios para mostrar.</td></tr>
             ) : (
-              rows.map((r, idx) => {
-                const hasSit = !!r.sit;
-                const hasProd = !!r.producerId;
-                return (
-                  <tr key={r._id || `${r.sit || "S"}-${idx}`}>
-                    <td className="px-3 py-2">
-                      {(hasSit || hasProd) && (
-                        <div className="text-xs text-gray-500 mt-0.5">
-                          {hasSit && (
-                            <>
-                              <span className="font-semibold">SIT:</span> {r.sit}
-                            </>
-                          )}
-                          {hasSit && hasProd && <span>, </span>}
-                          {hasProd && (
-                            <>
-                              <span className="font-semibold">PRODUCER_ID:</span> {r.producerId}
-                            </>
-                          )}
-                        </div>
-                      )}
-                    </td>
-                    <td className="px-3 py-2"><CellChip active={r.direct} title="Alerta directa" /></td>
-                    <td className="px-3 py-2"><CellChip active={r.input} title="Alerta de entrada" /></td>
-                    <td className="px-3 py-2"><CellChip active={r.output} title="Alerta de salida" /></td>
-                    <td className="px-3 py-2">{fmtHa(r.defHa)}</td>
-                  </tr>
-                );
-              })
+              rows.map((r, idx) => (
+                <tr key={r._id || `${r.sit || "S"}-${idx}`}>
+                  <td className="px-3 py-2">
+                    {(r.sit || r.producerId) && (
+                      <div className="text-xs text-gray-500 mt-0.5">
+                        {r.sit && <><span className="font-semibold">SIT:</span> {r.sit}</>}
+                        {r.sit && r.producerId && <span>, </span>}
+                        {r.producerId && <><span className="font-semibold">PRODUCER_ID:</span> {r.producerId}</>}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2"><CellChip active={r.risk_direct} title="Alerta Directa" /></td>
+                  <td className="px-3 py-2"><CellChip active={r.risk_input} title="Alerta de Entrada" /></td>
+                  <td className="px-3 py-2"><CellChip active={r.risk_output} title="Alerta de Salida" /></td>
+                  <td className="px-3 py-2">{formatHa(r.deforestation_ha)}</td>
+                </tr>
+              ))
             )}
           </tbody>
         </table>
@@ -533,105 +348,96 @@ export default function EnterpriseChart({
   );
 
   return (
-    <div className="space-y-6">
-      <div className="px-10 py-6 mb-6 border-b border-gray-400">
-        <div className="grid grid-cols-1 md:grid-cols-[240px_1px_minmax(0,1fr)] gap-4 md:gap-0">
-          {/* Izquierda */}
-          <div className="space-y-3">
-            <div className="flex items-start gap-3">
-              <Briefcase className="h-5 w-5 text-blue-600 mt-0.5" />
-              <div>
-                <div className="text-xs uppercase text-gray-500">Empresa</div>
-                <div className="font-medium">{enterpriseName}</div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Tag className="h-5 w-5 text-gray-500 mt-0.5" />
-              <div>
-                <div className="text-xs uppercase text-gray-500">Tipo de empresa</div>
-                <div className="font-medium">{enterpriseType}</div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Building2 className="h-5 w-5 text-gray-500 mt-0.5" />
-              <div>
-                <div className="text-xs uppercase text-gray-500">Departamento</div>
-                <div className="font-medium">{department}</div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <MapIcon className="h-5 w-5 text-gray-500 mt-0.5" />
-              <div>
-                <div className="text-xs uppercase text-gray-500">Municipio</div>
-                <div className="font-medium">{municipality}</div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
-              <div>
-                <div className="text-xs uppercase text-gray-500">Período</div>
-                <div className="font-medium">
-                  {yearStart} - {yearEnd}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
-              <div>
-                <div className="text-xs uppercase text-gray-500">Alerta de entrada</div>
-                <Badge active={inputAlert} className="mt-1" />
-              </div>
-            </div>
-
-            <div className="flex items-start gap-3">
-              <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
-              <div>
-                <div className="text-xs uppercase text-gray-500">Alerta de salida</div>
-                <Badge active={outputAlert} className="mt-1" />
-              </div>
+    <div className="px-10 py-6 mb-6 border-b border-gray-400">
+      <div className="grid grid-cols-1 md:grid-cols-[240px_1px_minmax(0,1fr)] gap-4 md:gap-0">
+        <div className="space-y-3">
+          <div className="flex items-start gap-3">
+            <Briefcase className="h-5 w-5 text-blue-600 mt-0.5" />
+            <div>
+              <div className="text-xs uppercase text-gray-500">Empresa</div>
+              <div className="font-medium">{enterpriseName}</div>
             </div>
           </div>
-
-          {/* Separador */}
-          <div className="hidden md:block bg-gray-200 md:self-stretch" style={{ width: 1 }} />
-
-          {/* Derecha: Tabs y contenido */}
-          <div className="md:pl-4 md:min-w-0 space-y-4">
-            {/* Tabs */}
-            <div className="flex border-b border-gray-200">
-              <TabButton
-                active={activeTab === "alertas"}
-                onClick={() => setActiveTab("alertas")}
-                icon={AlertTriangle}
-              >
-                Alertas
-              </TabButton>
-              <TabButton
-                active={activeTab === "movilizaciones"}
-                onClick={() => setActiveTab("movilizaciones")}
-                icon={ArrowRightLeft}
-              >
-                Movilizaciones
-              </TabButton>
+          <div className="flex items-start gap-3">
+            <Tag className="h-5 w-5 text-gray-500 mt-0.5" />
+            <div>
+              <div className="text-xs uppercase text-gray-500">Tipo de empresa</div>
+              <div className="font-medium">{enterpriseType}</div>
             </div>
-
-            {/* Contenido de los tabs */}
-            {activeTab === "alertas" ? (
-              <div className="space-y-8">
-                <Table title="Predios con alerta de entrada" rows={inputsRows} />
-                <Table title="Predios con alerta de salida" rows={outputsRows} />
-              </div>
-            ) : (
-              <MovementSection movementStats={movementStats} enterpriseId={enterpriseId} />
-            )}
+          </div>
+          <div className="flex items-start gap-3">
+            <Building2 className="h-5 w-5 text-gray-500 mt-0.5" />
+            <div>
+              <div className="text-xs uppercase text-gray-500">Departamento</div>
+              <div className="font-medium">{department}</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <MapIcon className="h-5 w-5 text-gray-500 mt-0.5" />
+            <div>
+              <div className="text-xs uppercase text-gray-500">Municipio</div>
+              <div className="font-medium">{municipality}</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
+            <div>
+              <div className="text-xs uppercase text-gray-500">Período</div>
+              <div className="font-medium">{yearStart} - {yearEnd}</div>
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
+            <div>
+              <div className="text-xs uppercase text-gray-500">Alerta de entrada</div>
+              <Badge active={inputAlert} className="mt-1" />
+            </div>
+          </div>
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
+            <div>
+              <div className="text-xs uppercase text-gray-500">Alerta de salida</div>
+              <Badge active={outputAlert} className="mt-1" />
+            </div>
           </div>
         </div>
+
+        <div className="hidden md:block bg-gray-200 md:self-stretch" style={{ width: 1 }} />
+
+        <div className="md:pl-4 md:min-w-0 space-y-4">
+          <div className="flex border-b border-gray-200">
+            <TabButton active={activeTab === "alertas"} onClick={() => setActiveTab("alertas")} icon={AlertTriangle}>Alertas</TabButton>
+            <TabButton active={activeTab === "movilizaciones"} onClick={() => setActiveTab("movilizaciones")} icon={ArrowRightLeft}>Movilizaciones</TabButton>
+          </div>
+          {activeTab === "alertas" ? (
+            <div className="space-y-8">
+              <Table title="Predios con alerta de entrada" rows={inputsRows} />
+              <Table title="Predios con alerta de salida" rows={outputsRows} />
+            </div>
+          ) : (
+            <MovementSection movementStats={movementStats} enterpriseId={enterpriseId} />
+          )}
+        </div>
       </div>
+    </div>
+  );
+}
+
+// Main component
+export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails = [], movementStats = {} }) {
+  if (!enterpriseDetails || enterpriseDetails.length === 0) return null;
+
+  return (
+    <div className="space-y-6">
+      {enterpriseDetails.map((ent, idx) => (
+        <EnterpriseCard
+          key={ent?._id || ent?.id || idx}
+          ent={ent}
+          yearStart={yearStart}
+          yearEnd={yearEnd}
+          movementStats={movementStats}
+        />
+      ))}
     </div>
   );
 }

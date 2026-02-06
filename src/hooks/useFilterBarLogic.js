@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+// Filter bar logic hooks
+import { useState, useEffect } from "react";
 import {
-  fetchEnterprises,
   fetchAnalysisYearRanges,
   fetchFarmBySITCode,
   searchAdmByName,
@@ -8,7 +8,7 @@ import {
 } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
 
-// Hook para manejar empresas
+// Enterprise suggestions with debounce
 export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) => {
   const { token } = useAuth();
   const [enterpriseSuggestions, setEnterpriseSuggestions] = useState([]);
@@ -41,7 +41,7 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) =>
   return { enterpriseSuggestions, setEnterpriseSuggestions, loading };
 };
 
-// Hook para manejar rangos de años
+// Year ranges fetching
 export const useYearRanges = (
   source,
   risk,
@@ -54,8 +54,6 @@ export const useYearRanges = (
   const [yearRanges, setYearRanges] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const asId = (v) => (v == null ? "" : String(v));
 
   useEffect(() => {
     if (!token) return;
@@ -91,7 +89,7 @@ export const useYearRanges = (
   return { yearRanges, loading, error };
 };
 
-// Hook para manejar sugerencias ADM con debounce
+// ADM suggestions with debounce
 export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) => {
   const { token } = useAuth();
   const [admSuggestions, setAdmSuggestions] = useState([]);
@@ -124,7 +122,7 @@ export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) =
   return { admSuggestions, setAdmSuggestions, loading };
 };
 
-// Hook para manejar búsqueda diferida de SIT_CODE
+// Farm code search
 export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast) => {
   const { token } = useAuth();
 
@@ -180,7 +178,7 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
           message: "Error de red al buscar los SIT CODE",
         });
       }
-    }, 0.5);
+    }, 500);
 
     return () => clearTimeout(delay);
   }, [foundFarms, farmRisk, setFoundFarms, setToast, token]);

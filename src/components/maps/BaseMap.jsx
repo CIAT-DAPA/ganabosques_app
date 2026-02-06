@@ -71,7 +71,6 @@ export default function BaseMap({
     }
   };
 
-  console.log(period);
 
 const start = period?.deforestation_period_start
   ? period.deforestation_period_start.slice(0, 4)
@@ -87,7 +86,6 @@ const end = period?.deforestation_period_end
 
   const defName = period?.deforestation_name ?? null;
   const timeValue = defName ? defName.split("_").pop() : null;
-  console.log(timeValue);  
   return (
     <MapContainer
       center={center}

@@ -176,14 +176,16 @@ export function buildBarFromItems(
   items = [],
   valueKey = "value",
   seriesName = "Total",
-  { round1Decimal = false } = {}
+  { round1Decimal = false, labelFormatter = null } = {}
 ) {
   const cleaned = (items || []).filter((it) => {
     const v = Number(it?.[valueKey] ?? 0);
     return Number.isFinite(v) && v > 0;
   });
 
-  const categories = cleaned.map((it) => buildLabelFromPeriod(it));
+  const categories = cleaned.map((it) => 
+    labelFormatter ? labelFormatter(it) : buildLabelFromPeriod(it)
+  );
   const values = cleaned.map((it) => {
     let v = Number(it?.[valueKey] ?? 0);
     if (round1Decimal) v = Math.round(v * 10) / 10;
@@ -223,9 +225,9 @@ export function baseBarOptions({ title, categories, yTitle, yFormatter }) {
 }
 
 // Normalize bubble series data
-export function normalizeBubbleSeries(items = []) {
+export function normalizeBubbleSeries(items = [], labelFormatter = null) {
   const rows = (items || []).map((it) => ({
-    label: buildLabelFromPeriod(it),
+    label: labelFormatter ? labelFormatter(it) : buildLabelFromPeriod(it),
     isRisk: Boolean(it?.risk_total),
     raw: it,
   }));

@@ -184,7 +184,7 @@ export async function fetchAdm3RisksByAnalysisAndAdm3(token, analysisId, adm3Ids
 export async function fetchAdm3RiskByAdm3AndType(token, adm3Ids, type) {
   if (!Array.isArray(adm3Ids) || adm3Ids.length === 0) return {};
   const t = (type || "").toString().trim().toLowerCase();
-  if (t !== "annual" && t !== "cumulative") {
+  if (t !== "annual" && t !== "cumulative" && t !== "atd" && t !== "nad") {
     throw new Error("El parámetro 'type' debe ser 'annual' o 'cumulative'");
   }
   return authPost(

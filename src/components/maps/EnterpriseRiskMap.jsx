@@ -268,8 +268,10 @@ export default function EnterpriseMap() {
 
         {hasEnterpriseData && (
           <EnterpriseChart
-            yearStart={yearStartVal}
-            yearEnd={yearEndVal}
+            yearStart={
+              risk === "atd" || risk === "nad" ? yearStart : yearStartVal
+            }
+            yearEnd={risk === "atd" || risk === "nad" ? yearEnd : yearEndVal}
             enterpriseDetails={enterpriseDetails}
             risk={risk}
             movementStats={enterpriseMovementStats}

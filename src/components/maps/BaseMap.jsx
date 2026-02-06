@@ -93,7 +93,11 @@ const end = formatDateForLabel(period?.deforestation_period_end, isMonthlyType);
 const hasPeriod = start != null;
 
 const defName = period?.deforestation_name ?? null;
-const timeValue = defName ? defName.split("_").pop() : null;
+let timeValue = defName ? defName.split("_").pop() : null;
+
+if (isMonthlyType && timeValue && /^\d{6}$/.test(timeValue)) {
+  timeValue = `${timeValue.slice(0, 4)}-${timeValue.slice(4)}`;
+}
 
 // For atd/nad show only timeValue, for annual/cumulative show range
 const defLabel = hasPeriod

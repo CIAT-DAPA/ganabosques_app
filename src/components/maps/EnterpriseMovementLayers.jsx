@@ -68,7 +68,7 @@ export default function EnterpriseMovementLayers({ movementStats, enterpriseDeta
   );
 
   const renderEnterpriseMarkers = useCallback(
-    (movements, flow, lineColor) =>
+    (movements, flow, lineColor, showArrows) =>
       movements
         .filter((m) => m?.destination?.latitude && m?.destination?.longitud && !m?.destination?.farm_id)
         .map((m, idx) => {
@@ -86,7 +86,7 @@ export default function EnterpriseMovementLayers({ movementStats, enterpriseDeta
               </Marker>
 
               {mainEnterprise?.latitude && mainEnterprise?.longitud &&
-                (useArrows ? (
+                (showArrows ? (
                   <ArrowLayer
                     fromLat={mainEnterprise.latitude}
                     fromLon={mainEnterprise.longitud}
@@ -97,19 +97,17 @@ export default function EnterpriseMovementLayers({ movementStats, enterpriseDeta
                     isMixed={mixed}
                   />
                 ) : (
-                  <Polyline
-                    positions={[[mainEnterprise.latitude, mainEnterprise.longitud], [lat, lon]]}
-                    pathOptions={{ color: finalLineColor }}
-                  />
+                  // If not showing arrows (optimization or disabled), do not render Polyline either
+                  null
                 ))}
             </div>
           );
         }),
-    [useArrows, createPopupContent, isMixedMovement, mainEnterprise]
+    [createPopupContent, isMixedMovement, mainEnterprise]
   );
 
   const renderFarmMarkers = useCallback(
-    (movements, flow, lineColor) =>
+    (movements, flow, lineColor, showArrows) =>
       movements
         .filter((m) => m?.destination?.latitude && m?.destination?.longitud && m?.destination?.farm_id)
         .map((m, idx) => {
@@ -127,7 +125,7 @@ export default function EnterpriseMovementLayers({ movementStats, enterpriseDeta
               </Marker>
 
               {mainEnterprise?.latitude && mainEnterprise?.longitud &&
-                (useArrows ? (
+                (showArrows ? (
                   <ArrowLayer
                     fromLat={mainEnterprise.latitude}
                     fromLon={mainEnterprise.longitud}
@@ -138,25 +136,31 @@ export default function EnterpriseMovementLayers({ movementStats, enterpriseDeta
                     isMixed={mixed}
                   />
                 ) : (
-                  <Polyline
-                    positions={[[mainEnterprise.latitude, mainEnterprise.longitud], [lat, lon]]}
-                    pathOptions={{ color: finalLineColor }}
-                  />
+                  null
                 ))}
             </div>
           );
         }),
-    [useArrows, createPopupContent, isMixedMovement, mainEnterprise]
+    [createPopupContent, isMixedMovement, mainEnterprise]
   );
+
+  // Calculate total movements
+  const totalMovements = (allInputs?.length || 0) + (allOutputs?.length || 0);
+  
+  // Optimization: If too many movements, hide everything (arrows AND markers)
+  // to prevent map saturation. Only the main enterprise marker (handled in parent) remains.
+  if (totalMovements > 100) return null;
+
+  const shouldRenderArrows = useArrows;
 
   if (!movementStats || !mainEnterprise) return null;
 
   return (
     <>
-      {renderEnterpriseMarkers(allInputs, "entrada", "#8B4513")}
-      {renderFarmMarkers(allInputs, "entrada", "#8B4513")}
-      {renderEnterpriseMarkers(allOutputs, "salida", "purple")}
-      {renderFarmMarkers(allOutputs, "salida", "purple")}
+      {renderEnterpriseMarkers(allInputs, "entrada", "#8B4513", shouldRenderArrows)}
+      {renderFarmMarkers(allInputs, "entrada", "#8B4513", shouldRenderArrows)}
+      {renderEnterpriseMarkers(allOutputs, "salida", "purple", shouldRenderArrows)}
+      {renderFarmMarkers(allOutputs, "salida", "purple", shouldRenderArrows)}
     </>
   );
 }

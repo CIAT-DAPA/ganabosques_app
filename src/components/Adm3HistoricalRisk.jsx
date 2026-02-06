@@ -34,9 +34,31 @@ export default function Adm3HistoricalRisk({
   className = "",
   yearStart,
   yearEnd,
+  risk,
 }) {
   const filterStartYear = toYear(yearStart);
   const filterEndYear = toYear(yearEnd);
+
+  // Custom label formatter for ATD/NAD (Quarterly: YYYY0Q)
+  const getLabelFormatter = () => {
+    if (risk === "atd" || risk === "nad") {
+      return (item) => {
+        if (!item?.period_start) return "—";
+        console.log("Incoming date:", item.period_start);
+        const d = new Date(item.period_start);
+        // Adjust for timezone issues if necessary, but simple date parsing usually works for YYYY-MM-DD
+        // Assuming period_start is YYYY-MM-DD
+        const y = d.getUTCFullYear();
+        const m = d.getUTCMonth(); // 0-11
+        const q = Math.floor(m / 3) + 1;
+        // console.log("DEBUG LABEL:", { risk, start: item.period_start, y, m, q, res: `${y}0${q}` });
+        return `${y}0${q}`;
+      };
+    }
+    return null;
+  };
+
+  const labelFormatter = getLabelFormatter();
 
   if (!Array.isArray(adm3RiskHistory) || adm3RiskHistory.length === 0) {
     return <p className="text-sm text-gray-500"></p>;
@@ -46,11 +68,13 @@ export default function Adm3HistoricalRisk({
     <div className={`space-y-6 ${className}`}>
       {adm3RiskHistory.map((group, idx) => {
         const itemsRaw = Array.isArray(group?.items) ? group.items : [];
-        const items = [...itemsRaw].sort(
-          (a, b) => sortKeyFromPeriod(a) - sortKeyFromPeriod(b)
-        );
+        const items = [...itemsRaw].sort((a, b) => {
+          const tA = a.period_start ? new Date(a.period_start).getTime() : 0;
+          const tB = b.period_start ? new Date(b.period_start).getTime() : 0;
+          return tA - tB;
+        });
 
-        const { points, rows } = normalizeBubbleSeries(items);
+        const { points, rows } = normalizeBubbleSeries(items, labelFormatter);
 
         const title =
           group?.name ||
@@ -61,7 +85,13 @@ export default function Adm3HistoricalRisk({
         let selectedRow = null;
         if (filterStartYear != null && filterEndYear != null) {
           selectedRow =
+          selectedRow =
             rows.find((r) => {
+              // For ATD/NAD, match exact start date if possible to distinguish quarters
+              if ((risk === "atd" || risk === "nad") && yearStart) {
+                return r?.raw?.period_start === yearStart;
+              }
+              // Fallback for annual/cumulative: match years
               const ys = isoToYear(r?.raw?.period_start);
               const ye = isoToYear(r?.raw?.period_end);
               return ys === filterStartYear && ye === filterEndYear;
@@ -79,7 +109,9 @@ export default function Adm3HistoricalRisk({
           : filterEndYear;
 
         const selectedPeriodLabel =
-          selYs && selYe
+          labelFormatter && selectedItem
+            ? labelFormatter(selectedItem)
+            : selYs && selYe
             ? `${selYs} - ${selYe}`
             : selYs
             ? `${selYs}`
@@ -143,7 +175,7 @@ export default function Adm3HistoricalRisk({
           items,
           "def_ha",
           "Hectáreas",
-          { round1Decimal: true }
+          { round1Decimal: true, labelFormatter }
         );
 
         const defoOptions = baseBarOptions({
@@ -161,7 +193,8 @@ export default function Adm3HistoricalRisk({
         const { categories: farmCats, series: farmSeries } = buildBarFromItems(
           items,
           "farm_amount",
-          "Fincas"
+          "Fincas",
+          { labelFormatter }
         );
 
         const farmOptions = baseBarOptions({

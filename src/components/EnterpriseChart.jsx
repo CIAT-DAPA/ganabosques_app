@@ -268,8 +268,15 @@ function MovementSection({ movementStats, enterpriseId }) {
   );
 }
 
-// Enterprise card component
-function EnterpriseCard({ ent, yearStart, yearEnd, movementStats, defaultActiveTab = "alertas" }) {
+// Enterprise Card component
+function EnterpriseCard({
+  ent,
+  yearStart,
+  yearEnd,
+  movementStats,
+  risk,
+  defaultActiveTab = "alertas",
+}) {
   const [activeTab, setActiveTab] = useState(defaultActiveTab);
 
   const enterpriseId = ent?._id || ent?.id;
@@ -284,23 +291,58 @@ function EnterpriseCard({ ent, yearStart, yearEnd, movementStats, defaultActiveT
   const inputAlert = hasAnyAlertInArray(inputs);
   const outputAlert = hasAnyAlertInArray(outputs);
 
-  const inputsRows = useMemo(() =>
-    (inputs || []).map((p) => ({
-      scope: "entrada",
-      sit: getExtCodeBySource(p, "SIT_CODE"),
-      producerId: getProducerId(p),
-      ...providerAlertFlags(p),
-      _id: p?._id,
-    })), [inputs]);
+  // Format period label based on risk type
+  const periodLabel = useMemo(() => {
+    // For ATD/NAD, show quarterly format (YYYY0Q)
+    if (risk === "atd" || risk === "nad") {
+      const formatQuarterly = (val) => {
+        if (!val) return "";
+        // If yearStart/yearEnd are already in YYYY-MM-DD format strings
+        const d = new Date(val);
+        if (isNaN(d.getTime())) return val;
+        const y = d.getUTCFullYear();
+        const m = d.getUTCMonth();
+        const q = Math.floor(m / 3) + 1;
+        return `${y}0${q}`;
+      };
 
-  const outputsRows = useMemo(() =>
-    (outputs || []).map((p) => ({
-      scope: "salida",
-      sit: getExtCodeBySource(p, "SIT_CODE"),
-      producerId: getProducerId(p),
-      ...providerAlertFlags(p),
-      _id: p?._id,
-    })), [outputs]);
+      const start = formatQuarterly(yearStart);
+      const end = formatQuarterly(yearEnd);
+
+      if (start && end && start !== end) return `${start} - ${end}`;
+      return start || end || "—";
+    }
+
+    // Default: Annual/Cumulative (YYYY or YYYY-YYYY)
+    if (yearStart && yearEnd && yearStart !== yearEnd) {
+      return `${yearStart} - ${yearEnd}`;
+    }
+    return yearStart || yearEnd || "—";
+  }, [yearStart, yearEnd, risk]);
+
+  const inputsRows = useMemo(
+    () =>
+      (inputs || []).map((p) => ({
+        scope: "entrada",
+        sit: getExtCodeBySource(p, "SIT_CODE"),
+        producerId: getProducerId(p),
+        ...providerAlertFlags(p), // returns { direct: bool, input: bool, output: bool, ... }
+        _id: p?._id,
+      })),
+    [inputs]
+  );
+
+  const outputsRows = useMemo(
+    () =>
+      (outputs || []).map((p) => ({
+        scope: "salida",
+        sit: getExtCodeBySource(p, "SIT_CODE"),
+        producerId: getProducerId(p),
+        ...providerAlertFlags(p),
+        _id: p?._id,
+      })),
+    [outputs]
+  );
 
   const Table = ({ title, rows }) => (
     <section>
@@ -313,31 +355,68 @@ function EnterpriseCard({ ent, yearStart, yearEnd, movementStats, defaultActiveT
           <thead className="bg-gray-50">
             <tr className="text-left">
               <th className="px-3 py-2 font-semibold text-gray-700">Predio</th>
-              <th className="px-3 py-2 font-semibold text-gray-700">Alerta directa</th>
-              <th className="px-3 py-2 font-semibold text-gray-700">Alerta de entrada</th>
-              <th className="px-3 py-2 font-semibold text-gray-700">Alerta de salida</th>
-              <th className="px-3 py-2 font-semibold text-gray-700">Área deforestada (ha)</th>
+              <th className="px-3 py-2 font-semibold text-gray-700">
+                Alerta directa
+              </th>
+              <th className="px-3 py-2 font-semibold text-gray-700">
+                Alerta de entrada
+              </th>
+              <th className="px-3 py-2 font-semibold text-gray-700">
+                Alerta de salida
+              </th>
+              <th className="px-3 py-2 font-semibold text-gray-700">
+                Área deforestada (ha)
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
             {rows.length === 0 ? (
-              <tr><td colSpan={5} className="px-3 py-3 text-gray-500">No hay predios para mostrar.</td></tr>
+              <tr>
+                <td colSpan={5} className="px-3 py-3 text-gray-500">
+                  No hay predios para mostrar.
+                </td>
+              </tr>
             ) : (
               rows.map((r, idx) => (
                 <tr key={r._id || `${r.sit || "S"}-${idx}`}>
                   <td className="px-3 py-2">
                     {(r.sit || r.producerId) && (
                       <div className="text-xs text-gray-500 mt-0.5">
-                        {r.sit && <><span className="font-semibold">SIT:</span> {r.sit}</>}
+                        {r.sit && (
+                          <>
+                            <span className="font-semibold">SIT:</span> {r.sit}
+                          </>
+                        )}
                         {r.sit && r.producerId && <span>, </span>}
-                        {r.producerId && <><span className="font-semibold">PRODUCER_ID:</span> {r.producerId}</>}
+                        {r.producerId && (
+                          <>
+                            <span className="font-semibold">PRODUCER_ID:</span>{" "}
+                            {r.producerId}
+                          </>
+                        )}
                       </div>
                     )}
                   </td>
-                  <td className="px-3 py-2"><CellChip active={r.risk_direct} title="Alerta Directa" /></td>
-                  <td className="px-3 py-2"><CellChip active={r.risk_input} title="Alerta de Entrada" /></td>
-                  <td className="px-3 py-2"><CellChip active={r.risk_output} title="Alerta de Salida" /></td>
-                  <td className="px-3 py-2">{formatHa(r.deforestation_ha)}</td>
+                  {/* Use explicit boolean checks for active prop */}
+                  <td className="px-3 py-2">
+                    <CellChip
+                      active={r.direct === true}
+                      title="Alerta Directa"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <CellChip
+                      active={r.input === true}
+                      title="Alerta de Entrada"
+                    />
+                  </td>
+                  <td className="px-3 py-2">
+                    <CellChip
+                      active={r.output === true}
+                      title="Alerta de Salida"
+                    />
+                  </td>
+                  <td className="px-3 py-2">{formatHa(r.defHa)}</td>
                 </tr>
               ))
             )}
@@ -361,7 +440,9 @@ function EnterpriseCard({ ent, yearStart, yearEnd, movementStats, defaultActiveT
           <div className="flex items-start gap-3">
             <Tag className="h-5 w-5 text-gray-500 mt-0.5" />
             <div>
-              <div className="text-xs uppercase text-gray-500">Tipo de empresa</div>
+              <div className="text-xs uppercase text-gray-500">
+                Tipo de empresa
+              </div>
               <div className="font-medium">{enterpriseType}</div>
             </div>
           </div>
@@ -383,31 +464,50 @@ function EnterpriseCard({ ent, yearStart, yearEnd, movementStats, defaultActiveT
             <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
             <div>
               <div className="text-xs uppercase text-gray-500">Período</div>
-              <div className="font-medium">{yearStart} - {yearEnd}</div>
+              <div className="font-medium">{periodLabel}</div>
             </div>
           </div>
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
             <div>
-              <div className="text-xs uppercase text-gray-500">Alerta de entrada</div>
+              <div className="text-xs uppercase text-gray-500">
+                Alerta de entrada
+              </div>
               <Badge active={inputAlert} className="mt-1" />
             </div>
           </div>
           <div className="flex items-start gap-3">
             <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
             <div>
-              <div className="text-xs uppercase text-gray-500">Alerta de salida</div>
+              <div className="text-xs uppercase text-gray-500">
+                Alerta de salida
+              </div>
               <Badge active={outputAlert} className="mt-1" />
             </div>
           </div>
         </div>
 
-        <div className="hidden md:block bg-gray-200 md:self-stretch" style={{ width: 1 }} />
+        <div
+          className="hidden md:block bg-gray-200 md:self-stretch"
+          style={{ width: 1 }}
+        />
 
         <div className="md:pl-4 md:min-w-0 space-y-4">
           <div className="flex border-b border-gray-200">
-            <TabButton active={activeTab === "alertas"} onClick={() => setActiveTab("alertas")} icon={AlertTriangle}>Alertas</TabButton>
-            <TabButton active={activeTab === "movilizaciones"} onClick={() => setActiveTab("movilizaciones")} icon={ArrowRightLeft}>Movilizaciones</TabButton>
+            <TabButton
+              active={activeTab === "alertas"}
+              onClick={() => setActiveTab("alertas")}
+              icon={AlertTriangle}
+            >
+              Alertas
+            </TabButton>
+            <TabButton
+              active={activeTab === "movilizaciones"}
+              onClick={() => setActiveTab("movilizaciones")}
+              icon={ArrowRightLeft}
+            >
+              Movilizaciones
+            </TabButton>
           </div>
           {activeTab === "alertas" ? (
             <div className="space-y-8">
@@ -415,7 +515,10 @@ function EnterpriseCard({ ent, yearStart, yearEnd, movementStats, defaultActiveT
               <Table title="Predios con alerta de salida" rows={outputsRows} />
             </div>
           ) : (
-            <MovementSection movementStats={movementStats} enterpriseId={enterpriseId} />
+            <MovementSection
+              movementStats={movementStats}
+              enterpriseId={enterpriseId}
+            />
           )}
         </div>
       </div>
@@ -424,7 +527,13 @@ function EnterpriseCard({ ent, yearStart, yearEnd, movementStats, defaultActiveT
 }
 
 // Main component
-export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails = [], movementStats = {} }) {
+export default function EnterpriseChart({
+  yearStart,
+  yearEnd,
+  enterpriseDetails = [],
+  movementStats = {},
+  risk,
+}) {
   if (!enterpriseDetails || enterpriseDetails.length === 0) return null;
 
   return (
@@ -436,6 +545,7 @@ export default function EnterpriseChart({ yearStart, yearEnd, enterpriseDetails 
           yearStart={yearStart}
           yearEnd={yearEnd}
           movementStats={movementStats}
+          risk={risk}
         />
       ))}
     </div>

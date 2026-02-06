@@ -53,8 +53,10 @@ export async function fetchEnterprises(token) {
   return authGet(token, "enterprise/", "Error al cargar empresas");
 }
 
-export async function searchEnterprisesByName(token, name) {
-  const endpoint = `enterprise/by-name?name=${encodeURIComponent(name)}`;
+export async function searchEnterprisesByName(token, name, valueChain = null) {
+  const vc = valueChain ? VALUE_CHAIN_MAP[valueChain] || valueChain : null;
+  let endpoint = `enterprise/by-name?name=${encodeURIComponent(name)}`;
+  if (vc) endpoint += `&value_chain=${vc}`;
   return authGet(token, endpoint, "Error al buscar empresas por nombre");
 }
 
@@ -67,9 +69,17 @@ export async function getEnterpriseRiskDetails(token, analysisId, enterpriseIds 
   );
 }
 
+// Value chain mapping: ganaderia -> livestock, cacao -> cacao
+const VALUE_CHAIN_MAP = {
+  ganaderia: "livestock",
+  cacao: "cacao",
+};
+
 // Analysis APIs
-export async function fetchAnalysisYearRanges(token, source, type) {
-  const data = await authGet(token, "analysis/", "No se encontró el analysis");
+export async function fetchAnalysisYearRanges(token, source, type, valueChain = null) {
+  const vc = valueChain ? VALUE_CHAIN_MAP[valueChain] || valueChain : null;
+  const endpoint = vc ? `analysis/?value_chain=${vc}` : "analysis/";
+  const data = await authGet(token, endpoint, "No se encontró el analysis");
   if (!Array.isArray(data)) return [];
 
   const s = source ? source.toString().trim().toLowerCase() : null;
@@ -97,8 +107,10 @@ export async function fetchYearRanges(token, source, type) {
 }
 
 // Farm APIs
-export async function fetchFarmBySITCode(token, code) {
-  const endpoint = `farm/by-extid?ext_codes=${code}&labels=SIT_CODE`;
+export async function fetchFarmBySITCode(token, code, valueChain = null) {
+  const vc = valueChain ? VALUE_CHAIN_MAP[valueChain] || valueChain : null;
+  let endpoint = `farm/by-extid?ext_codes=${code}&labels=SIT_CODE`;
+  if (vc) endpoint += `&value_chain=${vc}`;
   return authGet(token, endpoint, "Error de red al buscar el SIT CODE");
 }
 

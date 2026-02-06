@@ -18,7 +18,7 @@ import FarmMovementLayers from "./FarmMovementLayers";
 import FarmRiskLayers from "./FarmRiskLayers";
 import FarmNavigationHelpers from "./FarmNavigationHelpers";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
-import { RISK_OPTIONS } from "@/components/shared";
+import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 
 export default function FarmRiskMap() {
   const { mapRef, handleMapCreated } = useMapState();
@@ -58,6 +58,7 @@ export default function FarmRiskMap() {
     (text, level) => handleAdmSearch(text, level, mapRef),
     [handleAdmSearch, mapRef]
   );
+
 
   return (
     <>
@@ -99,6 +100,7 @@ export default function FarmRiskMap() {
             period={period}
             source={source}
             risk={risk}
+            deforestationLayers={period?.deforestation_path}
           >
             <FarmNavigationHelpers farmPolygons={farmPolygons} />
             <FarmMovementLayers movement={movement} farmPolygons={farmPolygons} yearStart={yearStart} />

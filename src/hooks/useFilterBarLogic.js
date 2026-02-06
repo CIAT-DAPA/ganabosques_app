@@ -9,7 +9,7 @@ import {
 import { useAuth } from "@/hooks/useAuth";
 
 // Enterprise suggestions with debounce
-export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) => {
+export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400, activity = null) => {
   const { token } = useAuth();
   const [enterpriseSuggestions, setEnterpriseSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) =>
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const results = await searchEnterprisesByName(token, search);
+        const results = await searchEnterprisesByName(token, search, activity);
         setEnterpriseSuggestions(results || []);
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
@@ -36,7 +36,7 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) =>
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [search, enterpriseRisk, delay, token]);
+  }, [search, enterpriseRisk, delay, token, activity]);
 
   return { enterpriseSuggestions, setEnterpriseSuggestions, loading };
 };
@@ -48,7 +48,8 @@ export const useYearRanges = (
   year,
   setYear,
   setPeriod,
-  onYearStartEndChange
+  onYearStartEndChange,
+  activity = null
 ) => {
   const { token } = useAuth();
   const [yearRanges, setYearRanges] = useState([]);
@@ -65,7 +66,7 @@ export const useYearRanges = (
       setError(null);
 
       try {
-        const data = await fetchAnalysisYearRanges(token, source, risk);
+        const data = await fetchAnalysisYearRanges(token, source, risk, activity);
         if (aborted) return;
 
         const arr = Array.isArray(data) ? data : [];
@@ -84,7 +85,7 @@ export const useYearRanges = (
     return () => {
       aborted = true;
     };
-  }, [token, source, risk, year, setYear, setPeriod, onYearStartEndChange]);
+  }, [token, source, risk, activity, year, setYear, setPeriod, onYearStartEndChange]);
 
   return { yearRanges, loading, error };
 };
@@ -123,7 +124,7 @@ export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) =
 };
 
 // Farm code search
-export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast) => {
+export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast, activity = null) => {
   const { token } = useAuth();
 
   useEffect(() => {
@@ -138,7 +139,7 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
       if (!pendingCodes) return;
 
       try {
-        const data = await fetchFarmBySITCode(token, pendingCodes);
+        const data = await fetchFarmBySITCode(token, pendingCodes, activity);
 
         if (!data || data.length === 0) {
           setToast({
@@ -181,5 +182,5 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
     }, 500);
 
     return () => clearTimeout(delay);
-  }, [foundFarms, farmRisk, setFoundFarms, setToast, token]);
+  }, [foundFarms, farmRisk, setFoundFarms, setToast, token, activity]);
 };

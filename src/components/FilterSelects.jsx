@@ -28,7 +28,10 @@ export default function FilterSelects({
   const asId = (v) => (v == null ? "" : String(v));
 
   const formatPeriod = (item) => {
-    if (item?.deforestation_type === "annual" || item?.deforestation_type === "cumulative") {
+    const type = item?.deforestation_type;
+    
+    // For annual and cumulative: show only years (YYYY - YYYY)
+    if (type === "annual" || type === "cumulative") {
       const start = item?.deforestation_period_start
         ? new Date(item.deforestation_period_start).getFullYear()
         : "";
@@ -37,6 +40,22 @@ export default function FilterSelects({
         : "";
       return `${start} - ${end}`;
     }
+    
+    // For atd and nad: show year-month format (YYYY-MM - YYYY-MM)
+    if (type === "atd" || type === "nad") {
+      const formatYearMonth = (dateStr) => {
+        if (!dateStr) return "";
+        const d = new Date(dateStr);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        return `${year}-${month}`;
+      };
+      const start = formatYearMonth(item?.deforestation_period_start);
+      const end = formatYearMonth(item?.deforestation_period_end);
+      return `${start} - ${end}`;
+    }
+    
+    // Fallback: show raw values
     return `${item?.deforestation_period_start} - ${item?.deforestation_period_end}`;
   };
 

@@ -63,12 +63,6 @@ export const ENTERPRISE_TYPES = {
   ENTERPRISE: "Empresa",
 };
 
-// Risk filter options
-export const RISK_OPTIONS = [
-  { value: "annual", label: "Alerta anual" },
-  { value: "cumulative", label: "Alerta acumulada" },
-];
-
 // Destination type labels
 export const DESTINATION_TYPE_LABELS = {
   SLAUGHTERHOUSE: "Planta de beneficio",

@@ -14,7 +14,8 @@ import { useMapState } from "@/hooks/useMapState";
 import { MapPin } from "lucide-react";
 import { GeoJSON, Popup } from "react-leaflet";
 import L from "leaflet";
-import { RiskChip, fmtNum, fmtProp, RISK_OPTIONS, InfoTooltip, COLUMN_INFO } from "@/components/shared";
+import { RiskChip, fmtNum, fmtProp, InfoTooltip, COLUMN_INFO } from "@/components/shared";
+import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 import { useLoadingState } from "@/hooks/useLoadingState";
 
 
@@ -444,6 +445,7 @@ export default function DashboardMap() {
             period={period}
             source={source}
             risk={risk}
+            deforestationLayers={period?.deforestation_path}
           >
             {/* GeoJSON polygons for selected farms */}
             {Array.from(selectedPolygons.values()).map((polygon) => (

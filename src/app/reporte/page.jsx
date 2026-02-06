@@ -9,7 +9,8 @@ import Adm3RiskTable from "@/components/Adm3RiskTable";
 import FarmRiskTable from "@/components/FarmRiskTable";
 import EnterpriseRiskTable from "@/components/EnterpriseRiskTable";
 import { useAuth } from "@/hooks/useAuth";
-import { yearFromDateLike, RISK_OPTIONS } from "@/utils";
+import { yearFromDateLike } from "@/utils";
+import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 

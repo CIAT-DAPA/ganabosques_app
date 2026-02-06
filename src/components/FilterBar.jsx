@@ -31,6 +31,8 @@ export default function FilterBar({
   report = false,
   multiPeriod = false,
   hideSearch = false,
+  activity: propActivity,
+  setActivity: propSetActivity,
   admLevel: propAdmLevel,
   onAdmSearch,
   selectedEnterprise: propSelectedEnterprise,
@@ -68,6 +70,8 @@ export default function FilterBar({
   const admLevel = propAdmLevel ?? ctx?.admLevel;
   const riskOptions = propRiskOptions ?? ctx?.riskOptions;
   const onYearStartEndChange = propOnYearStartEndChange ?? ctx?.handleYearStartEndChange;
+  const activity = propActivity ?? ctx?.activity;
+  const setActivity = propSetActivity ?? ctx?.setActivity;
 
   const [toast, setToast] = useState(null);
 
@@ -77,7 +81,7 @@ export default function FilterBar({
     setEnterpriseSuggestions,
     loading: enterpriseLoading,
     error: enterpriseError,
-  } = useEnterpriseSuggestions(search, shouldSearchEnterprise);
+  } = useEnterpriseSuggestions(search, shouldSearchEnterprise, 400, activity);
 
   const { yearRanges, error: yearError } = useYearRanges(
     source,
@@ -85,7 +89,8 @@ export default function FilterBar({
     year,
     setYear,
     setPeriod,
-    onYearStartEndChange
+    onYearStartEndChange,
+    activity
   );
 
   const shouldSearchAdm = nationalRisk || (report && reportType === "vereda");
@@ -96,7 +101,7 @@ export default function FilterBar({
   );
 
   const shouldSearchFarm = farmRisk || (report && reportType === "finca");
-  useFarmCodeSearch(shouldSearchFarm, foundFarms, setFoundFarms, setToast);
+  useFarmCodeSearch(shouldSearchFarm, foundFarms, setFoundFarms, setToast, activity);
 
   useEffect(() => {
     if (enterpriseError) setToast({ type: "alert", message: enterpriseError });
@@ -119,6 +124,8 @@ export default function FilterBar({
         setYear={setYear}
         source={source}
         setSource={setSource}
+        activity={activity}
+        setActivity={setActivity}
         riskOptions={riskOptions}
         yearRanges={yearRanges}
         period={period}

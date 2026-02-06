@@ -6,10 +6,12 @@ import { searchAdmByName } from "@/services/apiService";
 
 const MapFiltersContext = createContext(null);
 
-// Risk options for filters
-const RISK_OPTIONS = [
+// Risk options for filters - Single source of truth
+export const RISK_OPTIONS = [
   { value: "annual", label: "Alerta anual" },
   { value: "cumulative", label: "Alerta acumulada" },
+  { value: "atd", label: "Núcleos activos" },
+  { value: "nad", label: "Alerta temprana" },
 ];
 
 // Provider for map filter state
@@ -20,6 +22,7 @@ export function MapFiltersProvider({ children }) {
   const [year, setYear] = useState("");
   const [period, setPeriod] = useState("");
   const [source, setSource] = useState("smbyc");
+  const [activity, setActivity] = useState("ganaderia");
   const [search, setSearch] = useState("");
   
   const [selectedEnterprise, setSelectedEnterprise] = useState([]);
@@ -88,6 +91,8 @@ export function MapFiltersProvider({ children }) {
     setPeriod,
     source,
     setSource,
+    activity,
+    setActivity,
     search,
     setSearch,
     selectedEnterprise,
@@ -114,7 +119,7 @@ export function MapFiltersProvider({ children }) {
     resetSearchResults,
     token,
   }), [
-    risk, year, period, source, search,
+    risk, year, period, source, activity, search,
     selectedEnterprise, foundFarms, foundAdms, admLevel, admResults,
     yearStart, yearEnd, handleYearStartEndChange,
     pendingTasks, loading, analysis,

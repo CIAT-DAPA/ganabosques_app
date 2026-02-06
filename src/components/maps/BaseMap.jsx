@@ -56,10 +56,10 @@ export default function BaseMap({
   showDeforestation = false,
   period = null,
   source = "smbyc",
-  risk = ""
+  risk = "",
+  deforestationLayers = null
 }) {
   const mapRef = useRef();
-
   useEffect(() => {
     import("leaflet");
   }, []);
@@ -71,21 +71,36 @@ export default function BaseMap({
     }
   };
 
+const deforestationType = period?.deforestation_type;
+const isMonthlyType = deforestationType === "atd" || deforestationType === "nad";
 
-const start = period?.deforestation_period_start
-  ? period.deforestation_period_start.slice(0, 4)
-  : null;
+// Format dates based on type
+const formatDateForLabel = (dateStr, monthly) => {
+  if (!dateStr) return null;
+  if (monthly) {
+    // Format: YYYY-MM
+    const d = new Date(dateStr);
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, "0");
+    return `${year}-${month}`;
+  }
+  // Format: YYYY
+  return dateStr.slice(0, 4);
+};
 
-const end = period?.deforestation_period_end
-  ? period.deforestation_period_end.slice(0, 4)
-  : null;
-  const hasPeriod = start != null && end != null;
-  const defLabel = hasPeriod
-    ? `Deforestación ${start}-${end}`
-    : "Deforestación";
+const start = formatDateForLabel(period?.deforestation_period_start, isMonthlyType);
+const end = formatDateForLabel(period?.deforestation_period_end, isMonthlyType);
+const hasPeriod = start != null && end != null;
+const defLabel = hasPeriod
+  ? `Deforestación ${start}-${end}`
+  : "Deforestación";
 
   const defName = period?.deforestation_name ?? null;
   const timeValue = defName ? defName.split("_").pop() : null;
+  
+  // Use prop if provided, otherwise fallback to constructed path
+  const layersPath = deforestationLayers || `${source}_deforestation_${risk}`;
+  
   return (
     <MapContainer
       center={center}
@@ -105,13 +120,13 @@ const end = period?.deforestation_period_end
       <LayersControl position="topright">
         {showDeforestation && (
           <LayersControl.Overlay
-            key={`def-${start ?? "na"}-${end ?? "na"}-${source}-${risk}`}
+            key={`def-${start ?? "na"}-${end ?? "na"}-${layersPath}`}
             name={defLabel}
           >
             <WMSTileLayer
-              key={`wms-${start ?? "na"}-${end ?? "na"}-${source}-${risk}`}
+              key={`wms-${start ?? "na"}-${end ?? "na"}-${layersPath}`}
               url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
-              layers={`${source}_deforestation_${risk}`}
+              layers={layersPath}
               format="image/png"
               transparent
               version="1.1.1"

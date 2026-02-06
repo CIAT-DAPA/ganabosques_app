@@ -37,4 +37,5 @@ export const COLUMN_INFO = {
   frontier_out_ha: "Representa el área fuera de la frontera agrícola",
   frontier_out_pct: "Representa el porcentaje fuera de la frontera agrícola",
   protected_ha: "Representa el área dentro de áreas protegidas",
+  protected_pct: "Representa el porcentaje dentro de áreas protegidas",
 };

@@ -16,7 +16,8 @@ import { useFarmRisk } from "@/hooks/useFarmRisk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { useEnterpriseMovementStats } from "@/hooks/useEnterpriseMovementStats";
 import { useMapState } from "@/hooks/useMapState";
-import { asYear, RISK_OPTIONS, getEnterpriseIcon } from "@/components/shared";
+import { asYear, getEnterpriseIcon } from "@/components/shared";
+import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 
 import { Marker, Popup, useMap } from "react-leaflet";
 import { useAuth } from "@/hooks/useAuth";
@@ -212,6 +213,7 @@ export default function EnterpriseMap() {
     Array.isArray(getEnterprisesArray(enterpriseDetails)) &&
     getEnterprisesArray(enterpriseDetails).length > 0;
 
+  
   return (
     <>
       <div id="enterprise-risk-export">
@@ -254,6 +256,7 @@ export default function EnterpriseMap() {
             period={period}
             source={source}
             risk={risk}
+            deforestationLayers={period?.deforestation_path}
           >
             <EnterpriseOverlays enterpriseDetails={enterpriseDetails} />
             <EnterpriseMovementLayers

@@ -43,7 +43,6 @@ const FARM_COLUMNS = [
   { key: "departamento", label: "Departamento" },
   { key: "municipio", label: "Municipio" },
   { key: "vereda", label: "Vereda" },
-  { key: "farm_id", label: "Farm ID", highlight: true },
   { key: "codes", label: "Código SIT" },
   { key: "periodo", label: "Periodo" },
   { 
@@ -82,6 +81,7 @@ const FARM_COLUMNS = [
   { 
     key: "area_protegida_prop", 
     label: "Prot. (%)",
+    info: COLUMN_INFO.protected_pct,
     render: (value) => fmtProp(value)
   },
   { 

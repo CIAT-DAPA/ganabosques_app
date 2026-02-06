@@ -17,7 +17,7 @@ import NationalNavigationHelpers from "./NationalNavigationHelpers";
 import { fetchAdm3RiskByAdm3AndType } from "@/services/apiService";
 import Adm3HistoricalRisk from "@/components/Adm3HistoricalRisk";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
-import { RISK_OPTIONS } from "@/components/shared";
+import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 
 export default function NationalRiskMap() {
   const { mapRef, handleMapCreated } = useMapState();
@@ -161,6 +161,7 @@ export default function NationalRiskMap() {
             period={period}
             source={source}
             risk={risk}
+            deforestationLayers={period?.deforestation_path}
           >
             <LayersControl.Overlay name="Veredas">
               <WMSTileLayer

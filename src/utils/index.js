@@ -6,7 +6,6 @@ export {
   ALERT_STYLES,
   TYPE_ALIASES,
   ENTERPRISE_TYPES,
-  RISK_OPTIONS,
   DESTINATION_TYPE_LABELS,
   translateEnterpriseType,
   translateDestinationType,

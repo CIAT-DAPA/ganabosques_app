@@ -10,8 +10,8 @@ const MapFiltersContext = createContext(null);
 export const RISK_OPTIONS = [
   { value: "annual", label: "Alerta anual" },
   { value: "cumulative", label: "Alerta acumulada" },
-  { value: "atd", label: "Núcleos activos" },
-  { value: "nad", label: "Alerta temprana" },
+  { value: "nad", label: "Núcleos activos" },
+  { value: "atd", label: "Alerta temprana" },
 ];
 
 // Provider for map filter state

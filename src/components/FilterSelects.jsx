@@ -41,18 +41,11 @@ export default function FilterSelects({
       return `${start} - ${end}`;
     }
     
-    // For atd and nad: show year-month format (YYYY-MM - YYYY-MM)
+    // For atd and nad: show the time value from deforestation_name
     if (type === "atd" || type === "nad") {
-      const formatYearMonth = (dateStr) => {
-        if (!dateStr) return "";
-        const d = new Date(dateStr);
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, "0");
-        return `${year}-${month}`;
-      };
-      const start = formatYearMonth(item?.deforestation_period_start);
-      const end = formatYearMonth(item?.deforestation_period_end);
-      return `${start} - ${end}`;
+      const name = item?.deforestation_name || "";
+      const timeValue = name.split("_").pop();
+      return timeValue || "";
     }
     
     // Fallback: show raw values

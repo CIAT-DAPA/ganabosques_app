@@ -90,13 +90,17 @@ const formatDateForLabel = (dateStr, monthly) => {
 
 const start = formatDateForLabel(period?.deforestation_period_start, isMonthlyType);
 const end = formatDateForLabel(period?.deforestation_period_end, isMonthlyType);
-const hasPeriod = start != null && end != null;
-const defLabel = hasPeriod
-  ? `Deforestación ${start}-${end}`
-  : "Deforestación";
+const hasPeriod = start != null;
 
-  const defName = period?.deforestation_name ?? null;
-  const timeValue = defName ? defName.split("_").pop() : null;
+const defName = period?.deforestation_name ?? null;
+const timeValue = defName ? defName.split("_").pop() : null;
+
+// For atd/nad show only timeValue, for annual/cumulative show range
+const defLabel = hasPeriod
+  ? isMonthlyType
+    ? `Deforestación ${timeValue}`
+    : `Deforestación ${start}-${end}`
+  : "Deforestación";
   
   // Use prop if provided, otherwise fallback to constructed path
   const layersPath = deforestationLayers || `${source}_deforestation_${risk}`;

@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+// Filter bar logic hooks
+import { useState, useEffect } from "react";
 import {
-  fetchEnterprises,
   fetchAnalysisYearRanges,
   fetchFarmBySITCode,
   searchAdmByName,
@@ -8,8 +8,8 @@ import {
 } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
 
-// Hook para manejar empresas
-export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) => {
+// Enterprise suggestions with debounce
+export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400, activity = null) => {
   const { token } = useAuth();
   const [enterpriseSuggestions, setEnterpriseSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -23,7 +23,7 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) =>
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const results = await searchEnterprisesByName(token, search);
+        const results = await searchEnterprisesByName(token, search, activity);
         setEnterpriseSuggestions(results || []);
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
@@ -36,26 +36,25 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400) =>
     }, delay);
 
     return () => clearTimeout(timer);
-  }, [search, enterpriseRisk, delay, token]);
+  }, [search, enterpriseRisk, delay, token, activity]);
 
   return { enterpriseSuggestions, setEnterpriseSuggestions, loading };
 };
 
-// Hook para manejar rangos de años
+// Year ranges fetching
 export const useYearRanges = (
   source,
   risk,
   year,
   setYear,
   setPeriod,
-  onYearStartEndChange
+  onYearStartEndChange,
+  activity = null
 ) => {
   const { token } = useAuth();
   const [yearRanges, setYearRanges] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  const asId = (v) => (v == null ? "" : String(v));
 
   useEffect(() => {
     if (!token) return;
@@ -67,7 +66,7 @@ export const useYearRanges = (
       setError(null);
 
       try {
-        const data = await fetchAnalysisYearRanges(token, source, risk);
+        const data = await fetchAnalysisYearRanges(token, source, risk, activity);
         if (aborted) return;
 
         const arr = Array.isArray(data) ? data : [];
@@ -86,12 +85,12 @@ export const useYearRanges = (
     return () => {
       aborted = true;
     };
-  }, [token, source, risk, year, setYear, setPeriod, onYearStartEndChange]);
+  }, [token, source, risk, activity, year, setYear, setPeriod, onYearStartEndChange]);
 
   return { yearRanges, loading, error };
 };
 
-// Hook para manejar sugerencias ADM con debounce
+// ADM suggestions with debounce
 export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) => {
   const { token } = useAuth();
   const [admSuggestions, setAdmSuggestions] = useState([]);
@@ -124,8 +123,8 @@ export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) =
   return { admSuggestions, setAdmSuggestions, loading };
 };
 
-// Hook para manejar búsqueda diferida de SIT_CODE
-export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast) => {
+// Farm code search
+export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast, activity = null) => {
   const { token } = useAuth();
 
   useEffect(() => {
@@ -140,7 +139,7 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
       if (!pendingCodes) return;
 
       try {
-        const data = await fetchFarmBySITCode(token, pendingCodes);
+        const data = await fetchFarmBySITCode(token, pendingCodes, activity);
 
         if (!data || data.length === 0) {
           setToast({
@@ -180,8 +179,8 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast)
           message: "Error de red al buscar los SIT CODE",
         });
       }
-    }, 0.5);
+    }, 500);
 
     return () => clearTimeout(delay);
-  }, [foundFarms, farmRisk, setFoundFarms, setToast, token]);
+  }, [foundFarms, farmRisk, setFoundFarms, setToast, token, activity]);
 };

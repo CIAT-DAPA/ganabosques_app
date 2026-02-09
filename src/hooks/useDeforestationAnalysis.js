@@ -22,7 +22,6 @@ export function useDeforestationAnalysis(period, setAnalysis, setPendingTasks) {
       setPendingTasks((prev) => prev + 1);
       try {
         const data = await fetchFarmRiskByDeforestationId(token, period.deforestation_id);
-        console.log(period.deforestation_i)
         if (!cancelled) {
           setAnalysis(data);
         }

@@ -10,17 +10,19 @@ import {
   useAdmSuggestions,
   useFarmCodeSearch,
   useEnterpriseSuggestions
-} from "@/components/hooks/useFilterBarLogic";
+} from "@/hooks/useFilterBarLogic";
+import { useMapFiltersOptional } from "@/contexts/MapFiltersContext";
 
+// Filter bar with standalone props or context support
 export default function FilterBar({
-  risk,
-  setRisk,
-  year,
-  setYear,
-  source,
-  setSource,
-  search,
-  setSearch,
+  risk: propRisk,
+  setRisk: propSetRisk,
+  year: propYear,
+  setYear: propSetYear,
+  source: propSource,
+  setSource: propSetSource,
+  search: propSearch,
+  setSearch: propSetSearch,
   onSearch,
   enterpriseRisk = false,
   farmRisk = false,
@@ -29,44 +31,68 @@ export default function FilterBar({
   report = false,
   multiPeriod = false,
   hideSearch = false,
-  admLevel,
+  activity: propActivity,
+  setActivity: propSetActivity,
+  admLevel: propAdmLevel,
   onAdmSearch,
-  selectedEnterprise,
-  setSelectedEnterprise,
-  foundFarms,
-  setFoundFarms,
-  foundAdms,
-  setFoundAdms,
-  onYearStartEndChange,
-  riskOptions,
-  period,
-  setPeriod,
+  selectedEnterprise: propSelectedEnterprise,
+  setSelectedEnterprise: propSetSelectedEnterprise,
+  foundFarms: propFoundFarms,
+  setFoundFarms: propSetFoundFarms,
+  foundAdms: propFoundAdms,
+  setFoundAdms: propSetFoundAdms,
+  onYearStartEndChange: propOnYearStartEndChange,
+  riskOptions: propRiskOptions,
+  period: propPeriod,
+  setPeriod: propSetPeriod,
   reportType,
   setReportType,
   onPeriodsChange,
 }) {
+  const ctx = useMapFiltersOptional();
+  
+  const risk = propRisk ?? ctx?.risk;
+  const setRisk = propSetRisk ?? ctx?.setRisk;
+  const year = propYear ?? ctx?.year;
+  const setYear = propSetYear ?? ctx?.setYear;
+  const source = propSource ?? ctx?.source;
+  const setSource = propSetSource ?? ctx?.setSource;
+  const search = propSearch ?? ctx?.search;
+  const setSearch = propSetSearch ?? ctx?.setSearch;
+  const period = propPeriod ?? ctx?.period;
+  const setPeriod = propSetPeriod ?? ctx?.setPeriod;
+  const selectedEnterprise = propSelectedEnterprise ?? ctx?.selectedEnterprise;
+  const setSelectedEnterprise = propSetSelectedEnterprise ?? ctx?.setSelectedEnterprise;
+  const foundFarms = propFoundFarms ?? ctx?.foundFarms;
+  const setFoundFarms = propSetFoundFarms ?? ctx?.setFoundFarms;
+  const foundAdms = propFoundAdms ?? ctx?.foundAdms;
+  const setFoundAdms = propSetFoundAdms ?? ctx?.setFoundAdms;
+  const admLevel = propAdmLevel ?? ctx?.admLevel;
+  const riskOptions = propRiskOptions ?? ctx?.riskOptions;
+  const onYearStartEndChange = propOnYearStartEndChange ?? ctx?.handleYearStartEndChange;
+  const activity = propActivity ?? ctx?.activity;
+  const setActivity = propSetActivity ?? ctx?.setActivity;
+
   const [toast, setToast] = useState(null);
 
-  // 🔎 Empresas por nombre (debounce). Mapeamos a los nombres esperados por SearchBar:
   const shouldSearchEnterprise = enterpriseRisk || (report && reportType === "empresa");
   const {
     enterpriseSuggestions,
     setEnterpriseSuggestions,
     loading: enterpriseLoading,
-    error: enterpriseError, // si tu hook devuelve null, igual funciona
-  } = useEnterpriseSuggestions(search, shouldSearchEnterprise);
+    error: enterpriseError,
+  } = useEnterpriseSuggestions(search, shouldSearchEnterprise, 400, activity);
 
-  // 🔁 Años disponibles
   const { yearRanges, error: yearError } = useYearRanges(
     source,
     risk,
     year,
     setYear,
     setPeriod,
-    onYearStartEndChange
+    onYearStartEndChange,
+    activity
   );
 
-  // 🗺️ ADM por nombre (debounce)
   const shouldSearchAdm = nationalRisk || (report && reportType === "vereda");
   const { admSuggestions, setAdmSuggestions } = useAdmSuggestions(
     search,
@@ -74,26 +100,23 @@ export default function FilterBar({
     shouldSearchAdm
   );
 
-  // 🧷 Búsqueda diferida de SIT_CODE
   const shouldSearchFarm = farmRisk || (report && reportType === "finca");
-  useFarmCodeSearch(shouldSearchFarm, foundFarms, setFoundFarms, setToast);
+  useFarmCodeSearch(shouldSearchFarm, foundFarms, setFoundFarms, setToast, activity);
 
-  // 🛎️ Toasts de error
   useEffect(() => {
-    if (enterpriseError) {
-      setToast({ type: "alert", message: enterpriseError });
-    }
+    if (enterpriseError) setToast({ type: "alert", message: enterpriseError });
   }, [enterpriseError]);
 
   useEffect(() => {
-    if (yearError) {
-      setToast({ type: "alert", message: yearError });
-    }
+    if (yearError) setToast({ type: "alert", message: yearError });
   }, [yearError]);
+  // Use relative positioning for dashboard, absolute for map overlays
+  const containerClasses = dashboardRisk
+    ? "relative z-[1000] flex gap-4 py-4"
+    : "absolute top-4 left-[88px] right-4 z-[1000] flex gap-4";
 
   return (
-    <div className="absolute top-4 left-[88px] right-4 z-[1000] flex gap-4">
-      {/* Selectores de filtros */}
+    <div className={containerClasses}>
       <FilterSelects
         risk={risk}
         setRisk={setRisk}
@@ -101,6 +124,8 @@ export default function FilterBar({
         setYear={setYear}
         source={source}
         setSource={setSource}
+        activity={activity}
+        setActivity={setActivity}
         riskOptions={riskOptions}
         yearRanges={yearRanges}
         period={period}
@@ -113,7 +138,6 @@ export default function FilterBar({
         onPeriodsChange={onPeriodsChange}
       />
 
-      {/* Buscador + chips (cuando no es modo reporte, O cuando es reporte con cualquier tipo) */}
       {((!report && !hideSearch) || (report && reportType !== "")) && (
         <div className="flex flex-col gap-2 flex-grow">
           <SearchBar
@@ -124,7 +148,6 @@ export default function FilterBar({
             enterpriseRisk={report ? reportType === "empresa" : enterpriseRisk}
             nationalRisk={report ? reportType === "vereda" : nationalRisk}
             report={report}
-            /* ⬇️ Mantenemos las props que espera SearchBar pero alimentadas del nuevo hook */
             filteredEnterprises={enterpriseSuggestions}
             setFilteredEnterprises={setEnterpriseSuggestions}
             selectedEnterprise={selectedEnterprise}
@@ -135,13 +158,12 @@ export default function FilterBar({
             setFoundAdms={setFoundAdms}
             admSuggestions={admSuggestions}
             setAdmSuggestions={setAdmSuggestions}
-            onAdmSearch={onAdmSearch}
+            onAdmSearch={onAdmSearch ?? ctx?.handleAdmSearch}
             admLevel={admLevel}
             risk={risk}
             year={year}
             source={source}
             setToast={setToast}
-            /* opcional: si quieres indicar spinner durante búsqueda de empresas */
             enterpriseLoading={enterpriseLoading}
           />
 
@@ -159,7 +181,6 @@ export default function FilterBar({
         </div>
       )}
 
-      {/* Toast */}
       {toast && (
         <Toast
           type={toast.type}

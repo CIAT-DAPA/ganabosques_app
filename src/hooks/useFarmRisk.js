@@ -1,3 +1,4 @@
+// Farm risk fetching hook
 import { useEffect } from "react";
 import { fetchFarmRiskByAnalysisAndFarm } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,9 +45,7 @@ export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) 
           setRiskFarm([]);
         }
       } finally {
-
-          setPendingTasks((prev) => Math.max(0, prev - 1));
-        
+        setPendingTasks((prev) => Math.max(0, prev - 1));
       }
     };
 

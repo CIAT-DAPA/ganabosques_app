@@ -3,7 +3,7 @@
 import { Marker, Popup, Polyline } from "react-leaflet";
 import { useMemo, useCallback } from "react";
 import ArrowLayer from "./ArrowLayer";
-import { ARROW_CONFIG, calculateDistance, calculateAngle, interpolatePoints, getFarmIcon, getEnterpriseIcon, getTypeLabel, getGeojsonName } from "@/utils";
+import { ARROW_CONFIG, calculateDistance, calculateAngle, interpolatePoints, getFarmIcon, getEnterpriseIcon, getTypeLabel, getGeojsonName } from "@/utils/mapUtils";
 
 // Movement markers and arrows for farm risk view
 export default function FarmMovementLayers({ movement, farmPolygons, yearStart, useArrows = true }) {

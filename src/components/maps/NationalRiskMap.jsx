@@ -1,44 +1,43 @@
 "use client";
 
 import { useEffect, useMemo, useState, useRef, useCallback } from "react";
-import { WMSTileLayer, LayersControl, Popup } from "react-leaflet";
+import { WMSTileLayer, LayersControl } from "react-leaflet";
 import BaseMap from "./BaseMap";
 import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
 import LoadingSpinner from "@/components/LoadingSpinner";
-import { searchAdmByName } from "@/services/apiService";
 import { useAdm3Risk } from "@/hooks/useAdm3Risk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { useAdm3Details } from "@/hooks/useAdm3Details";
+import { useMapState } from "@/hooks/useMapState";
+import { useLoadingState } from "@/hooks/useLoadingState";
+import { useFilterState } from "@/hooks/useFilterState";
 import NationalRiskLayers from "./NationalRiskLayers";
 import NationalNavigationHelpers from "./NationalNavigationHelpers";
 import { fetchAdm3RiskByAdm3AndType } from "@/services/apiService";
 import Adm3HistoricalRisk from "@/components/Adm3HistoricalRisk";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
-import { useAuth } from "@/hooks/useAuth";
+import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 
 export default function NationalRiskMap() {
-  const riskOptions = useMemo(
-    () => [
-      { value: "annual", label: "Riesgo anual" },
-      { value: "cumulative", label: "Riesgo acumulado" },
-    ],
-    []
-  );
+  const { mapRef, handleMapCreated } = useMapState();
+  const { loading, setPendingTasks } = useLoadingState();
+  const {
+    risk, setRisk,
+    year, setYear,
+    period, setPeriod,
+    source, setSource,
+    search, setSearch,
+    foundAdms, setFoundAdms,
+    admLevel, setAdmLevel,
+    admResults, setAdmResults,
+    yearStart, yearEnd,
+    handleYearStartEndChange,
+    handleAdmSearch,
+    token,
+  } = useFilterState();
 
-  const [risk, setRisk] = useState(riskOptions[0]?.value || "");
-  const [year, setYear] = useState("");
-  const [period, setPeriod] = useState("");
-  const [source, setSource] = useState("smbyc");
-  const [search, setSearch] = useState("");
-  const [foundAdms, setFoundAdms] = useState([]);
-  const [admLevel, setAdmLevel] = useState("adm1");
-  const [admResults, setAdmResults] = useState([]);
-  const mapRef = useRef();
-  const [yearStart, setYearStart] = useState(2023);
-  const [yearEnd, setYearEnd] = useState(2024);
-  const [loading, setLoading] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState(0);
+  // National-specific state
   const [analysis, setAnalysis] = useState(null);
   const [adm3Risk, setAdm3Risk] = useState(null);
   const [adm3Details, setAdm3Details] = useState([]);
@@ -46,8 +45,7 @@ export default function NationalRiskMap() {
   const [lastCenteredExtId, setLastCenteredExtId] = useState(null);
   const [adm3RiskHistory, setAdm3RiskHistory] = useState([]);
 
-  const { token } = useAuth();
-
+  // Data hooks
   useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
   useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks);
@@ -56,38 +54,19 @@ export default function NationalRiskMap() {
   const prevRiskRef = useRef(risk);
 
   useEffect(() => {
-    setLoading(pendingTasks > 0);
-  }, [pendingTasks]);
-
-  useEffect(() => {
     if (!foundAdms || foundAdms.length === 0) {
       setPopupData(null);
       mapRef.current?.closePopup?.();
     }
-  }, [foundAdms]);
+  }, [foundAdms, mapRef]);
 
-  const handleAdmSearch = useCallback(
-    async (searchText, level) => {
-      try {
-        if (!token) return;
-        const results = await searchAdmByName(token, searchText, level);
-        if (!results?.length) return;
-        setAdmResults(results);
-        const geometry = results[0]?.geometry;
-        if (geometry && mapRef.current) {
-          const L = await import("leaflet");
-          const layer = L.geoJSON(geometry);
-          mapRef.current.fitBounds(layer.getBounds());
-        }
-      } catch (err) {
-        console.error("Error buscando nivel administrativo:", err);
-      }
-    },
-    [search, token]
+  // Wrapped ADM search with mapRef
+  const onAdmSearch = useCallback(
+    (text, level) => handleAdmSearch(text, level, mapRef),
+    [handleAdmSearch, mapRef]
   );
 
-  const handleMapCreated = (mapInstance) => (mapRef.current = mapInstance);
-
+  // Fetch ADM3 risk history
   useEffect(() => {
     if (!token) return;
 
@@ -122,9 +101,7 @@ export default function NationalRiskMap() {
     }
 
     if (removed.length > 0) {
-      setAdm3RiskHistory((prev) =>
-        prev.filter((group) => !removed.includes(group.adm3_id))
-      );
+      setAdm3RiskHistory((prev) => prev.filter((group) => !removed.includes(group.adm3_id)));
     }
 
     if (added.length > 0) {
@@ -132,10 +109,7 @@ export default function NationalRiskMap() {
       (async () => {
         try {
           const data = await fetchAdm3RiskByAdm3AndType(token, added, risk);
-          setAdm3RiskHistory((prev) => [
-            ...prev,
-            ...Object.values(data || {}),
-          ]);
+          setAdm3RiskHistory((prev) => [...prev, ...Object.values(data || {})]);
         } finally {
           setPendingTasks((v) => v - 1);
         }
@@ -143,12 +117,7 @@ export default function NationalRiskMap() {
     }
 
     prevIdsRef.current = currIds;
-  }, [foundAdms, risk, adm3RiskHistory.length, token]);
-
-  const handleYearStartEndChange = useCallback((start, end) => {
-    setYearStart(start);
-    setYearEnd(end);
-  }, []);
+  }, [foundAdms, risk, adm3RiskHistory.length, token, setPendingTasks]);
 
   return (
     <>
@@ -173,24 +142,18 @@ export default function NationalRiskMap() {
             nationalRisk={true}
             admLevel={admLevel}
             setAdmLevel={setAdmLevel}
-            onAdmSearch={handleAdmSearch}
+            onAdmSearch={onAdmSearch}
             foundAdms={foundAdms}
             setFoundAdms={setFoundAdms}
             onYearStartEndChange={handleYearStartEndChange}
-            riskOptions={riskOptions}
+            riskOptions={RISK_OPTIONS}
             period={period}
             setPeriod={setPeriod}
           />
 
-          {loading && (
-            <LoadingSpinner message="Cargando datos y polígonos..." />
-          )}
+          {loading && <LoadingSpinner message="Cargando datos y polígonos..." />}
 
-          <RiskLegend
-            enterpriseRisk={false}
-            farmRisk={false}
-            nationalRisk={true}
-          />
+          <RiskLegend enterpriseRisk={false} farmRisk={false} nationalRisk={true} />
 
           <BaseMap
             onMapCreated={handleMapCreated}
@@ -198,6 +161,7 @@ export default function NationalRiskMap() {
             period={period}
             source={source}
             risk={risk}
+            deforestationLayers={period?.deforestation_path}
           >
             <LayersControl.Overlay name="Veredas">
               <WMSTileLayer
@@ -227,21 +191,13 @@ export default function NationalRiskMap() {
         </div>
 
         {adm3RiskHistory?.length > 0 && (
-          <Adm3HistoricalRisk
-            adm3RiskHistory={adm3RiskHistory}
-            yearStart={yearStart}
-            yearEnd={yearEnd}
-          />
+          <Adm3HistoricalRisk adm3RiskHistory={adm3RiskHistory} yearStart={yearStart} yearEnd={yearEnd} risk={risk} />
         )}
       </div>
 
       {adm3RiskHistory?.length > 0 && (
         <div className="max-w-7xl mx-auto px-6 md:px-12 mt-4 mb-8 flex justify-end">
-          <DownloadPdfButton
-            targetId="national-risk-export"
-            filename="alerta_nacional.pdf"
-            label="Descargar (PDF)"
-          />
+          <DownloadPdfButton targetId="national-risk-export" filename="alerta_nacional.pdf" label="Descargar (PDF)" />
         </div>
       )}
     </>

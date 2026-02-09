@@ -11,150 +11,54 @@ import {
   Home,
   Calendar,
 } from "lucide-react";
+import {
+  CHART_COLORS,
+  isoToYear,
+  toYear,
+  buildLabelFromPeriod,
+  sortKeyFromPeriod,
+  normalizeBubbleSeries,
+  riskBadgeBool,
+  badgeTextColor,
+  buildBarFromItems,
+  baseBarOptions,
+  formatNumber,
+} from "./shared";
 
 const ReactApexChart = dynamic(() => import("react-apexcharts"), {
   ssr: false,
 });
-
-// Paleta
-const COLOR_TRUE = "#D50000"; // Con Alerta
-const COLOR_FALSE = "#00C853"; // Sin Alerta
-
-function riskBadgeBool(isRisk) {
-  return isRisk
-    ? {
-        label: "Con Alerta",
-        color: COLOR_TRUE,
-        desc: "Se han presentado alertas para este período.",
-      }
-    : {
-        label: "Sin Alerta",
-        color: COLOR_FALSE,
-        desc: "No se han presentado alertas para este período.",
-      };
-}
-
-function badgeTextColor(hex) {
-  if (!hex) return "#fff";
-  return hex.toUpperCase() === "#FFD600" ? "#111827" : "#ffffff";
-}
-
-function isoToYear(iso) {
-  if (!iso) return null;
-  const s = String(iso);
-  const hasTZ = /[zZ]|[+\-]\d{2}:?\d{2}$/.test(s);
-  const d = new Date(s);
-  const y = hasTZ ? d.getUTCFullYear() : d.getFullYear();
-  return Number.isFinite(y) ? y : null;
-}
-
-// Normaliza "2020-01-01T..." | "2020" | 2020 -> 2020
-function toYear(val) {
-  if (val == null) return null;
-  if (typeof val === "number" && Number.isFinite(val)) return val;
-  const s = String(val);
-  const m = s.match(/^(\d{4})/);
-  if (m) return parseInt(m[1], 10);
-  return isoToYear(s);
-}
-
-function buildLabelFromPeriod(it) {
-  const ys = isoToYear(it?.period_start);
-  const ye = isoToYear(it?.period_end);
-  if (ys != null && ye != null) return `${ys} - ${ye}`;
-  if (ys != null) return String(ys);
-  if (ye != null) return String(ye);
-  return "—";
-}
-
-function sortKeyFromPeriod(it) {
-  const ys = isoToYear(it?.period_start);
-  const ye = isoToYear(it?.period_end);
-  return ys != null ? ys : ye != null ? ye : 0;
-}
-
-// Solo construye puntos/filas: asumimos que items ya vienen ordenados
-function normalizeBubbleSeries(items = []) {
-  const rows = (items || []).map((it) => ({
-    label: buildLabelFromPeriod(it),
-    isRisk: Boolean(it?.risk_total),
-    raw: it,
-  }));
-
-  const points = rows.map((r) => ({
-    x: r.label,
-    y: 1,
-    z: 28,
-    fillColor: r.isRisk ? COLOR_TRUE : COLOR_FALSE,
-    isRisk: r.isRisk,
-  }));
-
-  return { points, rows };
-}
-
-/* ========= Helpers para las barras ========= */
-function formatNumber(val) {
-  if (typeof val !== "number") return val;
-  try {
-    return val.toLocaleString("es-CO");
-  } catch {
-    return String(val);
-  }
-}
-
-// Construye categorías y una serie desde items, filtrando valores 0
-function buildBarFromItems(
-  items = [],
-  valueKey = "value",
-  seriesName = "Total",
-  { round1Decimal = false } = {}
-) {
-  const cleaned = (items || []).filter((it) => {
-    const v = Number(it?.[valueKey] ?? 0);
-    return Number.isFinite(v) && v > 0; // excluye 0 y no numéricos
-  });
-
-  const categories = cleaned.map((it) => buildLabelFromPeriod(it));
-  const values = cleaned.map((it) => {
-    let v = Number(it?.[valueKey] ?? 0);
-    if (round1Decimal) v = Math.round(v * 10) / 10;
-    return v;
-  });
-
-  return {
-    categories,
-    series: [{ name: seriesName, data: values }],
-  };
-}
-
-function baseBarOptions({ title, categories, yTitle, yFormatter }) {
-  return {
-    chart: { type: "bar", toolbar: { show: false }, parentHeightOffset: 0 },
-    title: { text: title, style: { fontWeight: 600 } },
-    xaxis: { categories, title: { text: "Período" }, labels: { rotate: -30 } },
-    yaxis: { title: { text: yTitle } },
-    dataLabels: { enabled: false },
-    grid: { strokeDashArray: 4 },
-    plotOptions: { bar: { borderRadius: 6, columnWidth: "30%" } },
-    tooltip: {
-      y: {
-        formatter: (val) =>
-          typeof yFormatter === "function"
-            ? yFormatter(val)
-            : formatNumber(val),
-      },
-    },
-  };
-}
 
 export default function Adm3HistoricalRisk({
   adm3RiskHistory = [],
   className = "",
   yearStart,
   yearEnd,
+  risk,
 }) {
   const filterStartYear = toYear(yearStart);
   const filterEndYear = toYear(yearEnd);
+
+  // Custom label formatter for ATD/NAD (Quarterly: YYYY0Q)
+  const getLabelFormatter = () => {
+    if (risk === "atd" || risk === "nad") {
+      return (item) => {
+        if (!item?.period_start) return "—";
+        console.log("Incoming date:", item.period_start);
+        const d = new Date(item.period_start);
+        // Adjust for timezone issues if necessary, but simple date parsing usually works for YYYY-MM-DD
+        // Assuming period_start is YYYY-MM-DD
+        const y = d.getUTCFullYear();
+        const m = d.getUTCMonth(); // 0-11
+        const q = Math.floor(m / 3) + 1;
+        // console.log("DEBUG LABEL:", { risk, start: item.period_start, y, m, q, res: `${y}0${q}` });
+        return `${y}0${q}`;
+      };
+    }
+    return null;
+  };
+
+  const labelFormatter = getLabelFormatter();
 
   if (!Array.isArray(adm3RiskHistory) || adm3RiskHistory.length === 0) {
     return <p className="text-sm text-gray-500"></p>;
@@ -164,11 +68,13 @@ export default function Adm3HistoricalRisk({
     <div className={`space-y-6 ${className}`}>
       {adm3RiskHistory.map((group, idx) => {
         const itemsRaw = Array.isArray(group?.items) ? group.items : [];
-        const items = [...itemsRaw].sort(
-          (a, b) => sortKeyFromPeriod(a) - sortKeyFromPeriod(b)
-        );
+        const items = [...itemsRaw].sort((a, b) => {
+          const tA = a.period_start ? new Date(a.period_start).getTime() : 0;
+          const tB = b.period_start ? new Date(b.period_start).getTime() : 0;
+          return tA - tB;
+        });
 
-        const { points, rows } = normalizeBubbleSeries(items);
+        const { points, rows } = normalizeBubbleSeries(items, labelFormatter);
 
         const title =
           group?.name ||
@@ -179,7 +85,13 @@ export default function Adm3HistoricalRisk({
         let selectedRow = null;
         if (filterStartYear != null && filterEndYear != null) {
           selectedRow =
+          selectedRow =
             rows.find((r) => {
+              // For ATD/NAD, match exact start date if possible to distinguish quarters
+              if ((risk === "atd" || risk === "nad") && yearStart) {
+                return r?.raw?.period_start === yearStart;
+              }
+              // Fallback for annual/cumulative: match years
               const ys = isoToYear(r?.raw?.period_start);
               const ye = isoToYear(r?.raw?.period_end);
               return ys === filterStartYear && ye === filterEndYear;
@@ -197,7 +109,9 @@ export default function Adm3HistoricalRisk({
           : filterEndYear;
 
         const selectedPeriodLabel =
-          selYs && selYe
+          labelFormatter && selectedItem
+            ? labelFormatter(selectedItem)
+            : selYs && selYe
             ? `${selYs} - ${selYe}`
             : selYs
             ? `${selYs}`
@@ -252,7 +166,7 @@ export default function Adm3HistoricalRisk({
           plotOptions: {
             bubble: { minBubbleRadius: 8, maxBubbleRadius: 28 },
           },
-          colors: [COLOR_FALSE, COLOR_TRUE],
+          colors: [CHART_COLORS.OK, CHART_COLORS.RISK],
         };
 
         const series = [{ name: "Alerta", data: points }];
@@ -261,7 +175,7 @@ export default function Adm3HistoricalRisk({
           items,
           "def_ha",
           "Hectáreas",
-          { round1Decimal: true }
+          { round1Decimal: true, labelFormatter }
         );
 
         const defoOptions = baseBarOptions({
@@ -279,14 +193,14 @@ export default function Adm3HistoricalRisk({
         const { categories: farmCats, series: farmSeries } = buildBarFromItems(
           items,
           "farm_amount",
-          "Fincas"
+          "Fincas",
+          { labelFormatter }
         );
 
         const farmOptions = baseBarOptions({
           categories: farmCats,
           yTitle: "Número de predios",
         });
-        // ===============================================================
 
         return (
           <div
@@ -300,7 +214,7 @@ export default function Adm3HistoricalRisk({
             <h3 className="text-lg font-semibold mb-3">{title}</h3>
 
             <div className="grid grid-cols-1 md:grid-cols-[240px_1px_minmax(0,1fr)] gap-4 md:gap-0">
-              {/* Izquierda */}
+              {/* Left side info */}
               <div className="space-y-3">
                 <div className="flex items-start gap-3">
                   <Building2 className="h-5 w-5 text-gray-500 mt-0.5" />
@@ -334,7 +248,6 @@ export default function Adm3HistoricalRisk({
                   </div>
                 </div>
 
-                {/* Periodo + Estado */}
                 <div className="flex items-start gap-3">
                   <Calendar className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div className="flex flex-col gap-1">
@@ -357,7 +270,6 @@ export default function Adm3HistoricalRisk({
                   </div>
                 </div>
 
-                {/* Área deforestada */}
                 <div className="flex items-start gap-3">
                   <Trees className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
@@ -394,15 +306,15 @@ export default function Adm3HistoricalRisk({
                 </div>
               </div>
 
-              {/* Separador */}
+              {/* Separator */}
               <div
                 className="hidden md:block bg-gray-200 md:self-stretch"
                 style={{ width: 1 }}
               />
 
-              {/* Derecha: burbuja + barras */}
+              {/* Right side: charts */}
               <div className="md:pl-4 md:min-w-0 space-y-6">
-                {/* Burbuja */}
+                {/* Bubble chart */}
                 <div className="w-full">
                   <h2 style={{ fontSize: "18px", fontWeight: 600 }}>
                     Alertas históricas
@@ -421,7 +333,7 @@ export default function Adm3HistoricalRisk({
                   />
                 </div>
 
-                {/* Barra 1: hectáreas */}
+                {/* Bar chart 1: hectares */}
                 <div className="w-full">
                   {defoSeries?.[0]?.data?.length ? (
                     <div>
@@ -448,7 +360,7 @@ export default function Adm3HistoricalRisk({
                   )}
                 </div>
 
-                {/* Barra 2: predios */}
+                {/* Bar chart 2: farms */}
                 <div className="w-full">
                   {farmSeries?.[0]?.data?.length ? (
                     <div>

@@ -2,81 +2,27 @@
 
 import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
-import { AlertTriangle, Trees, Shield, Sprout, Calendar, Building2, MapPin, MapIcon } from "lucide-react";
+import { AlertTriangle, Trees, Shield, Sprout, Calendar, Building2, MapPin, Map as MapIcon, TrendingUp } from "lucide-react";
+import {
+  ALERT_STYLES,
+  DESTINATION_TYPE_LABELS,
+  MOVEMENT_CHART_COLORS,
+  getAlertLevel,
+  formatValue,
+  translateDestinationType,
+} from "./shared";
 
-// Constantes
-const BASE_COLORS = [
-  "#a3d977",
-  "#7ab86b",
-  "#568c5e",
-  "#366f50",
-  "#1f5043",
-  "#e9a25f",
-  "#de7c48",
-  "#cc5a33",
-  "#b3411f",
-  "#993014",
-  "#7a9e9f",
-  "#d2c29d",
-  "#d26a5c",
-  "#8c8c8c",
-  "#546e7a",
-];
+
 
 const CHART_CONFIG = {
   height: 250,
-  colors: {
-    primary: "#082C14",
-    grid: "#f1f1f1",
-  },
+  colors: { primary: "#082C14", grid: "#f1f1f1" },
 };
 
-// ALERTAS (booleanos)
-const ALERT_LEVELS = {
-  TRUE: {
-    label: "Alerta activa",
-    bgClass: "bg-red-500/20",
-    borderClass: "border-red-500",
-    textClass: "text-red-700",
-  },
-  FALSE: {
-    label: "Sin alerta",
-    bgClass: "bg-green-500/20",
-    borderClass: "border-green-500",
-    textClass: "text-green-700",
-  },
-};
-
-// Valor booleano -> estilos
-const getAlertLevel = (flag) => (flag ? ALERT_LEVELS.TRUE : ALERT_LEVELS.FALSE);
-
-const formatValue = (value, decimals = 2) => (value || 0).toFixed(decimals);
-
+// Helper functions
 const getFarmLabel = (farm) => farm?.sit_code || farm.code || farm.id;
 
-// Mapeo para traducir tipos de destino del API a español
-const DESTINATION_TYPE_LABELS = {
-  SLAUGHTERHOUSE: "Planta de beneficio",
-  COLLECTION_CENTER: "Centro de acopio",
-  CATTLE_FAIR: "Feria ganadera",
-  ENTERPRISE: "Empresa",
-  FARM: "Finca",
-  COLLECTIONCENTER: "Centro de acopio",
-  CENTRO_ACOPIO: "Centro de acopio",
-  ACOPIO: "Centro de acopio",
-  PLANTA: "Planta de beneficio",
-  FERIA: "Feria ganadera",
-  EMPRESA: "Empresa",
-  FINCA: "Finca",
-};
-
-const translateDestinationType = (type) => {
-  if (!type) return "Otro";
-  const normalized = String(type).trim().toUpperCase().replace(/\s+/g, "_").replace(/-/g, "_");
-  return DESTINATION_TYPE_LABELS[normalized] || type;
-};
-
-// Componentes reutilizables
+// Reusable components
 const SectionHeader = ({ icon: Icon, title }) => (
   <div className="flex items-center gap-2 text-custom-dark">
     <Icon className="h-4 w-4" />
@@ -87,10 +33,7 @@ const SectionHeader = ({ icon: Icon, title }) => (
 const InfoItem = ({ label, value, suffix = "" }) => (
   <div className="flex justify-between">
     <span>{label}:</span>
-    <span>
-      {value}
-      {suffix}
-    </span>
+    <span>{value}{suffix}</span>
   </div>
 );
 
@@ -108,13 +51,7 @@ const ToggleButton = ({ isVisible, onToggle, label }) => (
     className="text-xs text-custom-dark hover:underline flex items-center gap-1"
   >
     {isVisible ? `Ocultar ${label}` : `Mostrar ${label}`}
-    <span
-      className={`transition-transform ${
-        isVisible ? "rotate-180" : "rotate-0"
-      }`}
-    >
-      ▼
-    </span>
+    <span className={`transition-transform ${isVisible ? "rotate-180" : "rotate-0"}`}>▼</span>
   </button>
 );
 
@@ -124,31 +61,44 @@ const EmptyChart = ({ message }) => (
   </div>
 );
 
-const ChartSection = ({
-  title,
-  chart,
-  hasData,
-  showLegend,
-  onToggleLegend,
-  description,
-}) => (
+const ChartSection = ({ title, chart, hasData, showLegend, onToggleLegend, description, summaryData }) => (
   <div className="space-y-2">
     <h3 className="text-lg font-semibold text-custom-dark">{title}</h3>
     <p>{description}</p>
+    {summaryData && (
+      <div className="space-y-2">
+        <div className="flex items-center gap-2 text-custom-dark">
+          <TrendingUp className="h-4 w-4" />
+          <span className="font-semibold text-sm">Resumen de movilización</span>
+        </div>
+        <div className="text-sm text-custom-dark space-y-1">
+          <div className="flex justify-between">
+            <span>Cantidad:</span>
+            <span className="font-medium">{summaryData.count || 0}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Porcentaje del total:</span>
+            <span className="font-medium">{formatValue(summaryData.percentage)}%</span>
+          </div>
+          {summaryData.by_destination_type && (
+            <div className="pt-1 border-t border-gray-200 mt-1">
+              <div className="text-xs uppercase text-gray-500 mb-1">Tipos:</div>
+              {Object.entries(summaryData.by_destination_type).map(([type, data]) => (
+                <div key={type} className="flex justify-between text-xs">
+                  <span>{translateDestinationType(type)}:</span>
+                  <span>{data.count} ({formatValue(data.percentage_of_total)}%)</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    )}
     {hasData ? (
       <>
-        <Chart
-          options={chart.options}
-          series={chart.series}
-          type="bar"
-          height={CHART_CONFIG.height}
-        />
+        <Chart options={chart.options} series={chart.series} type="bar" height={CHART_CONFIG.height} />
         <div className="flex justify-end">
-          <ToggleButton
-            isVisible={showLegend}
-            onToggle={onToggleLegend}
-            label="leyendas"
-          />
+          <ToggleButton isVisible={showLegend} onToggle={onToggleLegend} label="leyendas" />
         </div>
       </>
     ) : (
@@ -157,7 +107,6 @@ const ChartSection = ({
   </div>
 );
 
-// Componente para la información de alertas
 const AlertSection = ({ risks }) => (
   <div className="space-y-3">
     <SectionHeader icon={AlertTriangle} title="Alertas" />
@@ -176,95 +125,50 @@ const AlertSection = ({ risks }) => (
   </div>
 );
 
-// Componente para información ambiental
 const EnvironmentalSection = ({ riskObj }) => (
   <div className="space-y-4">
-    {/* Deforestación */}
     <div className="space-y-2">
       <SectionHeader icon={Trees} title="Deforestación" />
       <div className="space-y-1 text-sm text-custom-dark">
-        <InfoItem
-          label="Proporción"
-          value={(riskObj?.deforestation?.prop * 100)?.toFixed(1)}
-          suffix="%"
-        />
-        <InfoItem
-          label="Área"
-          value={`${riskObj?.deforestation?.ha?.toFixed(1)} ha`}
-        />
+        <InfoItem label="Proporción" value={(riskObj?.deforestation?.prop * 100)?.toFixed(1)} suffix="%" />
+        <InfoItem label="Área" value={`${riskObj?.deforestation?.ha?.toFixed(1)} ha`} />
       </div>
     </div>
-
-    {/* Área Protegida */}
     <div className="space-y-2">
       <SectionHeader icon={Shield} title="Área protegida" />
       <div className="space-y-1 text-sm text-custom-dark">
-        <InfoItem
-          label="Proporción"
-          value={(riskObj?.protected?.prop * 100)?.toFixed(1)}
-          suffix="%"
-        />
-
-        <InfoItem
-          label="Área"
-          value={`${riskObj?.protected?.ha?.toFixed(1)} ha`}
-        />
+        <InfoItem label="Proporción" value={(riskObj?.protected?.prop * 100)?.toFixed(1)} suffix="%" />
+        <InfoItem label="Área" value={`${riskObj?.protected?.ha?.toFixed(1)} ha`} />
       </div>
     </div>
-
-    {/* Frontera Agrícola (unificada) */}
     <div className="space-y-2">
       <SectionHeader icon={Sprout} title="Frontera agrícola" />
-
-      {/* Dentro de frontera */}
       <div className="space-y-1 text-sm text-custom-dark">
-        <div className="text-xs uppercase text-gray-500">
-          Dentro de frontera
-        </div>
-        <InfoItem
-          label="Proporción"
-          value={(riskObj?.farming_in?.prop * 100)?.toFixed(1)}
-          suffix="%"
-        />
-        <InfoItem
-          label="Área"
-          value={`${riskObj?.farming_in?.ha?.toFixed(1)} ha`}
-        />
+        <div className="text-xs uppercase text-gray-500">Dentro de frontera</div>
+        <InfoItem label="Proporción" value={(riskObj?.farming_in?.prop * 100)?.toFixed(1)} suffix="%" />
+        <InfoItem label="Área" value={`${riskObj?.farming_in?.ha?.toFixed(1)} ha`} />
       </div>
-
-      {/* Fuera de frontera */}
       <div className="space-y-1 text-sm text-custom-dark">
         <div className="text-xs uppercase text-gray-500">Fuera de frontera</div>
-        <InfoItem
-          label="Proporción"
-          value={(riskObj?.farming_out?.prop * 100)?.toFixed(1)}
-          suffix="%"
-        />
-        <InfoItem
-          label="Área"
-          value={`${riskObj?.farming_out?.ha?.toFixed(1)} ha`}
-        />
+        <InfoItem label="Proporción" value={(riskObj?.farming_out?.prop * 100)?.toFixed(1)} suffix="%" />
+        <InfoItem label="Área" value={`${riskObj?.farming_out?.ha?.toFixed(1)} ha`} />
       </div>
     </div>
   </div>
 );
 
-// Componente para mostrar el resumen de movimientos
 const MovementSummarySection = ({ summary }) => {
   if (!summary) return null;
-  
   return (
     <div className="space-y-3 mt-4">
       <SectionHeader icon={MapIcon} title="Resumen de Movilizaciones" />
       <div className="space-y-1 text-sm text-custom-dark">
         <InfoItem label="Total movimientos" value={summary.total_movements || 0} />
-        
         {summary.inputs && (
           <div className="mt-2">
             <div className="text-xs uppercase text-gray-500">Entradas</div>
             <InfoItem label="Cantidad" value={summary.inputs.count || 0} />
             <InfoItem label="Porcentaje" value={formatValue(summary.inputs.percentage)} suffix="%" />
-            
             {summary.inputs.by_destination_type && (
               <div className="mt-1 ml-2">
                 {Object.entries(summary.inputs.by_destination_type).map(([type, data]) => (
@@ -277,13 +181,11 @@ const MovementSummarySection = ({ summary }) => {
             )}
           </div>
         )}
-        
         {summary.outputs && (
           <div className="mt-2">
             <div className="text-xs uppercase text-gray-500">Salidas</div>
             <InfoItem label="Cantidad" value={summary.outputs.count || 0} />
             <InfoItem label="Porcentaje" value={formatValue(summary.outputs.percentage)} suffix="%" />
-            
             {summary.outputs.by_destination_type && (
               <div className="mt-1 ml-2">
                 {Object.entries(summary.outputs.by_destination_type).map(([type, data]) => (
@@ -301,20 +203,10 @@ const MovementSummarySection = ({ summary }) => {
   );
 };
 
-// Componente principal para cada farm
 const FarmCard = ({
-  farm,
-  farmData,
-  riskData,
-  getFarmRiskLevels,
-  buildChartData,
-  legendEntradaMap,
-  legendSalidaMap,
-  toggleLegend,
-  yearStart,
-  yearEnd,
+  farm, farmData, riskData, getFarmRiskLevels, buildChartData,
+  legendEntradaMap, legendSalidaMap, toggleLegend, yearStart, yearEnd,
 }) => {
-  // La nueva estructura tiene inputs.statistics.species directamente (sin año)
   const statsEntrada = farmData?.inputs?.statistics;
   const statsSalida = farmData?.outputs?.statistics;
   const showLegendEntrada = legendEntradaMap[farm.id] || false;
@@ -323,7 +215,6 @@ const FarmCard = ({
   const entradaChart = statsEntrada?.species
     ? buildChartData(statsEntrada.species, "Entradas", showLegendEntrada)
     : null;
-
   const salidaChart = statsSalida?.species
     ? buildChartData(statsSalida.species, "Salidas", showLegendSalida)
     : null;
@@ -331,19 +222,15 @@ const FarmCard = ({
   const label = getFarmLabel(farm);
   const riskObj = riskData[farm.id];
   const risks = getFarmRiskLevels(farm.id);
-
   const hasEntrada = entradaChart?.series[0]?.data?.some((d) => d > 0);
   const hasSalida = salidaChart?.series[0]?.data?.some((d) => d > 0);
 
   return (
     <div className="bg-custom border-b border-[#082C14] p-6 m-10">
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* PANEL IZQUIERDO - Información del predio */}
         <div className="w-full lg:w-1/3">
           <div className="grid grid-cols-2 gap-4">
-            {/* COLUMNA 1: Predio y Alertas */}
             <div className="space-y-4">
-              {/* Título del predio */}
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-custom-dark">
                   <div className="w-4 h-4 bg-custom-dark rounded-full"></div>
@@ -351,43 +238,26 @@ const FarmCard = ({
                 </div>
                 <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
                   <Calendar className="h-4 w-4" />
-                  <span>
-                    Periodo: {String(yearStart).slice(0, 4)} -{" "}
-                    {String(yearEnd).slice(0, 4)}
-                  </span>
+                  <span>Periodo: {String(yearStart).slice(0, 4)} - {String(yearEnd).slice(0, 4)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
                   <Building2 className="h-4 w-4" />
-                  <span>
-                    Departamento: {riskObj?.department || "N/A"}
-                  </span>
+                  <span>Departamento: {riskObj?.department || "N/A"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
                   <MapIcon className="h-5 w-5" />
-                  <span>
-                    Municipio: {riskObj?.municipality || "N/A"}
-                  </span>
+                  <span>Municipio: {riskObj?.municipality || "N/A"}</span>
                 </div>
                 <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
                   <MapPin className="h-4 w-4" />
-                  <span>
-                    vereda: {riskObj?.vereda || "N/A"}
-                  </span>
+                  <span>vereda: {riskObj?.vereda || "N/A"}</span>
                 </div>
               </div>
-
               <AlertSection risks={risks} />
-              
-              {/* Resumen de movilizaciones */}
-              <MovementSummarySection summary={farmData?.summary} />
             </div>
-
-            {/* COLUMNA 2: Información Ambiental */}
             <EnvironmentalSection riskObj={riskObj} />
           </div>
         </div>
-
-        {/* PANEL DERECHO - Gráficos */}
         <div className="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6">
           <ChartSection
             title="Movilización de entrada"
@@ -395,7 +265,8 @@ const FarmCard = ({
             hasData={hasEntrada}
             showLegend={showLegendEntrada}
             onToggleLegend={() => toggleLegend("entrada", farm.id)}
-            description="Muestra los ingresos al predio según las categorías del sector productivo. En ganadería, las movilizaciones se agrupan por edades del hato."
+            description="Muestra los ingresos al predio según las categorías del sector productivo."
+            summaryData={farmData?.summary?.inputs}
           />
           <ChartSection
             title="Movilización de salida"
@@ -403,7 +274,8 @@ const FarmCard = ({
             hasData={hasSalida}
             showLegend={showLegendSalida}
             onToggleLegend={() => toggleLegend("salida", farm.id)}
-            description="Indica los movimientos de salida desde el predio, clasificados por tipo de producción o grupo etario en el caso ganadero."
+            description="Indica los movimientos de salida desde el predio."
+            summaryData={farmData?.summary?.outputs}
           />
         </div>
       </div>
@@ -411,29 +283,15 @@ const FarmCard = ({
   );
 };
 
-export default function MovementCharts({
-  summary = {},
-  foundFarms = [],
-  riskFarm = {},
-  yearStart,
-  yearEnd,
-}) {
+export default function MovementCharts({ summary = {}, foundFarms = [], riskFarm = {}, yearStart, yearEnd }) {
   const [legendEntradaMap, setLegendEntradaMap] = useState({});
   const [legendSalidaMap, setLegendSalidaMap] = useState({});
-  
+
   const toggleLegend = (type, id) => {
-    const setterMap = {
-      entrada: setLegendEntradaMap,
-      salida: setLegendSalidaMap,
-    };
-    const setter = setterMap[type];
-    setter((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+    const setter = type === "entrada" ? setLegendEntradaMap : setLegendSalidaMap;
+    setter((prev) => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // buildChartData: soporta species como OBJETO { grupo: { subcat: { headcount, movements } } }
   const buildChartData = (speciesData, title, showLegend) => {
     const aggregated = {};
     const addToAgg = (label, value) => {
@@ -441,77 +299,38 @@ export default function MovementCharts({
       aggregated[label] = (aggregated[label] || 0) + v;
     };
 
-    if (!speciesData) {
-      return { options: {}, series: [{ name: title, data: [] }] };
-    }
+    if (!speciesData) return { options: {}, series: [{ name: title, data: [] }] };
 
     if (Array.isArray(speciesData)) {
-      // ARRAY: intenta usar 'subcategory' (si existe) y cae a 'name'
       for (const it of speciesData) {
         if (!it) continue;
-        const label = String(
-          it?.subcategory ??
-            it?.name ??
-            it?.species_name ??
-            it?.category ??
-            it?._id ??
-            it?.id ??
-            it?.species_id ??
-            "N/A"
-        );
-        const val =
-          (typeof it.headcount === "number" && it.headcount) ??
-          (typeof it.amount === "number" && it.amount) ??
-          (typeof it.total === "number" && it.total) ??
-          0;
+        const label = String(it?.subcategory ?? it?.name ?? it?.species_name ?? it?.category ?? "N/A");
+        const val = it.headcount ?? it.amount ?? it.total ?? 0;
         addToAgg(label, val);
       }
     } else if (typeof speciesData === "object") {
-      // OBJETO: { bovinos: { "MACHOS MAYORES A 3 ANIOS": { headcount: 493, movements: 11 } } }
       for (const [group, sub] of Object.entries(speciesData)) {
-        if (typeof sub === "number") {
-          addToAgg(group, sub);
-          continue;
-        }
+        if (typeof sub === "number") { addToAgg(group, sub); continue; }
         if (!sub || typeof sub !== "object") continue;
-
         for (const [subcat, values] of Object.entries(sub)) {
           if (!values || typeof values !== "object") continue;
-          const v =
-            (typeof values.headcount === "number" && values.headcount) ??
-            (typeof values.amount === "number" && values.amount) ??
-            (typeof values.total === "number" && values.total) ??
-            0;
+          const v = values.headcount ?? values.amount ?? values.total ?? 0;
           addToAgg(String(subcat), v);
         }
       }
     }
 
     const categories = Object.keys(aggregated);
-    const series = [
-      { name: title, data: categories.map((label) => aggregated[label]) },
-    ];
+    const series = [{ name: title, data: categories.map((l) => aggregated[l]) }];
 
     const options = {
-      chart: {
-        type: "bar",
-        height: 250,
-        toolbar: { show: false },
-        background: "transparent",
-      },
+      chart: { type: "bar", height: 250, toolbar: { show: false }, background: "transparent" },
       title: { text: "" },
-      xaxis: {
-        categories,
-        labels: { show: false, style: { colors: "#082C14" } },
-        axisTicks: { show: false },
-        axisBorder: { show: false },
-      },
+      xaxis: { categories, labels: { show: false } },
       yaxis: { labels: { style: { colors: "#082C14" } } },
-      colors: categories.map((_, i) => BASE_COLORS[i % BASE_COLORS.length]),
+      colors: categories.map((_, i) => MOVEMENT_CHART_COLORS[i % MOVEMENT_CHART_COLORS.length]),
       legend: { show: showLegend, labels: { colors: "#082C14" } },
-      plotOptions: {
-        bar: { distributed: true, borderRadius: 4, horizontal: false },
-      },
+      plotOptions: { bar: { distributed: true, borderRadius: 4, horizontal: false } },
       dataLabels: { enabled: false },
       tooltip: { x: { show: true }, theme: "light" },
       grid: { borderColor: "#f1f1f1", strokeDashArray: 3 },
@@ -520,13 +339,9 @@ export default function MovementCharts({
     return { options, series };
   };
 
-  // Memoizar datos de alerta para optimizar rendimiento
   const riskData = useMemo(() => {
     const flatRisk = Object.values(riskFarm || {}).flat();
-    return flatRisk.reduce((acc, risk) => {
-      acc[risk.farm_id] = risk;
-      return acc;
-    }, {});
+    return flatRisk.reduce((acc, risk) => { acc[risk.farm_id] = risk; return acc; }, {});
   }, [riskFarm]);
 
   const getFarmRiskLevels = (farmId) => {
@@ -543,7 +358,6 @@ export default function MovementCharts({
       {foundFarms.map((farm) => {
         const farmData = summary[farm.id];
         if (!farmData) return null;
-
         return (
           <FarmCard
             key={farm.id}

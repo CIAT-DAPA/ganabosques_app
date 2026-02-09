@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState, useCallback } from "react";
-import dynamic from "next/dynamic";
-import "leaflet/dist/leaflet.css";
 import FilterBar from "@/components/FilterBar";
 import { fetchRiskGlobal } from "@/services/apiService";
 import Adm3RiskTable from "@/components/Adm3RiskTable";
@@ -11,8 +9,6 @@ import EnterpriseRiskTable from "@/components/EnterpriseRiskTable";
 import { useAuth } from "@/hooks/useAuth";
 import { yearFromDateLike } from "@/utils";
 import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
-
-const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
 const CSS_CLASSES = {
   pageContainer: "min-h-screen bg-[#FCFFF5]",

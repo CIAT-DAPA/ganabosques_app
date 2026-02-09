@@ -16,7 +16,8 @@ import { useFarmRisk } from "@/hooks/useFarmRisk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { useEnterpriseMovementStats } from "@/hooks/useEnterpriseMovementStats";
 import { useMapState } from "@/hooks/useMapState";
-import { asYear, getEnterpriseIcon } from "@/components/shared";
+import { asYear } from "@/utils";
+import { getEnterpriseIcon } from "@/utils/mapUtils";
 import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 
 import { Marker, Popup, useMap } from "react-leaflet";

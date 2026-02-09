@@ -10,7 +10,7 @@ import {
   interpolatePoints,
   getArrowSpacing,
   getIconSize,
-} from "@/utils";
+} from "@/utils/mapUtils";
 
 // Animated arrow layer between two map points
 export default function ArrowLayer({

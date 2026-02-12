@@ -1,7 +1,7 @@
 "use client";
 
 import RiskDataTable from "./RiskDataTable";
-import { RiskChip, fmtNum, fmtProp, formatPeriod, getCodes, COLUMN_INFO } from "./shared";
+import { RiskChip, VerificationChip, fmtNum, fmtProp, formatPeriod, getCodes, COLUMN_INFO } from "./shared";
 
 // Transform farm risk data to flat rows
 function transformFarmData(data) {
@@ -23,6 +23,7 @@ function transformFarmData(data) {
         alerta_directa: item.risk_direct,
         alerta_entrada: item.risk_input,
         alerta_salida: item.risk_output,
+        verificacion: item.verification || null,
         deforestacion_ha: item.deforestation?.ha,
         deforestacion_prop: item.deforestation?.prop,
         area_protegida_ha: item.protected?.ha,
@@ -59,6 +60,11 @@ const FARM_COLUMNS = [
     key: "alerta_salida", 
     label: "Alerta Salida",
     render: (value) => <RiskChip hasRisk={value} title="Alerta Salida" />
+  },
+  {
+    key: "verificacion",
+    label: "Verificación",
+    render: (value) => <VerificationChip verification={value} />
   },
   { 
     key: "deforestacion_ha", 

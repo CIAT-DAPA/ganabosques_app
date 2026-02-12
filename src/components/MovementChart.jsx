@@ -9,7 +9,9 @@ import {
   MOVEMENT_CHART_COLORS,
   getAlertLevel,
   formatValue,
+  formatPeriod,
   translateDestinationType,
+  VerificationChip,
 } from "./shared";
 
 
@@ -107,7 +109,7 @@ const ChartSection = ({ title, chart, hasData, showLegend, onToggleLegend, descr
   </div>
 );
 
-const AlertSection = ({ risks }) => (
+const AlertSection = ({ risks, verification }) => (
   <div className="space-y-3">
     <SectionHeader icon={AlertTriangle} title="Alertas" />
     <div className="space-y-2">
@@ -121,6 +123,10 @@ const AlertSection = ({ risks }) => (
           <RiskBadge level={item.level} />
         </div>
       ))}
+      <div className="flex items-center justify-between pt-1 border-t border-gray-200 mt-1">
+        <span className="text-sm text-custom-dark">Verificación:</span>
+        <VerificationChip verification={verification} />
+      </div>
     </div>
   </div>
 );
@@ -238,7 +244,7 @@ const FarmCard = ({
                 </div>
                 <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
                   <Calendar className="h-4 w-4" />
-                  <span>Periodo: {String(yearStart).slice(0, 4)} - {String(yearEnd).slice(0, 4)}</span>
+                  <span>Periodo: {formatPeriod(yearStart, yearEnd)}</span>
                 </div>
                 <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
                   <Building2 className="h-4 w-4" />
@@ -253,7 +259,7 @@ const FarmCard = ({
                   <span>vereda: {riskObj?.vereda || "N/A"}</span>
                 </div>
               </div>
-              <AlertSection risks={risks} />
+              <AlertSection risks={risks} verification={riskObj?.verification} />
             </div>
             <EnvironmentalSection riskObj={riskObj} />
           </div>

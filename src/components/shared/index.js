@@ -1,5 +1,6 @@
 // Shared React components
 export { default as RiskChip } from "./RiskChip";
+export { default as VerificationChip } from "./VerificationChip";
 export { default as ExpandableCodeCell } from "./ExpandableCodeCell";
 export { default as SortIcon } from "./SortIcon";
 export { default as InfoTooltip, COLUMN_INFO } from "./InfoTooltip";

@@ -50,7 +50,7 @@ export default function FarmRiskMap() {
   // Data fetching hooks
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period, risk);
   useFarmPolygons(foundFarms, setFarmPolygons, setPendingTasks, setOriginalMovement);
-  useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
+  useFarmRisk(period, foundFarms, setRiskFarm, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
 
   // Wrapped ADM search with mapRef

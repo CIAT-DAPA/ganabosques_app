@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { fetchFarmRiskByAnalysisAndFarm } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
 
-export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) {
+export function useFarmRisk(period, foundFarms, setRiskFarm, setPendingTasks) {
   const { token } = useAuth();
 
   useEffect(() => {
@@ -12,7 +12,9 @@ export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) 
       return;
     }
 
-    if (!Array.isArray(analysis) || analysis.length === 0) {
+    const analysisId = period?.id;
+
+    if (!analysisId) {
       setRiskFarm([]);
       return;
     }
@@ -22,10 +24,9 @@ export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) 
       return;
     }
 
-    const analysisId = analysis[0]?.id;
     const farmIds = foundFarms.map((f) => f?.id).filter(Boolean);
 
-    if (!analysisId || farmIds.length === 0) {
+    if (farmIds.length === 0) {
       setRiskFarm([]);
       return;
     }
@@ -54,5 +55,5 @@ export function useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks) 
     return () => {
       cancelled = true;
     };
-  }, [analysis, foundFarms, token, setRiskFarm, setPendingTasks]);
+  }, [period, foundFarms, token, setRiskFarm, setPendingTasks]);
 }

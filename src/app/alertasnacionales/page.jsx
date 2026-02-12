@@ -6,7 +6,6 @@ import "leaflet/dist/leaflet.css";
 import { useAuth } from "@/hooks/useAuth";
 import UnauthorizedPage from "@/components/Unauthorized";
 
-// Importación dinámica del componente Map
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
 });
@@ -22,17 +21,16 @@ const CSS_CLASSES = {
 };
 
 export default function RiesgosNacionales() {
-  // Configurar el título de la página
   useEffect(() => {
     document.title = "Ganabosques - Alertas nacionales";
   }, []);
 const { validatedPayload } = useAuth();
- if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
-return <UnauthorizedPage />;
-  }
+
+if (!validatedPayload?.user_db?.admin) {
+  return <UnauthorizedPage />;
+}
   return (
     <main className={CSS_CLASSES.pageContainer}>
-      {/* Sección de encabezado */}
       <header className={CSS_CLASSES.headerSection}>
         <div className={CSS_CLASSES.contentWrapper}>
           <h1 className={CSS_CLASSES.title}>Alertas nacionales</h1>

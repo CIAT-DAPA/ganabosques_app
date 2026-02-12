@@ -153,8 +153,9 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast,
           return;
         }
 
+        const labelSource = activity === "cacao" ? "GEOFARMER_ID" : "SIT_CODE";
         const updatedFarms = data.map((f) => {
-          const code = f.ext_id.find((ext) => ext.source === "SIT_CODE")?.ext_code;
+          const code = f.ext_id.find((ext) => ext.source === labelSource)?.ext_code;
           return { id: f.id, code };
         });
 

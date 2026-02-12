@@ -109,9 +109,10 @@ export async function fetchYearRanges(token, source, type) {
 // Farm APIs
 export async function fetchFarmBySITCode(token, code, valueChain = null) {
   const vc = valueChain ? VALUE_CHAIN_MAP[valueChain] || valueChain : null;
-  let endpoint = `farm/by-extid?ext_codes=${code}&labels=SIT_CODE`;
+  const label = vc === "cacao" ? "GEOFARMER_ID" : "SIT_CODE";
+  let endpoint = `farm/by-extid?ext_codes=${code}&labels=${label}`;
   if (vc) endpoint += `&value_chain=${vc}`;
-  return authGet(token, endpoint, "Error de red al buscar el SIT CODE");
+  return authGet(token, endpoint, `Error de red al buscar el ${label}`);
 }
 
 export async function fetchFarmPolygonsByIds(token, ids) {

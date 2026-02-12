@@ -27,9 +27,10 @@ export default function RiesgosPredios() {
   }, []);
 
 const { validatedPayload } = useAuth();
- if (!validatedPayload || !validatedPayload?.client_roles?.includes('Admin')) {
-return <UnauthorizedPage />;
-  }
+
+if (!validatedPayload?.user_db?.admin) {
+  return <UnauthorizedPage />;
+}
   return (
     <main className={CSS_CLASSES.pageContainer}>
       {/* Sección de encabezado */}

@@ -15,11 +15,28 @@ export const fmtProp = (value) => {
   return `${(Number(value) * 100).toFixed(0)}%`;
 };
 
-// Format date range as "YYYY - YYYY"
+// Format date range as "YYYY - YYYY" or "YYYY-Q#" for quarterly periods (atd/nad)
 export const formatPeriod = (start, end) => {
-  const ys = start ? new Date(start).getFullYear() : "";
-  const ye = end ? new Date(end).getFullYear() : "";
-  return ys && ye ? `${ys} - ${ye}` : ys || ye || "—";
+  if (!start && !end) return "—";
+  const ds = start ? new Date(start) : null;
+  const de = end ? new Date(end) : null;
+
+  // Use UTC to avoid timezone drift
+  const ys = ds && !isNaN(ds.getTime()) ? ds.getUTCFullYear() : null;
+  const ye = de && !isNaN(de.getTime()) ? de.getUTCFullYear() : null;
+  const ms = ds && !isNaN(ds.getTime()) ? ds.getUTCMonth() : null;
+  const me = de && !isNaN(de.getTime()) ? de.getUTCMonth() : null;
+
+  // Detect quarterly period: same year and span <= 4 months
+  if (ys != null && ye != null && ys === ye && ms != null && me != null) {
+    const diffMonths = me - ms + 1;
+    if (diffMonths <= 4) {
+      const quarter = Math.ceil((ms + 1) / 3);
+      return `${ys}0${quarter}`;
+    }
+  }
+
+  return ys != null && ye != null ? `${ys} - ${ye}` : String(ys || ye || "—");
 };
 
 // Extract external codes from ext_id array

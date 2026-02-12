@@ -72,12 +72,17 @@ export default function Header() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Roles
-  const isAdmin =
-    Array.isArray(validatedPayload?.client_roles) &&
-    validatedPayload.client_roles.includes("Admin");
-  const canAccess = (loginRequired) =>
-    !loginRequired || (token && isAdmin);
+  const userDb = validatedPayload?.user_db ?? null;
+
+  const isAdmin = userDb?.admin === true;
+
+  const canAccess = (loginRequired) => {
+    if (!loginRequired) return true;   
+    if (!token) return false;          
+    if (!userDb) return false;         
+    return isAdmin;                    
+  };
+
 
   // Iniciales de usuario
   const getUserInitials = () => {

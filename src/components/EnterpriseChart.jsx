@@ -293,11 +293,10 @@ function EnterpriseCard({
 
   // Format period label based on risk type
   const periodLabel = useMemo(() => {
-    // For ATD/NAD, show quarterly format (YYYY0Q)
+    // For ATD/NAD, show quarterly format (YYYY-Q#)
     if (risk === "atd" || risk === "nad") {
       const formatQuarterly = (val) => {
         if (!val) return "";
-        // If yearStart/yearEnd are already in YYYY-MM-DD format strings
         const d = new Date(val);
         if (isNaN(d.getTime())) return val;
         const y = d.getUTCFullYear();

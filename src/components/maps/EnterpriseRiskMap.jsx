@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import EnterpriseChart from "@/components/EnterpriseChart";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
 import EnterpriseMovementLayers from "./EnterpriseMovementLayers";
-import { searchAdmByName, getEnterpriseRiskDetails } from "@/services/apiService";
+import { getEnterpriseRiskDetails } from "@/services/apiService";
 import { useFilteredMovement } from "@/hooks/useFilteredMovement";
 import { useMovementStats } from "@/hooks/useMovementStats";
 import { useFarmPolygons } from "@/hooks/useFarmPolygons";
@@ -16,14 +16,14 @@ import { useFarmRisk } from "@/hooks/useFarmRisk";
 import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { useEnterpriseMovementStats } from "@/hooks/useEnterpriseMovementStats";
 import { useMapState } from "@/hooks/useMapState";
+import { useLoadingState } from "@/hooks/useLoadingState";
+import { useFilterState } from "@/hooks/useFilterState";
 import { asYear } from "@/utils";
 import { getEnterpriseIcon } from "@/utils/mapUtils";
 import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
 
 import { Marker, Popup, useMap } from "react-leaflet";
-import { useAuth } from "@/hooks/useAuth";
 
-// Utils
 function getEnterprisesArray(enterpriseDetails) {
   if (!enterpriseDetails) return [];
   if (Array.isArray(enterpriseDetails)) return enterpriseDetails;
@@ -38,7 +38,6 @@ function hasProviderAlert(p = {}) {
   return r?.risk_direct === true || r?.risk_input === true || r?.risk_output === true;
 }
 
-// Overlays component
 function EnterpriseOverlays({ enterpriseDetails }) {
   const map = useMap();
 
@@ -101,30 +100,26 @@ function EnterpriseOverlays({ enterpriseDetails }) {
   );
 }
 
-
-
-// Main component
 export default function EnterpriseMap() {
-  const { token } = useAuth();
   const { mapRef, handleMapCreated } = useMapState();
+  const { loading, setPendingTasks } = useLoadingState();
+  const {
+    risk, setRisk,
+    year, setYear,
+    period, setPeriod,
+    source, setSource,
+    search, setSearch,
+    selectedEnterprise, setSelectedEnterprise,
+    foundFarms, setFoundFarms,
+    foundAdms, setFoundAdms,
+    admLevel, setAdmLevel,
+    yearStart, yearEnd,
+    handleYearStartEndChange,
+    handleAdmSearch,
+    token,
+  } = useFilterState();
 
-  // Filter states
-  const [risk, setRisk] = useState(RISK_OPTIONS[0]?.value || "");
-  const [year, setYear] = useState("");
-  const [period, setPeriod] = useState("");
-  const [source, setSource] = useState("smbyc");
-  const [search, setSearch] = useState("");
-  const [selectedEnterprise, setSelectedEnterprise] = useState([]);
-  const [foundFarms, setFoundFarms] = useState([]);
-  const [foundAdms, setFoundAdms] = useState([]);
-  const [admLevel, setAdmLevel] = useState("adm1");
-  const [admResults, setAdmResults] = useState([]);
-
-  const [yearStart, setYearStart] = useState(2023);
-  const [yearEnd, setYearEnd] = useState(2024);
   const [originalMovement, setOriginalMovement] = useState(null);
-  const [loading, setLoading] = useState(false);
-  const [pendingTasks, setPendingTasks] = useState(0);
   const [analysis, setAnalysis] = useState(null);
   const [riskFarm, setRiskFarm] = useState(null);
   const [enterpriseDetails, setEnterpriseDetails] = useState(null);
@@ -132,10 +127,9 @@ export default function EnterpriseMap() {
   const movement = useFilteredMovement(originalMovement);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period, risk);
   useFarmPolygons(foundFarms, setPendingTasks, setOriginalMovement);
-  useFarmRisk(analysis, foundFarms, setRiskFarm, setPendingTasks);
+  useFarmRisk(period, foundFarms, setRiskFarm, setPendingTasks);
   useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
 
-  // Enterprise movement stats
   const enterpriseIds = useMemo(() => {
     return Array.isArray(selectedEnterprise)
       ? selectedEnterprise.map((e) => e?.id).filter(Boolean)
@@ -143,37 +137,14 @@ export default function EnterpriseMap() {
   }, [selectedEnterprise]);
   const enterpriseMovementStats = useEnterpriseMovementStats(enterpriseIds, period, risk, setPendingTasks);
 
-  useEffect(() => setLoading(pendingTasks > 0), [pendingTasks]);
-
-  const handleAdmSearch = useCallback(
-    async (searchText, level) => {
-      try {
-        if (!token) return;
-        const results = await searchAdmByName(token, searchText, level);
-        if (!results || results.length === 0) return;
-        setAdmResults(results);
-        const geometry = results[0]?.geometry;
-        if (geometry && mapRef.current) {
-          const Lm = await import("leaflet");
-          const layer = Lm.geoJSON(geometry);
-          mapRef.current.fitBounds(layer.getBounds());
-        }
-      } catch (err) {
-        console.error("Error al buscar nivel administrativo:", err);
-      }
-    },
-    [token, mapRef]
+  const onAdmSearch = useCallback(
+    (text, level) => handleAdmSearch(text, level, mapRef),
+    [handleAdmSearch, mapRef]
   );
-
-  const handleYearStartEndChange = useCallback((start, end) => {
-    setYearStart(start);
-    setYearEnd(end);
-  }, []);
 
   const yearStartVal = asYear(yearStart);
   const yearEndVal = asYear(yearEnd);
 
-  // Fetch enterprise details
   useEffect(() => {
     if (!token) {
       setEnterpriseDetails(null);
@@ -208,13 +179,12 @@ export default function EnterpriseMap() {
     return () => {
       cancelled = true;
     };
-  }, [year, selectedEnterprise, token]);
+  }, [year, selectedEnterprise, token, setPendingTasks]);
 
   const hasEnterpriseData =
     Array.isArray(getEnterprisesArray(enterpriseDetails)) &&
     getEnterprisesArray(enterpriseDetails).length > 0;
 
-  
   return (
     <>
       <div id="enterprise-risk-export">
@@ -238,7 +208,7 @@ export default function EnterpriseMap() {
             setFoundFarms={setFoundFarms}
             admLevel={admLevel}
             setAdmLevel={setAdmLevel}
-            onAdmSearch={handleAdmSearch}
+            onAdmSearch={onAdmSearch}
             foundAdms={foundAdms}
             setFoundAdms={setFoundAdms}
             onYearStartEndChange={handleYearStartEndChange}

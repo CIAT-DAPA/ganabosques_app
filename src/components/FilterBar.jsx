@@ -165,6 +165,7 @@ export default function FilterBar({
             source={source}
             setToast={setToast}
             enterpriseLoading={enterpriseLoading}
+            activity={activity}
           />
 
           <FilterChips

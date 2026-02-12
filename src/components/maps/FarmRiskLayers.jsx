@@ -2,6 +2,7 @@
 
 import { GeoJSON, Popup } from "react-leaflet";
 import proj4 from "proj4";
+import { useMapFiltersOptional } from "@/contexts/MapFiltersContext";
 
 // Definiciones de CRS
 proj4.defs(
@@ -86,6 +87,10 @@ function reprojectGeoJSON3116to4326(geojson) {
 }
 
 export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
+  const ctx = useMapFiltersOptional();
+  const activity = ctx?.activity;
+  const codeLabel = activity === "cacao" ? "GEOFARMER_ID" : "Código SIT";
+
   if (!riskFarm || !farmPolygons) return null;
 
   const renderFarmRiskPolygons = (polygons, farmRiskData, foundFarmsList = []) => {
@@ -129,7 +134,7 @@ export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
             <div className="p-3 bg-white text-sm space-y-1">
               <div className="font-semibold text-green-700">Finca</div>
               <div>
-                <span className="font-medium">Código SIT:</span> {sitCode || "N/A"}
+                <span className="font-medium">{codeLabel}:</span> {sitCode || "N/A"}
               </div>
               <div>
                 <span className="font-medium">Alerta Directa:</span>{" "}

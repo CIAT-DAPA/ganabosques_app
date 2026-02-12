@@ -26,6 +26,7 @@ export default function SearchBar({
   year,
   source,
   setToast,
+  activity,
 }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -37,7 +38,7 @@ export default function SearchBar({
     x?.name ?? x?.label ?? String(getEntId(x));
 
   const getPlaceholder = () => {
-    if (farmRisk) return "Buscar SIT CODE";
+    if (farmRisk) return activity === "cacao" ? "Buscar GEOFARMER_ID" : "Buscar SIT CODE";
     if (enterpriseRisk) return "Buscar empresa";
     return "Buscar sitio";
   };

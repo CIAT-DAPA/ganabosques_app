@@ -7,7 +7,6 @@ import RiskLegend from "@/components/Legend";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
 import RiskDataTable from "@/components/RiskDataTable";
-import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { fetchFarmRiskByAnalysisId } from "@/services/apiService";
 import { useMapState } from "@/hooks/useMapState";
 import { useLoadingState } from "@/hooks/useLoadingState";
@@ -16,7 +15,7 @@ import { MapPin } from "lucide-react";
 import { GeoJSON, Popup } from "react-leaflet";
 import L from "leaflet";
 import { RiskChip, fmtNum, fmtProp, InfoTooltip, COLUMN_INFO } from "@/components/shared";
-import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
+import { RISK_OPTIONS, useMapFiltersOptional } from "@/contexts/MapFiltersContext";
 
 const COLOR_RISK = "#D50000";
 const COLOR_OK = "#00C853";
@@ -57,6 +56,8 @@ const getItemValue = (item, key) => {
 export default function DashboardMap() {
   const { mapRef, handleMapCreated } = useMapState();
   const { loading, setPendingTasks } = useLoadingState();
+  const ctx = useMapFiltersOptional();
+  const activity = ctx?.activity || "ganaderia";
   const {
     risk, setRisk,
     year, setYear,
@@ -69,7 +70,6 @@ export default function DashboardMap() {
     token,
   } = useFilterState();
 
-  const [analysis, setAnalysis] = useState(null);
   const [tableData, setTableData] = useState([]);
   const [total, setTotal] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
@@ -77,17 +77,8 @@ export default function DashboardMap() {
   const [selectedPolygons, setSelectedPolygons] = useState(new Map());
   const [recordsPerPage, setRecordsPerPage] = useState(20);
 
-  useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
-
-  const analysisId = useMemo(() => {
-    if (!analysis) return null;
-    if (Array.isArray(analysis) && analysis.length > 0) {
-      return analysis[0]?.id || analysis[0]?.analysis_id;
-    }
-    if (analysis?.id) return analysis.id;
-    if (analysis?.analysis_id) return analysis.analysis_id;
-    return null;
-  }, [analysis]);
+  // period.id is the analysisId for the endpoint
+  const analysisId = period?.id || null;
 
   useEffect(() => {
     if (!token || !analysisId) return;
@@ -210,7 +201,7 @@ export default function DashboardMap() {
   const columns = useMemo(() => [
     {
       key: "ext_id",
-      label: "SIT CODE",
+      label: activity === "cacao" ? "GEOFARMER_ID" : "SIT CODE",
       sortable: true,
       highlight: true,
       getValue: (row) => getItemValue(row, "ext_id"),
@@ -323,7 +314,7 @@ export default function DashboardMap() {
         );
       },
     },
-  ], [selectedPolygons, handleViewOnMap]);
+  ], [selectedPolygons, handleViewOnMap, activity]);
 
   const sortedTableData = useMemo(() => {
     if (!tableData.length) return [];

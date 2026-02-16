@@ -71,6 +71,18 @@ export const useYearRanges = (
 
         const arr = Array.isArray(data) ? data : [];
         setYearRanges(arr);
+
+        // Auto-select first period when yearRanges reload (activity/source/risk change)
+        if (arr.length > 0) {
+          const first = arr[0];
+          setYear?.(String(first.id));
+          setPeriod?.(first);
+          onYearStartEndChange?.(first.deforestation_period_start, first.deforestation_period_end);
+        } else {
+          setYear?.("");
+          setPeriod?.("");
+          onYearStartEndChange?.(null, null);
+        }
       } catch (err) {
         if (!aborted) {
           setError("Error al cargar años disponibles");

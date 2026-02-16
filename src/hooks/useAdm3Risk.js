@@ -2,21 +2,14 @@ import { useEffect } from "react";
 import { fetchAdm3RisksByAnalysisAndAdm3 } from "@/services/apiService";
 import { useAuth } from "@/hooks/useAuth";
 
-export function useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks) {
+export function useAdm3Risk(period, foundAdms, setAdm3Risk, setPendingTasks) {
   const { token } = useAuth();
 
   useEffect(() => {
     if (!token) return;
 
-    if (
-      !Array.isArray(analysis) || analysis.length === 0 ||
-      !Array.isArray(foundAdms) || foundAdms.length === 0
-    ) {
-      return;
-    }
-
-    const analysisId = analysis[0]?.id;
-    const adm3Ids = foundAdms.map((adm) => adm.id).filter(Boolean);
+    const analysisId = period?.id;
+    const adm3Ids = (foundAdms || []).map((adm) => adm.id).filter(Boolean);
 
     if (!analysisId || adm3Ids.length === 0) return;
 
@@ -45,5 +38,5 @@ export function useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks) {
     return () => {
       cancelled = true;
     };
-  }, [analysis, foundAdms, token, setAdm3Risk, setPendingTasks]);
+  }, [period, foundAdms, token, setAdm3Risk, setPendingTasks]);
 }

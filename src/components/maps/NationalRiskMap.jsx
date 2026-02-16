@@ -7,7 +7,6 @@ import FilterBar from "@/components/FilterBar";
 import RiskLegend from "@/components/Legend";
 import LoadingSpinner from "@/components/LoadingSpinner";
 import { useAdm3Risk } from "@/hooks/useAdm3Risk";
-import { useDeforestationAnalysis } from "@/hooks/useDeforestationAnalysis";
 import { useAdm3Details } from "@/hooks/useAdm3Details";
 import { useMapState } from "@/hooks/useMapState";
 import { useLoadingState } from "@/hooks/useLoadingState";
@@ -38,16 +37,14 @@ export default function NationalRiskMap() {
   } = useFilterState();
 
   // National-specific state
-  const [analysis, setAnalysis] = useState(null);
   const [adm3Risk, setAdm3Risk] = useState(null);
   const [adm3Details, setAdm3Details] = useState([]);
   const [popupData, setPopupData] = useState(null);
   const [lastCenteredExtId, setLastCenteredExtId] = useState(null);
   const [adm3RiskHistory, setAdm3RiskHistory] = useState([]);
 
-  // Data hooks
-  useAdm3Risk(analysis, foundAdms, setAdm3Risk, setPendingTasks);
-  useDeforestationAnalysis(period, setAnalysis, setPendingTasks);
+  // Data hooks — period.id is the analysisId for the adm3 endpoint
+  useAdm3Risk(period, foundAdms, setAdm3Risk, setPendingTasks);
   useAdm3Details(adm3Risk, setAdm3Details, setPendingTasks);
 
   const prevIdsRef = useRef([]);

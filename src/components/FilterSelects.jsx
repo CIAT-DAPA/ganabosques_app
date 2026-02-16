@@ -55,8 +55,8 @@ export default function FilterSelects({
   const sourceOptions = useMemo(() => [{ value: "smbyc", label: "SMBYC" }], []);
 
   const activityOptions = useMemo(() => [
-    { value: "cacao", label: "Cacao" },
     { value: "ganaderia", label: "Ganadería" },
+    { value: "cacao", label: "Cacao" },
   ], []);
 
   const yearOptions = useMemo(() =>

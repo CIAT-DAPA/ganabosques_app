@@ -97,7 +97,10 @@ export const useYearRanges = (
     return () => {
       aborted = true;
     };
-  }, [token, source, risk, activity, year, setYear, setPeriod, onYearStartEndChange]);
+  // NOTE: `year` is intentionally excluded — this hook *sets* year, so including it
+  // would cause a re-fetch loop (especially noticeable on first login).
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, source, risk, activity, setYear, setPeriod, onYearStartEndChange]);
 
   return { yearRanges, loading, error };
 };

@@ -12,6 +12,7 @@ import { useMapState } from "@/hooks/useMapState";
 import { useLoadingState } from "@/hooks/useLoadingState";
 import { useFilterState } from "@/hooks/useFilterState";
 import NationalRiskLayers from "./NationalRiskLayers";
+import { useMapFiltersOptional } from "@/contexts/MapFiltersContext";
 import NationalNavigationHelpers from "./NationalNavigationHelpers";
 import { fetchAdm3RiskByAdm3AndType } from "@/services/apiService";
 import Adm3HistoricalRisk from "@/components/Adm3HistoricalRisk";
@@ -35,6 +36,9 @@ export default function NationalRiskMap() {
     handleAdmSearch,
     token,
   } = useFilterState();
+
+  const ctx = useMapFiltersOptional();
+  const activity = ctx?.activity || "ganaderia";
 
   // National-specific state
   const [adm3Risk, setAdm3Risk] = useState(null);
@@ -86,7 +90,7 @@ export default function NationalRiskMap() {
       setPendingTasks((v) => v + 1);
       (async () => {
         try {
-          const data = await fetchAdm3RiskByAdm3AndType(token, currIds, risk);
+          const data = await fetchAdm3RiskByAdm3AndType(token, currIds, risk, activity);
           setAdm3RiskHistory(Object.values(data || {}));
         } finally {
           setPendingTasks((v) => v - 1);
@@ -105,7 +109,7 @@ export default function NationalRiskMap() {
       setPendingTasks((v) => v + 1);
       (async () => {
         try {
-          const data = await fetchAdm3RiskByAdm3AndType(token, added, risk);
+          const data = await fetchAdm3RiskByAdm3AndType(token, added, risk, activity);
           setAdm3RiskHistory((prev) => [...prev, ...Object.values(data || {})]);
         } finally {
           setPendingTasks((v) => v - 1);
@@ -114,7 +118,7 @@ export default function NationalRiskMap() {
     }
 
     prevIdsRef.current = currIds;
-  }, [foundAdms, risk, adm3RiskHistory.length, token, setPendingTasks]);
+  }, [foundAdms, risk, adm3RiskHistory.length, token, setPendingTasks, activity]);
 
   return (
     <>

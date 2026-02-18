@@ -22,13 +22,16 @@ import {
   formatHa,
 } from "./shared";
 
-// Get ext code by source
+// Get ext code by source — prefer given source, fallback to first available
 function getExtCodeBySource(item, source = "SIT_CODE") {
-  const arr = item?.ext_id || item?.extId || [];
-  const found = Array.isArray(arr)
-    ? arr.find((e) => e?.source === source || e?.label === source)
-    : null;
-  return found?.ext_code ?? null;
+  const arr = Array.isArray(item?.ext_id || item?.extId)
+    ? (item?.ext_id || item?.extId)
+    : [];
+  const found = arr.find((e) => e?.source === source || e?.label === source);
+  if (found?.ext_code) return { code: found.ext_code, source };
+  // Fallback to first available ext_code
+  const first = arr.find((e) => e?.ext_code);
+  return first ? { code: first.ext_code, source: first.source || first.label || "ID" } : null;
 }
 
 // Get producer ID
@@ -321,25 +324,33 @@ function EnterpriseCard({
 
   const inputsRows = useMemo(
     () =>
-      (inputs || []).map((p) => ({
-        scope: "entrada",
-        sit: getExtCodeBySource(p, "SIT_CODE"),
-        producerId: getProducerId(p),
-        ...providerAlertFlags(p), // returns { direct: bool, input: bool, output: bool, ... }
-        _id: p?._id,
-      })),
+      (inputs || []).map((p) => {
+        const extInfo = getExtCodeBySource(p, "SIT_CODE");
+        return {
+          scope: "entrada",
+          sit: extInfo?.code || null,
+          sitLabel: extInfo?.source || null,
+          producerId: getProducerId(p),
+          ...providerAlertFlags(p),
+          _id: p?._id,
+        };
+      }),
     [inputs]
   );
 
   const outputsRows = useMemo(
     () =>
-      (outputs || []).map((p) => ({
-        scope: "salida",
-        sit: getExtCodeBySource(p, "SIT_CODE"),
-        producerId: getProducerId(p),
-        ...providerAlertFlags(p),
-        _id: p?._id,
-      })),
+      (outputs || []).map((p) => {
+        const extInfo = getExtCodeBySource(p, "SIT_CODE");
+        return {
+          scope: "salida",
+          sit: extInfo?.code || null,
+          sitLabel: extInfo?.source || null,
+          producerId: getProducerId(p),
+          ...providerAlertFlags(p),
+          _id: p?._id,
+        };
+      }),
     [outputs]
   );
 
@@ -383,7 +394,7 @@ function EnterpriseCard({
                       <div className="text-xs text-gray-500 mt-0.5">
                         {r.sit && (
                           <>
-                            <span className="font-semibold">SIT:</span> {r.sit}
+                            <span className="font-semibold">{r.sitLabel || "SIT"}:</span> {r.sit}
                           </>
                         )}
                         {r.sit && r.producerId && <span>, </span>}

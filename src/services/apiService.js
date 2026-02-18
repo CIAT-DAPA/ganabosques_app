@@ -182,16 +182,19 @@ export async function fetchAdm3RisksByAnalysisAndAdm3(token, analysisId, adm3Ids
   );
 }
 
-export async function fetchAdm3RiskByAdm3AndType(token, adm3Ids, type) {
+export async function fetchAdm3RiskByAdm3AndType(token, adm3Ids, type, valueChain = null) {
   if (!Array.isArray(adm3Ids) || adm3Ids.length === 0) return {};
   const t = (type || "").toString().trim().toLowerCase();
   if (t !== "annual" && t !== "cumulative" && t !== "atd" && t !== "nad") {
     throw new Error("El parámetro 'type' debe ser 'annual' o 'cumulative'");
   }
+  const vc = valueChain ? VALUE_CHAIN_MAP[valueChain] || valueChain : null;
+  const body = { adm3_ids: adm3Ids, type: t };
+  if (vc) body.value_chain = vc;
   return authPost(
     token,
     "adm3risk/by-adm3-and-type",
-    { adm3_ids: adm3Ids, type: t },
+    body,
     "Error al obtener adm3 risks"
   );
 }

@@ -2,7 +2,7 @@
 
 import React, { useState, useMemo } from "react";
 import Chart from "react-apexcharts";
-import { AlertTriangle, Trees, Shield, Sprout, Calendar, Building2, MapPin, Map as MapIcon, TrendingUp } from "lucide-react";
+import { AlertTriangle, Trees, Shield, Sprout, Calendar, Building2, MapPin, Map as MapIcon, TrendingUp, Info } from "lucide-react";
 import {
   ALERT_STYLES,
   DESTINATION_TYPE_LABELS,
@@ -163,6 +163,63 @@ const EnvironmentalSection = ({ riskObj }) => (
   </div>
 );
 
+const UGG_LABELS = {
+  terneros_menores_1_anio: "Terneros menores a un año",
+  hembras_machos_1_2_anios: "Hembras y machos de 1 a 2 años",
+  hembras_menores_2_3_anios: "Hembras menores de 2 a 3 años",
+  machos_2_3_anios: "Machos de 2 a 3 años",
+  hembras_mayores_3_anios: "Hembras mayores a 3 años",
+  machos_mayores_3_anios: "Machos mayores a 3 años",
+};
+
+function formatUgg(ugg) {
+  if (!ugg) return "";
+  return UGG_LABELS[ugg] || ugg.replace(/_/g, " ");
+}
+
+const PolygonInfoSection = ({ polygon }) => {
+  const [showExtra, setShowExtra] = useState(false);
+  if (!polygon) return null;
+
+  const bufferInputs = polygon.buffer_inputs || [];
+  const hasContent = polygon.farm_ha != null || polygon.radio != null || bufferInputs.length > 0;
+  if (!hasContent) return null;
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader icon={Info} title="Información del polígono" />
+      <div className="space-y-1 text-sm text-custom-dark">
+        {polygon.farm_ha != null && (
+          <InfoItem label="Área ha" value={Number(polygon.farm_ha).toFixed(2)} />
+        )}
+        {polygon.radio != null && (
+          <InfoItem label="Radio m" value={polygon.radio} />
+        )}
+        {bufferInputs.length > 0 && (
+          <>
+            <ToggleButton
+              isVisible={showExtra}
+              onToggle={() => setShowExtra((v) => !v)}
+              label="información adicional"
+            />
+            {showExtra && (
+              <div className="mt-1 space-y-1 pl-2 border-l-2 border-gray-200">
+                {bufferInputs.map((item, idx) => (
+                  <div key={idx} className="text-xs text-gray-700">
+                    <span className="font-medium capitalize">{formatUgg(item.ugg)}:</span>{" "}
+                    {item.amount}{" "}
+                    <span className="text-gray-500">({item.species})</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
 const MovementSummarySection = ({ summary }) => {
   if (!summary) return null;
   return (
@@ -211,7 +268,7 @@ const MovementSummarySection = ({ summary }) => {
 
 const FarmCard = ({
   farm, farmData, riskData, getFarmRiskLevels, buildChartData,
-  legendEntradaMap, legendSalidaMap, toggleLegend, yearStart, yearEnd,
+  legendEntradaMap, legendSalidaMap, toggleLegend, yearStart, yearEnd, polygon,
 }) => {
   const statsEntrada = farmData?.inputs?.statistics;
   const statsSalida = farmData?.outputs?.statistics;
@@ -260,6 +317,7 @@ const FarmCard = ({
                 </div>
               </div>
               <AlertSection risks={risks} verification={riskObj?.verification} />
+              <PolygonInfoSection polygon={polygon} />
             </div>
             <EnvironmentalSection riskObj={riskObj} />
           </div>
@@ -289,7 +347,7 @@ const FarmCard = ({
   );
 };
 
-export default function MovementCharts({ summary = {}, foundFarms = [], riskFarm = {}, yearStart, yearEnd }) {
+export default function MovementCharts({ summary = {}, foundFarms = [], riskFarm = {}, farmPolygons = [], yearStart, yearEnd }) {
   const [legendEntradaMap, setLegendEntradaMap] = useState({});
   const [legendSalidaMap, setLegendSalidaMap] = useState({});
 
@@ -364,12 +422,16 @@ export default function MovementCharts({ summary = {}, foundFarms = [], riskFarm
       {foundFarms.map((farm) => {
         const farmData = summary[farm.id];
         if (!farmData) return null;
+        const polygon = (farmPolygons || []).find(
+          (p) => (p.farm_id || p.id) === farm.id
+        );
         return (
           <FarmCard
             key={farm.id}
             farm={farm}
             farmData={farmData}
             riskData={riskData}
+            polygon={polygon}
             getFarmRiskLevels={getFarmRiskLevels}
             buildChartData={buildChartData}
             legendEntradaMap={legendEntradaMap}

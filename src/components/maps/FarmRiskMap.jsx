@@ -113,6 +113,7 @@ export default function FarmRiskMap() {
             summary={movement}
             foundFarms={foundFarms}
             riskFarm={riskFarm}
+            farmPolygons={farmPolygons}
             yearStart={yearStart}
             yearEnd={yearEnd}
           />

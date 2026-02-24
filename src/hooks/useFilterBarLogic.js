@@ -24,7 +24,10 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400, ac
       setLoading(true);
       try {
         const results = await searchEnterprisesByName(token, search, activity);
-        setEnterpriseSuggestions(results || []);
+        const sorted = (results || []).slice().sort((a, b) =>
+          (a.name || "").localeCompare(b.name || "", "es", { sensitivity: "base" })
+        );
+        setEnterpriseSuggestions(sorted);
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
           console.error("Error al buscar sugerencias de empresas:", error);
@@ -121,7 +124,10 @@ export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) =
       setLoading(true);
       try {
         const results = await searchAdmByName(token, search, admLevel);
-        setAdmSuggestions(results || []);
+        const sorted = (results || []).slice().sort((a, b) =>
+          (a.label || a.name || "").localeCompare(b.label || b.name || "", "es", { sensitivity: "base" })
+        );
+        setAdmSuggestions(sorted);
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
           console.error("Error al buscar sugerencias ADM:", error);

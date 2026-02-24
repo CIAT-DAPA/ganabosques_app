@@ -7,6 +7,16 @@ import { ARROW_CONFIG, calculateDistance, calculateAngle, interpolatePoints, get
 
 // Movement markers and arrows for farm risk view
 export default function FarmMovementLayers({ movement, farmPolygons, yearStart, useArrows = true }) {
+  // Build a lookup map: farmId -> polygon for correct arrow origins
+  const polygonByFarmId = useMemo(() => {
+    const map = new Map();
+    (farmPolygons || []).forEach((p) => {
+      const id = String(p.farm_id || p.id || "");
+      if (id) map.set(id, p);
+    });
+    return map;
+  }, [farmPolygons]);
+
   const { allInputs, allOutputs } = useMemo(() => {
     if (!movement) return { allInputs: [], allOutputs: [] };
 
@@ -65,7 +75,7 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart, 
 
           const icon = getEnterpriseIcon(type);
           const finalLineColor = mixed ? "purple" : lineColor;
-          const farm_tmp = farm_main?.[0];
+          const farm_tmp = polygonByFarmId.get(originFarmId) || farm_main?.[0];
           const sitFromGeojson = getGeojsonName(dest.geojson);
 
           return (
@@ -94,7 +104,7 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart, 
             </div>
           );
         }),
-    [useArrows, createPopupContent, isMixedMovement]
+    [useArrows, createPopupContent, isMixedMovement, polygonByFarmId]
   );
 
   const renderFarmMarkers = useCallback(
@@ -110,7 +120,7 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart, 
 
           const icon = getFarmIcon();
           const finalLineColor = mixed ? "purple" : lineColor;
-          const farm_tmp = farm_main?.[0];
+          const farm_tmp = polygonByFarmId.get(originFarmId) || farm_main?.[0];
 
           return (
             <div key={`farm-${idx}-${targetFarmId || "noid"}`}>
@@ -138,7 +148,7 @@ export default function FarmMovementLayers({ movement, farmPolygons, yearStart, 
             </div>
           );
         }),
-    [useArrows, createPopupContent, isMixedMovement]
+    [useArrows, createPopupContent, isMixedMovement, polygonByFarmId]
   );
 
   if (!movement) return null;

@@ -222,4 +222,13 @@ export async function fetchRiskGlobal(
   }
 
   return authPost(token, "risk/by-ids-and-type", payload, "Error al obtener riesgos globales");
+
+  
+}
+
+// Suppliers por enterprise (agrupado por IDs)
+export async function fetchSuppliersByEnterpriseIds(token, enterpriseIds = []) {
+  if (!Array.isArray(enterpriseIds) || enterpriseIds.length === 0) return {};
+  const endpoint = `suppliers/by-enterprise?ids=${enterpriseIds.join(",")}`;
+  return authGet(token, endpoint, "Error al obtener suppliers por enterprise");
 }

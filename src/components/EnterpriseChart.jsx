@@ -12,6 +12,7 @@ import {
   Calendar,
   TrendingUp,
   ArrowRightLeft,
+  Users,
 } from "lucide-react";
 import {
   CHART_COLORS,
@@ -21,6 +22,7 @@ import {
   formatValue,
   formatHa,
 } from "./shared";
+import RiskDataTable from "./RiskDataTable";
 
 // Get ext code by source — prefer given source, fallback to first available
 function getExtCodeBySource(item, source = "SIT_CODE") {
@@ -121,6 +123,101 @@ const ToggleButton = ({ isVisible, onToggle, label }) => (
     <span className={`transition-transform duration-200 ${isVisible ? "rotate-180" : "rotate-0"}`}>▼</span>
   </button>
 );
+
+// Get the supplier's external code — prefer SIT_CODE, then GEOFARMER_ID, then first available
+function getSupplierCode(extIdArr) {
+  if (!Array.isArray(extIdArr) || extIdArr.length === 0) return { code: null, label: null };
+  const prefer = ["SIT_CODE", "GEOFARMER_ID"];
+  for (const src of prefer) {
+    const found = extIdArr.find((e) => e?.source === src);
+    if (found?.ext_code) return { code: found.ext_code, label: src };
+  }
+  const first = extIdArr.find((e) => e?.ext_code);
+  return first ? { code: first.ext_code, label: first.source || "ID" } : { code: null, label: null };
+}
+
+// Transform supplier API response into table rows (one row per unique farm_id)
+function buildSupplierRows(suppliersForEnterprise) {
+  if (!Array.isArray(suppliersForEnterprise) || suppliersForEnterprise.length === 0) return [];
+
+  // Group records by farm_id and collect all years
+  const map = {};
+  for (const record of suppliersForEnterprise) {
+    const farmId = record.farm_id || record.id;
+    if (!map[farmId]) {
+      map[farmId] = {
+        farmId,
+        extIds: Array.isArray(record.ext_id) ? record.ext_id : [],
+        years: new Set(),
+      };
+    }
+    if (Array.isArray(record.years)) {
+      record.years.forEach((y) => map[farmId].years.add(y));
+    }
+  }
+
+  return Object.values(map).map((entry) => ({
+    farmId: entry.farmId,
+    extIds: entry.extIds,
+    years: [...entry.years].sort(),
+  }));
+}
+
+// Column definitions for the suppliers table
+const SUPPLIER_COLUMNS = [
+  {
+    key: "extIds",
+    label: "Códigos de predio",
+    render: (v) =>
+      Array.isArray(v) && v.length > 0 ? (
+        <div className="space-y-0.5">
+          {v.map((e, i) => (
+            <div key={i} className="text-sm text-gray-700">
+              <span className="text-xs uppercase text-gray-500 mr-1">{e.source || e.label}:</span>
+              <span className="font-medium">{e.ext_code}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <span className="text-gray-400 italic">Sin código</span>
+      ),
+  },
+  {
+    key: "years",
+    label: "Años como proveedor",
+    render: (v) =>
+      Array.isArray(v) && v.length > 0
+        ? v.join(", ")
+        : <span className="text-gray-400 italic">Sin años registrados</span>,
+  },
+];
+
+// Suppliers table section
+function SuppliersSection({ supplierData, enterpriseId }) {
+  const rows = useMemo(
+    () => buildSupplierRows(supplierData?.[enterpriseId]),
+    [supplierData, enterpriseId]
+  );
+
+  if (!supplierData || !supplierData[enterpriseId]) {
+    return (
+      <div className="text-center py-8 text-gray-500">
+        No hay datos de proveedores disponibles
+      </div>
+    );
+  }
+
+  return (
+    <RiskDataTable
+      data={rows}
+      columns={SUPPLIER_COLUMNS}
+      getRowKey={(row, idx) => row.farmId || idx}
+      emptyMessage="No hay predios proveedores registrados."
+      paginated
+      defaultPageSize={20}
+    />
+  );
+}
 
 // Movement section component
 function MovementSection({ movementStats, enterpriseId }) {
@@ -277,6 +374,7 @@ function EnterpriseCard({
   yearStart,
   yearEnd,
   movementStats,
+  supplierData,
   risk,
   defaultActiveTab = "alertas",
 }) {
@@ -518,15 +616,27 @@ function EnterpriseCard({
             >
               Movilizaciones
             </TabButton>
+            <TabButton
+              active={activeTab === "proveedores"}
+              onClick={() => setActiveTab("proveedores")}
+              icon={Users}
+            >
+              Proveedores
+            </TabButton>
           </div>
           {activeTab === "alertas" ? (
             <div className="space-y-8">
               <Table title="Predios con alerta de entrada" rows={inputsRows} />
               <Table title="Predios con alerta de salida" rows={outputsRows} />
             </div>
-          ) : (
+          ) : activeTab === "movilizaciones" ? (
             <MovementSection
               movementStats={movementStats}
+              enterpriseId={enterpriseId}
+            />
+          ) : (
+            <SuppliersSection
+              supplierData={supplierData}
               enterpriseId={enterpriseId}
             />
           )}
@@ -542,6 +652,7 @@ export default function EnterpriseChart({
   yearEnd,
   enterpriseDetails = [],
   movementStats = {},
+  supplierData = {},
   risk,
 }) {
   if (!enterpriseDetails || enterpriseDetails.length === 0) return null;
@@ -555,6 +666,7 @@ export default function EnterpriseChart({
           yearStart={yearStart}
           yearEnd={yearEnd}
           movementStats={movementStats}
+          supplierData={supplierData}
           risk={risk}
         />
       ))}

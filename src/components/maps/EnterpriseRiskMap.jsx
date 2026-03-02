@@ -8,7 +8,7 @@ import LoadingSpinner from "@/components/LoadingSpinner";
 import EnterpriseChart from "@/components/EnterpriseChart";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
 import EnterpriseMovementLayers from "./EnterpriseMovementLayers";
-import { getEnterpriseRiskDetails } from "@/services/apiService";
+import { getEnterpriseRiskDetails, fetchSuppliersByEnterpriseIds } from "@/services/apiService";
 import { useFilteredMovement } from "@/hooks/useFilteredMovement";
 import { useMovementStats } from "@/hooks/useMovementStats";
 import { useFarmPolygons } from "@/hooks/useFarmPolygons";
@@ -123,6 +123,7 @@ export default function EnterpriseMap() {
   const [analysis, setAnalysis] = useState(null);
   const [riskFarm, setRiskFarm] = useState(null);
   const [enterpriseDetails, setEnterpriseDetails] = useState(null);
+  const [supplierData, setSupplierData] = useState({});
 
   const movement = useFilteredMovement(originalMovement);
   useMovementStats(foundFarms, setOriginalMovement, setPendingTasks, period, risk);
@@ -180,6 +181,25 @@ export default function EnterpriseMap() {
       cancelled = true;
     };
   }, [year, selectedEnterprise, token, setPendingTasks]);
+
+  // Fetch suppliers for selected enterprises
+  useEffect(() => {
+    if (!token || enterpriseIds.length === 0) {
+      setSupplierData({});
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      try {
+        const data = await fetchSuppliersByEnterpriseIds(token, enterpriseIds);
+        if (!cancelled) setSupplierData(data || {});
+      } catch (err) {
+        console.error("Error al cargar proveedores:", err);
+        if (!cancelled) setSupplierData({});
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [enterpriseIds, token]);
 
   const hasEnterpriseData =
     Array.isArray(getEnterprisesArray(enterpriseDetails)) &&
@@ -246,6 +266,7 @@ export default function EnterpriseMap() {
             enterpriseDetails={enterpriseDetails}
             risk={risk}
             movementStats={enterpriseMovementStats}
+            supplierData={supplierData}
           />
         )}
       </div>

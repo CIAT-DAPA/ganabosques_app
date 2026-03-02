@@ -7,8 +7,8 @@ import {
   MapPin,
   Building2,
   Map as MapIcon,
-  Trees,
-  Home,
+  TrendingUp,
+  AlertTriangle,
   Calendar,
 } from "lucide-react";
 import {
@@ -271,7 +271,7 @@ export default function Adm3HistoricalRisk({
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Trees className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <TrendingUp className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
                     <div className="text-xs uppercase text-gray-500">
                       Área deforestada por predios
@@ -290,7 +290,7 @@ export default function Adm3HistoricalRisk({
                 </div>
 
                 <div className="flex items-start gap-3">
-                  <Home className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <AlertTriangle className="h-5 w-5 text-gray-500 mt-0.5" />
                   <div>
                     <div className="text-xs uppercase text-gray-500">
                       Predios con alertas

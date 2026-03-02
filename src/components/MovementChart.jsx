@@ -190,10 +190,10 @@ const PolygonInfoSection = ({ polygon }) => {
       <SectionHeader icon={Info} title="Información del polígono" />
       <div className="space-y-1 text-sm text-custom-dark">
         {polygon.farm_ha != null && (
-          <InfoItem label="Área ha" value={Number(polygon.farm_ha).toFixed(2)} />
+          <InfoItem label="Área" value={`${Number(polygon.farm_ha).toFixed(2)} ha`} />
         )}
         {polygon.radio != null && (
-          <InfoItem label="Radio m" value={polygon.radio} />
+          <InfoItem label="Radio" value={`${polygon.radio} m`} />
         )}
         {bufferInputs.length > 0 && (
           <>
@@ -297,29 +297,58 @@ const FarmCard = ({
               <div className="space-y-2">
                 <div className="flex items-center gap-2 text-custom-dark">
                   <div className="w-4 h-4 bg-custom-dark rounded-full"></div>
-                  <h2 className="text-lg font-bold">Predio {label}</h2>
+                  <h2 className="text-lg font-bold">Predio</h2>
                 </div>
-                <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
-                  <Calendar className="h-4 w-4" />
-                  <span>Periodo: {formatPeriod(yearStart, yearEnd)}</span>
+                {(() => {
+                  const extIds = Array.isArray(farm?.ext_id) && farm.ext_id.length > 0
+                    ? farm.ext_id
+                    : Array.isArray(riskObj?.ext_id) && riskObj.ext_id.length > 0
+                    ? riskObj.ext_id
+                    : null;
+                  if (!extIds) return null;
+                  return (
+                    <div className="space-y-1 pl-6">
+                      {extIds.map((e, i) => (
+                        <div key={i} className="text-sm text-gray-700">
+                          <span className="text-xs uppercase text-gray-500 mr-1">{e.source || e.label}:</span>
+                          <span className="font-medium">{e.ext_code}</span>
+                        </div>
+                      ))}
+                    </div>
+                  );
+                })()}
+                <div className="flex items-start gap-3">
+                  <Building2 className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <div className="text-xs uppercase text-gray-500">Departamento</div>
+                    <div className="font-medium">{riskObj?.department || "—"}</div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
-                  <Building2 className="h-4 w-4" />
-                  <span>Departamento: {riskObj?.department || "N/A"}</span>
+                <div className="flex items-start gap-3">
+                  <MapIcon className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <div className="text-xs uppercase text-gray-500">Municipio</div>
+                    <div className="font-medium">{riskObj?.municipality || "—"}</div>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
-                  <MapIcon className="h-5 w-5" />
-                  <span>Municipio: {riskObj?.municipality || "N/A"}</span>
-                </div>
-                <div className="flex items-center gap-2 text-lg text-custom-dark text-medium">
-                  <MapPin className="h-4 w-4" />
-                  <span>vereda: {riskObj?.vereda || "N/A"}</span>
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <div className="text-xs uppercase text-gray-500">Vereda</div>
+                    <div className="font-medium">{riskObj?.vereda || "—"}</div>
+                  </div>
                 </div>
               </div>
-              <AlertSection risks={risks} verification={riskObj?.verification} />
               <PolygonInfoSection polygon={polygon} />
             </div>
-            <EnvironmentalSection riskObj={riskObj} />
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 text-sm text-custom-dark">
+                <Calendar className="h-4 w-4 text-gray-500" />
+                <span>Periodo: <span className="font-medium">{formatPeriod(yearStart, yearEnd)}</span></span>
+              </div>
+              <AlertSection risks={risks} verification={riskObj?.verification} />
+              <EnvironmentalSection riskObj={riskObj} />
+            </div>
           </div>
         </div>
         <div className="w-full lg:w-2/3 grid grid-cols-1 md:grid-cols-2 gap-6">

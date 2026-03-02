@@ -177,7 +177,7 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast,
         const labelSource = activity === "cacao" ? "GEOFARMER_ID" : "SIT_CODE";
         const updatedFarms = data.map((f) => {
           const code = f.ext_id.find((ext) => ext.source === labelSource)?.ext_code;
-          return { id: f.id, code };
+          return { id: f.id, code, ext_id: f.ext_id };
         });
 
         setFoundFarms((prev) => {

@@ -208,7 +208,7 @@ export default function DashboardMap() {
     },
     {
       key: "adm3_name",
-      label: "Vereda",
+      label: "ubicación",
       sortable: true,
       getValue: (row) => getItemValue(row, "adm3_name"),
     },
@@ -429,7 +429,7 @@ export default function DashboardMap() {
                       <span className="font-medium">Ext ID:</span> {polygon.extId}
                     </div>
                     <div>
-                      <span className="font-medium">Vereda:</span> {polygon.adm3Name}
+                      <span className="font-medium">Ubicación:</span> {polygon.adm3Name}
                     </div>
                     <div>
                       <span className="font-medium">Deforestación:</span> {Number(polygon.deforestation).toFixed(2)} ha

@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import {
   fetchAnalysisYearRanges,
   fetchFarmBySITCode,
+  fetchEnums,
   searchAdmByName,
   searchEnterprisesByName,
 } from "@/services/apiService";
@@ -20,25 +21,31 @@ export const useEnterpriseSuggestions = (search, enterpriseRisk, delay = 400, ac
       return;
     }
 
+    let aborted = false;
+
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
         const results = await searchEnterprisesByName(token, search, activity);
+        if (aborted) return;
         const sorted = (results || []).slice().sort((a, b) =>
           (a.name || "").localeCompare(b.name || "", "es", { sensitivity: "base" })
         );
         setEnterpriseSuggestions(sorted);
       } catch (error) {
-        if (process.env.NODE_ENV !== "production") {
+        if (!aborted && process.env.NODE_ENV !== "production") {
           console.error("Error al buscar sugerencias de empresas:", error);
         }
-        setEnterpriseSuggestions([]);
+        if (!aborted) setEnterpriseSuggestions([]);
       } finally {
-        setLoading(false);
+        if (!aborted) setLoading(false);
       }
     }, delay);
 
-    return () => clearTimeout(timer);
+    return () => {
+      aborted = true;
+      clearTimeout(timer);
+    };
   }, [search, enterpriseRisk, delay, token, activity]);
 
   return { enterpriseSuggestions, setEnterpriseSuggestions, loading };
@@ -144,8 +151,39 @@ export const useAdmSuggestions = (search, admLevel, nationalRisk, delay = 400) =
   return { admSuggestions, setAdmSuggestions, loading };
 };
 
+// Source labels from enums endpoint
+export const useSourceLabels = () => {
+  const { token } = useAuth();
+  const [sourceLabels, setSourceLabels] = useState([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!token) return;
+    let aborted = false;
+
+    const load = async () => {
+      setLoading(true);
+      try {
+        const data = await fetchEnums(token, "source");
+        if (!aborted && Array.isArray(data)) {
+          setSourceLabels(data);
+        }
+      } catch (err) {
+        if (!aborted) console.error("Error fetching source labels:", err);
+      } finally {
+        if (!aborted) setLoading(false);
+      }
+    };
+
+    load();
+    return () => { aborted = true; };
+  }, [token]);
+
+  return { sourceLabels, loading };
+};
+
 // Farm code search
-export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast, activity = null) => {
+export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast, activity = null, sourceLabel = null) => {
   const { token } = useAuth();
 
   useEffect(() => {
@@ -160,7 +198,8 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast,
       if (!pendingCodes) return;
 
       try {
-        const data = await fetchFarmBySITCode(token, pendingCodes, activity);
+        const effectiveLabel = sourceLabel || (activity === "cacao" ? "GEOFARMER_ID" : "SIT_CODE");
+        const data = await fetchFarmBySITCode(token, pendingCodes, activity, effectiveLabel);
 
         if (!data || data.length === 0) {
           setToast({
@@ -174,9 +213,8 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast,
           return;
         }
 
-        const labelSource = activity === "cacao" ? "GEOFARMER_ID" : "SIT_CODE";
         const updatedFarms = data.map((f) => {
-          const code = f.ext_id.find((ext) => ext.source === labelSource)?.ext_code;
+          const code = f.ext_id.find((ext) => ext.source === effectiveLabel)?.ext_code;
           return { id: f.id, code, ext_id: f.ext_id };
         });
 
@@ -194,15 +232,15 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast,
         });
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.error("Error fetching SIT_CODE:", error);
+          console.error("Error fetching farm code:", error);
         }
         setToast({
           type: "alert",
-          message: "Error de red al buscar los SIT CODE",
+          message: `Error de red al buscar los ${sourceLabel || "códigos"}`,
         });
       }
     }, 500);
 
     return () => clearTimeout(delay);
-  }, [foundFarms, farmRisk, setFoundFarms, setToast, token, activity]);
+  }, [foundFarms, farmRisk, setFoundFarms, setToast, token, activity, sourceLabel]);
 };

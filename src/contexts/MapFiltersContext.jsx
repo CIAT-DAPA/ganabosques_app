@@ -30,6 +30,7 @@ export function MapFiltersProvider({ children }) {
   const [foundAdms, setFoundAdms] = useState([]);
   const [admLevel, setAdmLevel] = useState("adm1");
   const [admResults, setAdmResults] = useState([]);
+  const [sourceLabel, setSourceLabel] = useState("SIT_CODE");
   
   const [yearStart, setYearStart] = useState(2023);
   const [yearEnd, setYearEnd] = useState(2024);
@@ -105,6 +106,8 @@ export function MapFiltersProvider({ children }) {
     setAdmLevel,
     admResults,
     setAdmResults,
+    sourceLabel,
+    setSourceLabel,
     yearStart,
     yearEnd,
     handleYearStartEndChange,
@@ -120,7 +123,7 @@ export function MapFiltersProvider({ children }) {
     token,
   }), [
     risk, year, period, source, activity, search,
-    selectedEnterprise, foundFarms, foundAdms, admLevel, admResults,
+    selectedEnterprise, foundFarms, foundAdms, admLevel, admResults, sourceLabel,
     yearStart, yearEnd, handleYearStartEndChange,
     pendingTasks, loading, analysis,
     handleMapCreated, handleAdmSearch, resetSearchResults, token,

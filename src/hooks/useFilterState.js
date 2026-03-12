@@ -17,6 +17,7 @@ export function useFilterState(initialRisk = "annual") {
   const [foundAdms, setFoundAdms] = useState([]);
   const [admLevel, setAdmLevel] = useState("adm1");
   const [admResults, setAdmResults] = useState([]);
+  const [sourceLabel, setSourceLabel] = useState("SIT_CODE");
   
   const [yearStart, setYearStart] = useState(2023);
   const [yearEnd, setYearEnd] = useState(2024);
@@ -65,6 +66,7 @@ export function useFilterState(initialRisk = "annual") {
     foundAdms, setFoundAdms,
     admLevel, setAdmLevel,
     admResults, setAdmResults,
+    sourceLabel, setSourceLabel,
     
     yearStart, yearEnd,
     handleYearStartEndChange,

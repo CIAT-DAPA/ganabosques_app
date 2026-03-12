@@ -107,12 +107,12 @@ export async function fetchYearRanges(token, source, type) {
 }
 
 // Farm APIs
-export async function fetchFarmBySITCode(token, code, valueChain = null) {
+export async function fetchFarmBySITCode(token, code, valueChain = null, label = null) {
   const vc = valueChain ? VALUE_CHAIN_MAP[valueChain] || valueChain : null;
-  const label = vc === "cacao" ? "GEOFARMER_ID" : "SIT_CODE";
-  let endpoint = `farm/by-extid?ext_codes=${code}&labels=${label}`;
+  const effectiveLabel = label || "SIT_CODE";
+  let endpoint = `farm/by-extid?ext_codes=${code}&labels=${effectiveLabel}`;
   if (vc) endpoint += `&value_chain=${vc}`;
-  return authGet(token, endpoint, `Error de red al buscar el ${label}`);
+  return authGet(token, endpoint, `Error de red al buscar el ${effectiveLabel}`);
 }
 
 export async function fetchFarmPolygonsByIds(token, ids) {
@@ -231,4 +231,11 @@ export async function fetchSuppliersByEnterpriseIds(token, enterpriseIds = []) {
   if (!Array.isArray(enterpriseIds) || enterpriseIds.length === 0) return {};
   const endpoint = `suppliers/by-enterprise?ids=${enterpriseIds.join(",")}`;
   return authGet(token, endpoint, "Error al obtener suppliers por enterprise");
+}
+
+// Enums API
+export async function fetchEnums(token, enumName) {
+  if (!enumName) throw new Error("enumName es requerido");
+  const endpoint = `enums/?enum_name=${encodeURIComponent(enumName)}`;
+  return authGet(token, endpoint, "Error al obtener enums");
 }

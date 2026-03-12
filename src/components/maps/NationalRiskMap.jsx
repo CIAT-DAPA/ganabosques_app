@@ -192,7 +192,7 @@ export default function NationalRiskMap() {
         </div>
 
         {adm3RiskHistory?.length > 0 && (
-          <Adm3HistoricalRisk adm3RiskHistory={adm3RiskHistory} yearStart={yearStart} yearEnd={yearEnd} risk={risk} />
+          <Adm3HistoricalRisk adm3RiskHistory={adm3RiskHistory} adm3Risk={adm3Risk} yearStart={yearStart} yearEnd={yearEnd} risk={risk} />
         )}
       </div>
 

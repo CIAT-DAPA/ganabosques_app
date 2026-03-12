@@ -9,7 +9,8 @@ import {
   useYearRanges,
   useAdmSuggestions,
   useFarmCodeSearch,
-  useEnterpriseSuggestions
+  useEnterpriseSuggestions,
+  useSourceLabels
 } from "@/hooks/useFilterBarLogic";
 import { useMapFiltersOptional } from "@/contexts/MapFiltersContext";
 
@@ -48,6 +49,8 @@ export default function FilterBar({
   reportType,
   setReportType,
   onPeriodsChange,
+  sourceLabel: propSourceLabel,
+  setSourceLabel: propSetSourceLabel,
 }) {
   const ctx = useMapFiltersOptional();
   
@@ -72,6 +75,8 @@ export default function FilterBar({
   const onYearStartEndChange = propOnYearStartEndChange ?? ctx?.handleYearStartEndChange;
   const activity = propActivity ?? ctx?.activity;
   const setActivity = propSetActivity ?? ctx?.setActivity;
+  const sourceLabel = propSourceLabel ?? ctx?.sourceLabel;
+  const setSourceLabel = propSetSourceLabel ?? ctx?.setSourceLabel;
 
   const [toast, setToast] = useState(null);
 
@@ -101,7 +106,19 @@ export default function FilterBar({
   );
 
   const shouldSearchFarm = farmRisk || (report && reportType === "finca");
-  useFarmCodeSearch(shouldSearchFarm, foundFarms, setFoundFarms, setToast, activity);
+  useFarmCodeSearch(shouldSearchFarm, foundFarms, setFoundFarms, setToast, activity, sourceLabel);
+
+  // Fetch available source labels from enums
+  const { sourceLabels } = useSourceLabels();
+
+  // Auto-switch sourceLabel when activity changes
+  useEffect(() => {
+    if (activity === "cacao") {
+      setSourceLabel("GEOFARMER_ID");
+    } else if (activity === "ganaderia") {
+      setSourceLabel("SIT_CODE");
+    }
+  }, [activity, setSourceLabel]);
 
   useEffect(() => {
     if (enterpriseError) setToast({ type: "alert", message: enterpriseError });
@@ -139,34 +156,52 @@ export default function FilterBar({
       />
 
       {((!report && !hideSearch) || (report && reportType !== "")) && (
-        <div className="flex flex-col gap-2 flex-grow">
-          <SearchBar
-            search={search}
-            setSearch={setSearch}
-            onSearch={onSearch}
-            farmRisk={report ? reportType === "finca" : farmRisk}
-            enterpriseRisk={report ? reportType === "empresa" : enterpriseRisk}
-            nationalRisk={report ? reportType === "vereda" : nationalRisk}
-            report={report}
-            filteredEnterprises={enterpriseSuggestions}
-            setFilteredEnterprises={setEnterpriseSuggestions}
-            selectedEnterprise={selectedEnterprise}
-            setSelectedEnterprise={setSelectedEnterprise}
-            foundFarms={foundFarms}
-            setFoundFarms={setFoundFarms}
-            foundAdms={foundAdms}
-            setFoundAdms={setFoundAdms}
-            admSuggestions={admSuggestions}
-            setAdmSuggestions={setAdmSuggestions}
-            onAdmSearch={onAdmSearch ?? ctx?.handleAdmSearch}
-            admLevel={admLevel}
-            risk={risk}
-            year={year}
-            source={source}
-            setToast={setToast}
-            enterpriseLoading={enterpriseLoading}
-            activity={activity}
-          />
+        <div className="flex items-start gap-2 flex-grow">
+          {/* Source label select — visible only for farm risk */}
+          {(farmRisk || (report && reportType === "finca")) && sourceLabels.length > 0 && (
+            <select
+              value={sourceLabel}
+              onChange={(e) => setSourceLabel(e.target.value)}
+              className="px-3 py-2 text-sm rounded-full bg-custom border border-gray-300 shadow-md text-custom-dark focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all duration-200 shrink-0"
+              aria-label="Tipo de código"
+            >
+              {sourceLabels.map((label) => (
+                <option key={label} value={label}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          )}
+
+          <div className="flex flex-col gap-2 flex-grow">
+            <SearchBar
+              search={search}
+              setSearch={setSearch}
+              onSearch={onSearch}
+              farmRisk={report ? reportType === "finca" : farmRisk}
+              enterpriseRisk={report ? reportType === "empresa" : enterpriseRisk}
+              nationalRisk={report ? reportType === "vereda" : nationalRisk}
+              report={report}
+              filteredEnterprises={enterpriseSuggestions}
+              setFilteredEnterprises={setEnterpriseSuggestions}
+              selectedEnterprise={selectedEnterprise}
+              setSelectedEnterprise={setSelectedEnterprise}
+              foundFarms={foundFarms}
+              setFoundFarms={setFoundFarms}
+              foundAdms={foundAdms}
+              setFoundAdms={setFoundAdms}
+              admSuggestions={admSuggestions}
+              setAdmSuggestions={setAdmSuggestions}
+              onAdmSearch={onAdmSearch ?? ctx?.handleAdmSearch}
+              admLevel={admLevel}
+              risk={risk}
+              year={year}
+              source={source}
+              setToast={setToast}
+              enterpriseLoading={enterpriseLoading}
+              activity={activity}
+              sourceLabel={sourceLabel}
+            />
 
           <FilterChips
             farmRisk={report ? reportType === "finca" : farmRisk}
@@ -179,6 +214,7 @@ export default function FilterBar({
             foundAdms={foundAdms}
             setFoundAdms={setFoundAdms}
           />
+          </div>
         </div>
       )}
 

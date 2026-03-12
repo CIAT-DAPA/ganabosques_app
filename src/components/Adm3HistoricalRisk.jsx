@@ -31,6 +31,7 @@ const ReactApexChart = dynamic(() => import("react-apexcharts"), {
 
 export default function Adm3HistoricalRisk({
   adm3RiskHistory = [],
+  adm3Risk = null,
   className = "",
   yearStart,
   yearEnd,
@@ -100,6 +101,14 @@ export default function Adm3HistoricalRisk({
 
         const selectedItem = selectedRow?.raw ?? null;
         const hasMatch = Boolean(selectedItem);
+
+        // Look up farm_total_amount from adm3Risk (by-analysis-and-adm3 endpoint)
+        let farmTotalAmount = null;
+        if (adm3Risk && group.adm3_id) {
+          const riskEntries = Object.values(adm3Risk || {}).flat();
+          const match = riskEntries.find((r) => r.adm3_id === group.adm3_id);
+          if (match) farmTotalAmount = match.farm_total_amount;
+        }
 
         const selYs = selectedItem
           ? isoToYear(selectedItem?.period_start)
@@ -301,6 +310,22 @@ export default function Adm3HistoricalRisk({
                             "es-CO"
                           )} Predios`
                         : "0 predios"}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                  <MapPin className="h-5 w-5 text-gray-500 mt-0.5" />
+                  <div>
+                    <div className="text-xs uppercase text-gray-500">
+                      Total predios en vereda
+                    </div>
+                    <div className="font-medium">
+                      {farmTotalAmount != null
+                        ? `${Number(farmTotalAmount).toLocaleString(
+                            "es-CO"
+                          )} Predios`
+                        : "—"}
                     </div>
                   </div>
                 </div>

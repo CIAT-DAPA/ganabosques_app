@@ -24,12 +24,25 @@ jobs:
         run: |
           npm ci
 
+  RunTests:
+    needs: [InstallPackage]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 18
+      - name: Install packages
+        run: npm ci
+      - name: Run unit tests
+        run: npm test
+
   # ------- END FRONT PROCESS -------- #
 
   # ------- START MERGE PROCESS -------- #
 
   MergeMainFront:
-    needs: [InstallPackage]
+    needs: [RunTests]
     name: Merge Pre deploy with Main
     permissions: write-all
     runs-on: ubuntu-latest

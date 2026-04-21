@@ -198,7 +198,7 @@ export const useFarmCodeSearch = (farmRisk, foundFarms, setFoundFarms, setToast,
       if (!pendingCodes) return;
 
       try {
-        const effectiveLabel = sourceLabel || (activity === "cacao" ? "GEOFARMER_ID" : "SIT_CODE");
+        const effectiveLabel = sourceLabel || (activity === "cacao" || activity === "cafe" ? "GEOFARMER_ID" : "SIT_CODE");
         const data = await fetchFarmBySITCode(token, pendingCodes, activity, effectiveLabel);
 
         if (!data || data.length === 0) {

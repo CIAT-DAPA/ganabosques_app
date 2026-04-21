@@ -89,7 +89,7 @@ function reprojectGeoJSON3116to4326(geojson) {
 export default function FarmRiskLayers({ farmPolygons, riskFarm, foundFarms }) {
   const ctx = useMapFiltersOptional();
   const activity = ctx?.activity;
-  const codeLabel = activity === "cacao" ? "GEOFARMER_ID" : "Código SIT";
+  const codeLabel = (activity === "cacao" || activity === "cafe") ? "GEOFARMER_ID" : "Código SIT";
 
   if (!riskFarm || !farmPolygons) return null;
 

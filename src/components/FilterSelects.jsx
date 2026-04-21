@@ -57,6 +57,7 @@ export default function FilterSelects({
   const activityOptions = useMemo(() => [
     { value: "ganaderia", label: "Ganadería" },
     { value: "cacao", label: "Cacao" },
+    { value: "cafe", label: "Café" },
   ], []);
 
   const yearOptions = useMemo(() =>

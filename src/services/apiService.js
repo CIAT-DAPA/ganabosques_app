@@ -73,6 +73,7 @@ export async function getEnterpriseRiskDetails(token, analysisId, enterpriseIds 
 const VALUE_CHAIN_MAP = {
   ganaderia: "livestock",
   cacao: "cacao",
+  cafe: "coffee",
 };
 
 // Analysis APIs

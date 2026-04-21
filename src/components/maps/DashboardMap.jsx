@@ -201,7 +201,7 @@ export default function DashboardMap() {
   const columns = useMemo(() => [
     {
       key: "ext_id",
-      label: activity === "cacao" ? "GEOFARMER_ID" : "SIT CODE",
+      label: (activity === "cacao" || activity === "cafe") ? "GEOFARMER_ID" : "SIT CODE",
       sortable: true,
       highlight: true,
       getValue: (row) => getItemValue(row, "ext_id"),

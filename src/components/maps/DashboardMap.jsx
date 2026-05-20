@@ -86,9 +86,15 @@ export default function DashboardMap() {
     const fetchData = async () => {
       setTableLoading(true);
       try {
+        let farmIds = [];
+        if (foundFarms.length > 0) 
+          farmIds = foundFarms.map(f => f.id).filter(Boolean);
+
+        
         const result = await fetchFarmRiskByAnalysisId(
           token,
           analysisId,
+          farmIds,
           recordsPerPage,
           currentPage
         );
@@ -119,11 +125,11 @@ export default function DashboardMap() {
     };
 
     fetchData();
-  }, [token, analysisId, currentPage, recordsPerPage]);
+  }, [token, analysisId, currentPage, recordsPerPage, foundFarms]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [analysisId]);
+  }, [analysisId, foundFarms]);
 
   const handleViewOnMap = useCallback((item) => {
     const farmId = item.farm_id || item.farm?.farm_id;

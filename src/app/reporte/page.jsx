@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback } from "react";
 import FilterBar from "@/components/FilterBar";
-import { fetchRiskGlobal } from "@/services/apiService";
+import { fetchRiskGlobal, fetchSuppliersByEnterpriseIds } from "@/services/apiService";
 import Adm3RiskTable from "@/components/Adm3RiskTable";
 import FarmRiskTable from "@/components/FarmRiskTable";
 import EnterpriseRiskTable from "@/components/EnterpriseRiskTable";
@@ -91,6 +91,7 @@ export default function Reporte() {
   // Results state
   const [veredaRiskData, setVeredaRiskData] = useState(null);
   const [farmRiskData, setFarmRiskData] = useState(null);
+  const [farmRiskDataForEnterprise, setFarmRiskDataForEnterprise] = useState(null);
   const [enterpriseRiskData, setEnterpriseRiskData] = useState(null);
 
   // Removed clearing effects to allow partial updates via filtering
@@ -162,7 +163,19 @@ export default function Reporte() {
           throw new Error("No se encontraron empresas seleccionadas.");
         }
         const data = await fetchRiskGlobal(token, "enterprise", enterpriseIds, { analysisIds });
+        const supplers = await fetchSuppliersByEnterpriseIds(token, enterpriseIds);
+        const farmIdsByEnterprise = Object.entries(supplers).reduce(
+            (acc, [enterpriseId, farms]) => {
+              acc[enterpriseId] = farms.map(f => f.farm_id);
+              return acc;
+            },
+            {}
+          );
+        
+        const data_farms = await fetchRiskGlobal(token, "farm", farmIdsByEnterprise[enterpriseIds[0]], { analysisIds });
         setEnterpriseRiskData(data);
+        setFarmRiskDataForEnterprise(data_farms);
+
       }
     } catch (err) {
       console.error(err);
@@ -407,11 +420,16 @@ export default function Reporte() {
         {/* Enterprise Results */}
         {hasEnterpriseResults && !loading && (
           <>
-            <div className="w-4/5 mx-auto bg-white rounded-2xl shadow-md p-6 mt-8" id="report-results">
+            <div className="mx-6 bg-white rounded-2xl shadow-md p-6 mt-8" id="report-results">
               <h3 className="text-xl font-semibold text-[#082C14] mb-4">Resultados del análisis - Empresas</h3>
               <EnterpriseRiskTable data={filteredEnterpriseData} />
             </div>
-
+            <div className="mx-6 bg-white rounded-2xl shadow-md p-6 mt-8" id="detalle-predios">
+              <h3 className="text-xl font-semibold text-[#082C14] mb-4">Detalles Predios</h3>
+              {farmRiskDataForEnterprise && Object.keys(farmRiskDataForEnterprise).length > 0 && (
+                <FarmRiskTable data={farmRiskDataForEnterprise} paginated={true} />
+              )}
+            </div>
             <div className="w-4/5 mx-auto mt-4 flex justify-end">
               <button
                 type="button"

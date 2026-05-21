@@ -51,7 +51,7 @@ function transformEnterpriseData(data) {
         id_empresa: getEnterpriseExtCode(enterprise),
         nombre_empresa: enterprise.name || "—",
         periodo: formatPeriod(item.period_start, item.period_end),
-        alerta: entrada.length > 0 || salida.length > 0,
+        alerta: Object.entries(entrada).length > 0 || Object.entries(salida).length > 0,
         alerta_entrada: entrada,
         alerta_salida: salida,
         _rowKey: `${getEnterpriseExtCode(enterprise)}-${item.period_start}`,
@@ -77,7 +77,7 @@ const ENTERPRISE_COLUMNS = [
   },
   {
     key: "alerta_entrada",
-    label: "Alerta Entrada (SIT Codes)",
+    label: "Alerta Entrada",
     minWidth: "200px",
     render: (value, row, idx) => (
       <ExpandableCodeCell codes={value} rowKey={`in-${row.id_empresa}-${idx}`} />
@@ -85,7 +85,7 @@ const ENTERPRISE_COLUMNS = [
   },
   {
     key: "alerta_salida",
-    label: "Alerta Salida (SIT Codes)",
+    label: "Alerta Salida",
     minWidth: "200px",
     render: (value, row, idx) => (
       <ExpandableCodeCell codes={value} rowKey={`out-${row.id_empresa}-${idx}`} />

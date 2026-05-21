@@ -20,6 +20,7 @@ function transformFarmData(data) {
         farm_id: record.farm_id || "—",
         codes: getCodes(farm.ext_id),
         periodo: formatPeriod(item.period_start, item.period_end),
+        _sortPeriod: Date.parse(item.period_start) || Date.parse(item.period_end) || 0,
         alerta_directa: item.risk_direct,
         alerta_entrada: item.risk_input,
         alerta_salida: item.risk_output,
@@ -36,6 +37,8 @@ function transformFarmData(data) {
     }
   }
 
+  rows.sort((a, b) => b._sortPeriod - a._sortPeriod);
+
   return rows;
 }
 
@@ -44,7 +47,7 @@ const FARM_COLUMNS = [
   { key: "departamento", label: "Departamento" },
   { key: "municipio", label: "Municipio" },
   { key: "vereda", label: "Vereda" },
-  { key: "codes", label: "Código SIT" },
+  { key: "codes", label: "Códigos" },
   { key: "periodo", label: "Periodo" },
   { 
     key: "alerta_directa", 
@@ -117,7 +120,7 @@ const FARM_COLUMNS = [
 ];
 
 // Farm Risk Table Component
-export default function FarmRiskTable({ data = {} }) {
+export default function FarmRiskTable({ data = {}, ...props }) {
   const rows = transformFarmData(data);
 
   return (
@@ -126,6 +129,7 @@ export default function FarmRiskTable({ data = {} }) {
       columns={FARM_COLUMNS}
       getRowKey={(row, idx) => `${row.farm_id}-${idx}`}
       emptyMessage="No hay datos de fincas para mostrar."
+      {...props}
     />
   );
 }

@@ -27,7 +27,7 @@ export const TABLE_CSS = {
   
   // Expandable code cell
   codeCell: "max-w-[200px] overflow-hidden transition-all duration-300 ease-in-out cursor-pointer",
-  codeCellExpanded: "max-w-none",
+  codeCellExpanded: "w-fit max-w-none",
   codeContainer: "flex flex-wrap gap-1",
   codeChip: "inline-block px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-xs",
   expandBtn: "text-blue-600 hover:text-blue-800 text-xs mt-1 cursor-pointer font-medium",

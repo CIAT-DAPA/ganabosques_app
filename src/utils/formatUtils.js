@@ -12,7 +12,7 @@ export const fmtNum = (value, decimals = 2) => {
 // Format proportion as percentage
 export const fmtProp = (value) => {
   if (value == null || Number.isNaN(Number(value))) return "—";
-  return `${(Number(value) * 100).toFixed(0)}%`;
+  return `${Number((Number(value) * 100).toFixed(2))}%`;
 };
 
 // Format date range as "YYYY - YYYY" or "YYYY-Q#" for quarterly periods (atd/nad)
@@ -42,7 +42,13 @@ export const formatPeriod = (start, end) => {
 // Extract external codes from ext_id array
 export const getCodes = (extIds) => {
   if (!Array.isArray(extIds)) return "—";
-  return extIds.map((e) => e?.ext_code || "").filter(Boolean).join(", ") || "—";
+  return extIds.map((e) => {
+        if (!e?.ext_code) return "";
+
+        return e.source
+          ? `${e.source}: ${e.ext_code}`
+          : e.ext_code;
+      }).filter(Boolean).join(", ") || "—";
 };
 
 // Convert date-like value to year

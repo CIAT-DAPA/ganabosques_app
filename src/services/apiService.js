@@ -138,9 +138,16 @@ export async function fetchFarmRiskByDeforestationId(token, deforestationId) {
   return authGet(token, endpoint, "Error en la respuesta del servidor");
 }
 
-export async function fetchFarmRiskByAnalysisId(token, analysisId, pageSize = 20, page = 1) {
+export async function fetchFarmRiskByAnalysisId(token, analysisId, farm_ids=[], pageSize = 20, page = 1) {
   if (!analysisId) return { items: [], page: 1, page_size: pageSize };
-  const endpoint = `farmrisk/by-analysis-id?analysis_id=${analysisId}&page=${page}&page_size=${pageSize}`;
+
+  let endpoint = `farmrisk/by-analysis-id?analysis_id=${analysisId}&page=${page}&page_size=${pageSize}`;
+
+  // Agregar farm_ids si existen
+  if (farm_ids.length > 0) {
+    endpoint += `&farm_ids=${farm_ids.join(",")}`;
+  }
+  
   return authGet(token, endpoint, "Error al obtener farm risks por analysis ID");
 }
 

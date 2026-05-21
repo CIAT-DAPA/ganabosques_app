@@ -226,7 +226,7 @@ describe("fetchFarmRiskByAnalysisId", () => {
   });
   it("supports custom pagination", async () => {
     mockFetchOk({ items: [], page: 2, page_size: 50 });
-    await fetchFarmRiskByAnalysisId(TOKEN, 1, 50, 2);
+    await fetchFarmRiskByAnalysisId(TOKEN, 1, [], 50, 2);
     expect(global.fetch).toHaveBeenCalledWith(
       expect.stringContaining("page=2&page_size=50"), expect.any(Object)
     );

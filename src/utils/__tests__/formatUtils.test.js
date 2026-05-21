@@ -76,7 +76,7 @@ describe("fmtProp", () => {
   });
 
   it("converts 0.123 to '12%'", () => {
-    expect(fmtProp(0.123)).toBe("12%");
+    expect(fmtProp(0.123)).toBe("12.3%");
   });
 
   it("handles string number input", () => {

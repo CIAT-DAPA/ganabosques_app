@@ -42,7 +42,13 @@ export const formatPeriod = (start, end) => {
 // Extract external codes from ext_id array
 export const getCodes = (extIds) => {
   if (!Array.isArray(extIds)) return "—";
-  return extIds.map((e) => e?.ext_code && `${e.source}: ${e.ext_code}` || "").filter(Boolean).join(", ") || "—";
+  return extIds.map((e) => {
+        if (!e?.ext_code) return "";
+
+        return e.source
+          ? `${e.source}: ${e.ext_code}`
+          : e.ext_code;
+      }).filter(Boolean).join(", ") || "—";
 };
 
 // Convert date-like value to year

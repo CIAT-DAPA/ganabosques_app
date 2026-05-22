@@ -41,56 +41,56 @@ function transformAdm3Data(data) {
   return rows;
 }
 
-// Column config
-const ADM3_COLUMNS = [
-  { key: "departamento", label: "Departamento" },
-  { key: "municipio", label: "Municipio" },
-  { key: "vereda", label: "Vereda", highlight: true },
-  { key: "periodo", label: "Periodo" },
-  {
-    key: "alerta",
-    label: "Alerta",
-    render: (value) => <RiskChip hasRisk={value} title="Alerta" />,
-  },
-  {
-    key: "sit_direct",
-    label: "Alerta Directa (SIT)",
-    minWidth: "180px",
-    render: (value, row, idx) => (
-      <ExpandableCodeCell codes={value} rowKey={`dir-${row.adm3_id}-${idx}`} />
-    ),
-  },
-  {
-    key: "sit_input",
-    label: "Alerta Entrada (SIT)",
-    minWidth: "180px",
-    render: (value, row, idx) => (
-      <ExpandableCodeCell codes={value} rowKey={`in-${row.adm3_id}-${idx}`} />
-    ),
-  },
-  {
-    key: "sit_output",
-    label: "Alerta Salida (SIT)",
-    minWidth: "180px",
-    render: (value, row, idx) => (
-      <ExpandableCodeCell codes={value} rowKey={`out-${row.adm3_id}-${idx}`} />
-    ),
-  },
-  { 
-    key: "predios", 
-    label: "Predios",
-    render: (value) => value
-  },
-  {
-    key: "deforestacion",
-    label: "Deforestación (ha)",
-    render: (value) => fmtNum(value),
-  },
-];
-
 // ADM3 Risk Table Component
-export default function Adm3RiskTable({ data = {} }) {
+export default function Adm3RiskTable({ data = {}, isPrinting = false, ...props }) {
   const rows = transformAdm3Data(data);
+
+  // Column config
+  const ADM3_COLUMNS = [
+    { key: "departamento", label: "Departamento" },
+    { key: "municipio", label: "Municipio" },
+    { key: "vereda", label: "Vereda", highlight: true },
+    { key: "periodo", label: "Periodo" },
+    {
+      key: "alerta",
+      label: "Alerta",
+      render: (value) => <RiskChip hasRisk={value} title="Alerta" />,
+    },
+    {
+      key: "sit_direct",
+      label: "Alerta Directa (SIT)",
+      minWidth: "180px",
+      render: (value, row, idx) => (
+        <ExpandableCodeCell codes={value} rowKey={`dir-${row.adm3_id}-${idx}`} isPrinting={isPrinting} />
+      ),
+    },
+    {
+      key: "sit_input",
+      label: "Alerta Entrada (SIT)",
+      minWidth: "180px",
+      render: (value, row, idx) => (
+        <ExpandableCodeCell codes={value} rowKey={`in-${row.adm3_id}-${idx}`} isPrinting={isPrinting} />
+      ),
+    },
+    {
+      key: "sit_output",
+      label: "Alerta Salida (SIT)",
+      minWidth: "180px",
+      render: (value, row, idx) => (
+        <ExpandableCodeCell codes={value} rowKey={`out-${row.adm3_id}-${idx}`} isPrinting={isPrinting} />
+      ),
+    },
+    { 
+      key: "predios", 
+      label: "Predios",
+      render: (value) => value
+    },
+    {
+      key: "deforestacion",
+      label: "Deforestación (ha)",
+      render: (value) => fmtNum(value),
+    },
+  ];
 
   return (
     <RiskDataTable

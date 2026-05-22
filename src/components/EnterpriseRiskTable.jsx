@@ -62,40 +62,39 @@ function transformEnterpriseData(data) {
   return rows;
 }
 
-// Column config
-const ENTERPRISE_COLUMNS = [
-  { key: "departamento", label: "Departamento" },
-  { key: "municipio", label: "Municipio" },
-  { key: "tipo_empresa", label: "Tipo Empresa" },
-  { key: "id_empresa", label: "ID Empresa", highlight: true },
-  { key: "nombre_empresa", label: "Nombre Empresa", highlight: true },
-  { key: "periodo", label: "Periodo" },
-  {
-    key: "alerta",
-    label: "Alerta",
-    render: (value) => <RiskChip hasRisk={value} />,
-  },
-  {
-    key: "alerta_entrada",
-    label: "Alerta Entrada",
-    minWidth: "200px",
-    render: (value, row, idx) => (
-      <ExpandableCodeCell codes={value} rowKey={`in-${row.id_empresa}-${idx}`} />
-    ),
-  },
-  {
-    key: "alerta_salida",
-    label: "Alerta Salida",
-    minWidth: "200px",
-    render: (value, row, idx) => (
-      <ExpandableCodeCell codes={value} rowKey={`out-${row.id_empresa}-${idx}`} />
-    ),
-  },
-];
-
 // Enterprise Risk Table Component
-export default function EnterpriseRiskTable({ data = {} }) {
+export default function EnterpriseRiskTable({ data = {}, isPrinting = false, ...props }) {
   const rows = transformEnterpriseData(data);
+  // Column config
+  const ENTERPRISE_COLUMNS = [
+    { key: "departamento", label: "Departamento" },
+    { key: "municipio", label: "Municipio" },
+    { key: "tipo_empresa", label: "Tipo Empresa" },
+    { key: "id_empresa", label: "ID Empresa", highlight: true },
+    { key: "nombre_empresa", label: "Nombre Empresa", highlight: true },
+    { key: "periodo", label: "Periodo" },
+    {
+      key: "alerta",
+      label: "Alerta",
+      render: (value) => <RiskChip hasRisk={value} />,
+    },
+    {
+      key: "alerta_entrada",
+      label: "Alerta Entrada",
+      minWidth: "200px",
+      render: (value, row, idx) => (
+        <ExpandableCodeCell codes={value} rowKey={`in-${row.id_empresa}-${idx}`} isPrinting={isPrinting} />
+      ),
+    },
+    {
+      key: "alerta_salida",
+      label: "Alerta Salida",
+      minWidth: "200px",
+      render: (value, row, idx) => (
+        <ExpandableCodeCell codes={value} rowKey={`out-${row.id_empresa}-${idx}`} isPrinting={isPrinting} />
+      ),
+    },
+  ];
 
   return (
     <RiskDataTable
@@ -103,6 +102,7 @@ export default function EnterpriseRiskTable({ data = {} }) {
       columns={ENTERPRISE_COLUMNS}
       getRowKey={(row, idx) => `${row.id_empresa}-${idx}`}
       emptyMessage="No hay datos de empresas para mostrar."
+      {...props}
     />
   );
 }

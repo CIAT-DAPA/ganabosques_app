@@ -39,6 +39,15 @@ export {
   TABLE_CSS,
 } from "./tableStyles";
 
+export {
+  formatSitCodes,
+  formatFarmCodes,
+  escapeCsvCell,
+  exportEnterpriseToCSV,
+  exportFarmToCSV,
+  exportVeredaToCSV
+} from "./exportCSV";
+
 // Note: mapUtils is NOT re-exported here because it imports Leaflet,
 // which requires `window` and breaks SSR/SSG. Import directly from
 // "@/utils/mapUtils" in client-only components that need it.

@@ -57,6 +57,9 @@ export default function FloatingDownloadMenu({
     try {
       setLoading(true);
       await action();
+    } catch (error) {
+      console.error("Error al ejecutar acción:", error);
+      setLoading(false);
     } finally {
       setLoading(false);
       setIsOpen(false);
@@ -69,16 +72,37 @@ export default function FloatingDownloadMenu({
       className={`fixed ${positionClasses[position]} z-40 flex flex-col items-end`}
     >
       {/* Menú de opciones */}
-      {isOpen && (
         <div
-          className={`absolute ${menuDirection[position]} bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100 animate-in fade-in duration-200`}
+          className={`
+            absolute ${menuDirection[position]}
+            bg-white rounded-2xl shadow-2xl overflow-hidden border border-gray-100
+            origin-bottom-right
+            transition-all duration-300 ease-out
+            ${
+              isOpen
+                ? "opacity-100 scale-100 translate-y-0 pointer-events-auto"
+                : "opacity-0 scale-95 translate-y-2 pointer-events-none"
+            }
+          `}
         >
           {options.map((option, idx) => (
             <button
               key={idx}
               onClick={() => handleOptionClick(option.action)}
-              className="w-full px-4 py-3 text-left text-sm font-medium text-[#082C14] hover:bg-[#FCFFF5] transition-colors flex items-center gap-3 whitespace-nowrap group"
-              title={option.label}
+              className={`
+                w-full px-4 py-3 text-left text-sm font-medium
+                text-[#082C14] hover:bg-[#FCFFF5]
+                transition-all duration-300
+                flex items-center gap-3 whitespace-nowrap group
+                ${
+                  isOpen
+                    ? "opacity-100 translate-y-0"
+                    : "opacity-0 translate-y-2"
+                }
+              `}
+              style={{
+                transitionDelay: `${idx * 50}ms`,
+              }}
             >
               <span className="text-[#082C14] group-hover:text-[#00C853] transition-colors">
                 {option.icon}
@@ -89,7 +113,6 @@ export default function FloatingDownloadMenu({
             </button>
           ))}
         </div>
-      )}
 
       {/* Botón flotante principal */}
       <button
@@ -99,7 +122,7 @@ export default function FloatingDownloadMenu({
           w-14 h-14 rounded-full shadow-lg hover:shadow-xl
           transition-all duration-200
           flex items-center justify-center
-          bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50
+          bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all duration-500
           ${disabled || options.length === 0
             ? "bg-gray-300 cursor-not-allowed"
             : "bg-[#082C14] hover:bg-[#0b3b1b] text-white cursor-pointer"

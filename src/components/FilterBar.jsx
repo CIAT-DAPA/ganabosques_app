@@ -113,8 +113,11 @@ export default function FilterBar({
 
   // Auto-switch sourceLabel when activity changes
   useEffect(() => {
-    if (activity === "cacao" || activity === "cafe") {
+    setFoundFarms([]);
+    if (activity === "cacao" ) {
       setSourceLabel("GEOFARMER_ID");
+    } else if (activity === "cafe") {
+      setSourceLabel("PRODUCER_ID");
     } else if (activity === "ganaderia") {
       setSourceLabel("SIT_CODE");
     }

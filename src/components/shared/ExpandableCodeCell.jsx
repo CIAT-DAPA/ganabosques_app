@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { TABLE_CSS } from "@/utils";
 
-export default function ExpandableCodeCell({ codes = {}, rowKey }) {
+export default function ExpandableCodeCell({ codes = {}, rowKey, isPrinting = false }) {
   const [expanded, setExpanded] = useState(false);
 
   if (!codes || Object.keys(codes).length === 0) {
@@ -12,7 +12,9 @@ export default function ExpandableCodeCell({ codes = {}, rowKey }) {
 
   const farmEntries = Object.entries(codes);
 
-  const displayEntries = expanded
+  const shouldExpand = expanded || isPrinting;
+
+  const displayEntries = shouldExpand
     ? farmEntries
     : farmEntries.slice(0, 2);
 
@@ -21,9 +23,9 @@ export default function ExpandableCodeCell({ codes = {}, rowKey }) {
   return (
     <div
       className={`${TABLE_CSS.codeCell} ${
-        expanded ? TABLE_CSS.codeCellExpanded : ""
+        shouldExpand || !hasMore ? TABLE_CSS.codeCellExpanded : ""
       }`}
-      style={{ minWidth: expanded ? "auto" : "200px" }}
+      style={{ minWidth: shouldExpand ? "auto" : "200px" }}
     >
       <div className="space-y-1">
         {displayEntries.map(([farmId, farmCodes], farmIndex) => (
@@ -36,7 +38,7 @@ export default function ExpandableCodeCell({ codes = {}, rowKey }) {
                 <div
                   key={`${farmId}-${i}`}
                 >
-                  <strong>{item.source}:</strong> {item.ext_code}
+                  <strong>{item.source}:</strong> <span>{item.ext_code}</span>
                 </div>
               ))}
             </div>
@@ -44,7 +46,7 @@ export default function ExpandableCodeCell({ codes = {}, rowKey }) {
         ))}
       </div>
 
-      {hasMore && (
+      {hasMore && !isPrinting && (
         <button
           type="button"
           onClick={() => setExpanded(!expanded)}

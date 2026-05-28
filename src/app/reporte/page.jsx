@@ -168,15 +168,28 @@ export default function Reporte() {
         }
         const data = await fetchRiskGlobal(token, "enterprise", enterpriseIds, { analysisIds });
         const supplers = await fetchSuppliersByEnterpriseIds(token, enterpriseIds);
-        const farmIdsByEnterprise = Object.entries(supplers).reduce(
-            (acc, [enterpriseId, farms]) => {
-              acc[enterpriseId] = farms.map(f => f.farm_id);
-              return acc;
-            },
-            {}
-          );
+        const farmIdsBySuppliers = Object.values(supplers).flatMap((farms) =>
+          farms.map((f) => f.farm_id)
+        );
+        const farmIdsByEnterprise = [
+          ...new Set(
+            Object.values(data)
+              .flatMap((enterprise) => enterprise.items || [])
+              .flatMap((item) => [
+                ...Object.keys(item?.sit_codes?.input || {}),
+                ...Object.keys(item?.sit_codes?.output || {}),
+              ])
+          ),
+        ];
+
+        const allIds = [
+          ...new Set([
+            ...farmIdsByEnterprise,
+            ...farmIdsBySuppliers,
+          ]),
+        ];
         
-        const data_farms = await fetchRiskGlobal(token, "farm", farmIdsByEnterprise[enterpriseIds[0]], { analysisIds });
+        const data_farms = await fetchRiskGlobal(token, "farm", allIds, { analysisIds });
         setEnterpriseRiskData(data);
         setFarmRiskDataForEnterprise(data_farms);
 

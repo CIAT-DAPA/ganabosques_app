@@ -26,7 +26,7 @@ export const TABLE_CSS = {
   paginationButtonInactive: "px-3 py-1 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-100 cursor-pointer",
   
   // Expandable code cell
-  codeCell: "max-w-[200px] overflow-hidden transition-all duration-300 ease-in-out cursor-pointer",
+  codeCell: "max-w-fit overflow-hidden transition-all duration-300 ease-in-out cursor-pointer",
   codeCellExpanded: "w-fit max-w-none",
   codeContainer: "flex flex-wrap gap-1",
   codeChip: "inline-block px-1.5 py-0.5 bg-gray-100 text-gray-700 rounded text-xs",

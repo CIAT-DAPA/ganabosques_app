@@ -18,6 +18,7 @@ export default function RiskDataTable({
   externalPage = null,
   setExternalPage = null,
   hasMore = false,
+  ...props
 }) {
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
   const [internalPage, setInternalPage] = useState(1);
@@ -93,7 +94,7 @@ export default function RiskDataTable({
   return (
     <div className={TABLE_CSS.tableContainer}>
       <div className="overflow-x-auto">
-        <table className={TABLE_CSS.table}>
+        <table className={TABLE_CSS.table} id={props?.tableId}>
           <thead className={TABLE_CSS.tableHeader}>
             <tr>
               {columns.map((col) => {

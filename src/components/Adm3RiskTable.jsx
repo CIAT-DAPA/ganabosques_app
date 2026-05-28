@@ -98,6 +98,7 @@ export default function Adm3RiskTable({ data = {}, isPrinting = false, ...props 
       columns={ADM3_COLUMNS}
       getRowKey={(row, idx) => `${row.adm3_id}-${idx}`}
       emptyMessage="No hay datos de veredas para mostrar."
+      {...props}
     />
   );
 }

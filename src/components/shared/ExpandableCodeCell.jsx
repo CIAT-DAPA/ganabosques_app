@@ -38,10 +38,10 @@ export default function ExpandableCodeCell({ codes = {}, rowKey, isPrinting = fa
                 <div
                   key={`${farmId}-${i}`}
                 >
-                  <strong>{item.source}:</strong> <span>{item.ext_code}</span>
+                  <strong>{item.source}:</strong> <span>{item.ext_code}{ i < farmCodes.length - 1 && <br /> }</span>
                 </div>
               ))}
-            </div>
+            </div> { farmIndex < displayEntries.length - 1 && <br /> }
           </div>
         ))}
       </div>

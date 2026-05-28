@@ -189,45 +189,106 @@ export default function Reporte() {
     }
   }, [canGenerateReport, token, reportType, foundAdms, foundFarms, selectedEnterprise, analysisIds]);
 
-  const handleDownloadPdf = useCallback(async () => {
-    const el = document.getElementById("report-results");
-    if (!el) return;
+  const formatRiskCells = (data) => {
+    const value = data.cell.text?.join(" ");
 
+    if (value === "Con alerta") {
+      data.cell.styles.fillColor = [213, 0, 0];
+      data.cell.styles.textColor = 255;
+      data.cell.styles.fontStyle = "bold";
+      data.cell.styles.overflow = "visible"; 
+      data.cell.styles.cellWidth = "wrap";
+    }
+
+    if (value === "Sin alerta") {
+      data.cell.styles.fillColor = [0, 200, 83];
+      data.cell.styles.textColor = 255;
+      data.cell.styles.fontStyle = "bold";
+      data.cell.styles.overflow = "visible"; 
+      data.cell.styles.cellWidth = "wrap";
+    }
+
+    data.cell.styles.minCellHeight = 6;
+    data.cell.styles.valign = "middle";
+  };
+
+  const handleDownloadPdf = useCallback(async () => {
     try {
       setIsPrinting(true);
 
-      // esperar render
       await new Promise((resolve) => setTimeout(resolve, 100));
+      const {jsPDF} = await import('jspdf');
+      const autoTable = (await import('jspdf-autotable')).default;
+      const pdf = new jsPDF({ orientation: reportType === 'finca' ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
 
-      const { jsPDF } = await import("jspdf");
-      const html2canvas = (await import("html2canvas-pro")).default;
+      const alertLabel =
+        RISK_OPTIONS.find((r) => r.value === risk)?.label || risk;
 
-      const canvas = await html2canvas(el, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: "#ffffff",
+      pdf.setFontSize(18);
+      pdf.text(`Reporte ${reportType}`, 14, 20);
+      pdf.setFontSize(10);
+      pdf.text(`Exportado el ${new Date().toLocaleDateString()}`, 14, 28);
+      pdf.text(`Tipo de alerta: ${alertLabel}`, 14, 34);
+      pdf.setFontSize(14);
+      pdf.text(`Resultados del análisis`, 14, 42);
+
+      autoTable(pdf, {
+        html: `#pdf-${reportType}-table`,
+        startY: 48,
+        theme: 'grid',
+        styles: {
+          fontSize: 6,
+          overflow: 'linebreak',
+          cellPadding: 1.5,
+        },
+        headStyles: {
+          fillColor: [8, 44, 20],
+        },
+        alternateRowStyles: {
+          fillColor: [245, 245, 245],
+        },
+        margin: {
+          left: 8,
+          right: 8,
+        },
+        tableWidth: 'auto',
+        rowPageBreak: 'avoid',
+        didParseCell: (data) => {
+          formatRiskCells(data);
+        },
       });
 
-      const imgData = canvas.toDataURL("image/png");
-      const pdf = new jsPDF("p", "mm", "a4");
+      if (reportType === 'empresa') {
 
-      const pdfW = pdf.internal.pageSize.getWidth();
-      const pdfH = pdf.internal.pageSize.getHeight();
+        pdf.addPage('a4', 'landscape');
+        pdf.setFontSize(14);
+        pdf.text('Detalles Predios', 14, 20);
 
-      const imgW = pdfW;
-      const imgH = (canvas.height * imgW) / canvas.width;
-
-      let position = 0;
-      let heightLeft = imgH;
-
-      pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-      heightLeft -= pdfH;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgH;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", 0, position, imgW, imgH);
-        heightLeft -= pdfH;
+        autoTable(pdf, {
+          html: '#pdf-farmdetalle-table',
+          startY: 25,
+          theme: 'grid',
+          styles: {
+            fontSize: 6,
+            overflow: 'linebreak',
+            cellPadding: 1.5,
+          },
+          headStyles: {
+            fillColor: [8, 44, 20],
+          },
+          alternateRowStyles: {
+            fillColor: [245, 245, 245],
+          },
+          margin: {
+            left: 8,
+            right: 8,
+          },
+          tableWidth: 'auto',
+          rowPageBreak: 'avoid',
+          didParseCell: (data) => {
+            formatRiskCells(data);
+          },
+        });
       }
 
       pdf.save(`reporte_${reportType}.pdf`);
@@ -379,13 +440,16 @@ export default function Reporte() {
           <h1 className={CSS_CLASSES.title}>Reporte</h1>
           <hr className={CSS_CLASSES.separator} />
           <p className={CSS_CLASSES.description}>
-            En esta sección podrás generar reportes detallados para Veredas, Predios y Empresas. Selecciona los periodos de interés, define el tipo de reporte y utiliza los filtros de búsqueda para visualizar la información consolidada de alertas.
+            En esta sección podrás generar reportes detallados para Veredas,
+            Predios y Empresas. Selecciona los periodos de interés, define el
+            tipo de reporte y utiliza los filtros de búsqueda para visualizar la
+            información consolidada de alertas.
           </p>
         </div>
       </header>
 
       <section className={CSS_CLASSES.mapContainer}>
-        <div className="relative max-w-7xl mx-auto p-6 md:p-12">
+        <div className='relative max-w-7xl mx-auto p-6 md:p-12'>
           <FilterBar
             risk={risk}
             setRisk={setRisk}
@@ -419,34 +483,35 @@ export default function Reporte() {
           />
 
           {/* Generate button area */}
-          {reportType !== "" && (
-            <div className="mt-20">
+          {reportType !== '' && (
+            <div className='mt-20'>
               {errorMsg && (
-                <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700">
+                <div className='mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-red-700'>
                   {errorMsg}
                 </div>
               )}
 
               {canGenerateReport && (
-                <div className="flex items-center justify-between gap-4">
-                  <div className="text-sm text-[#082C14]/70">
-                    <span className="inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700">
+                <div className='flex items-center justify-between gap-4'>
+                  <div className='text-sm text-[#082C14]/70'>
+                    <span className='inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 font-medium text-emerald-700'>
                       {getCountText()}
                     </span>
                     {analysisIds.length > 0 && (
-                      <span className="ml-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700">
-                        {analysisIds.length} período{analysisIds.length === 1 ? "" : "s"}
+                      <span className='ml-2 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 font-medium text-blue-700'>
+                        {analysisIds.length} período
+                        {analysisIds.length === 1 ? '' : 's'}
                       </span>
                     )}
                   </div>
 
                   <button
-                    type="button"
+                    type='button'
                     onClick={handleGenerateReport}
                     disabled={loading}
-                    className="relative inline-flex items-center gap-3 rounded-2xl px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+                    className='relative inline-flex items-center gap-3 rounded-2xl px-6 py-3 bg-gradient-to-r from-emerald-600 to-emerald-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all disabled:opacity-50'
                   >
-                    {loading ? "Generando..." : "Generar reporte"}
+                    {loading ? 'Generando...' : 'Generar reporte'}
                   </button>
                 </div>
               )}
@@ -457,9 +522,14 @@ export default function Reporte() {
         {/* Vereda Results */}
         {hasVeredaResults && !loading && (
           <>
-            <div className="w-4/5 mx-auto bg-white rounded-2xl shadow-md p-6 mt-8" id="report-results">
-              <h3 className="text-xl font-semibold text-[#082C14] mb-4">Resultados del análisis - Veredas</h3>
-              <Adm3RiskTable data={filteredVeredaAnalysis} isPrinting={isPrinting} />
+            <div
+              className='w-4/5 mx-auto bg-white rounded-2xl shadow-md p-6 mt-8'
+              id='report-results'
+            >
+              <h3 className='text-xl font-semibold text-[#082C14] mb-4'>
+                Resultados del análisis - Veredas
+              </h3>
+              <Adm3RiskTable data={filteredVeredaAnalysis} />
             </div>
           </>
         )}
@@ -467,8 +537,13 @@ export default function Reporte() {
         {/* Farm Results */}
         {hasFarmResults && !loading && (
           <>
-            <div className="w-4/5 mx-auto bg-white rounded-2xl shadow-md p-6 mt-8" id="report-results">
-              <h3 className="text-xl font-semibold text-[#082C14] mb-4">Resultados del análisis - Fincas</h3>
+            <div
+              className='w-4/5 mx-auto bg-white rounded-2xl shadow-md p-6 mt-8'
+              id='report-results'
+            >
+              <h3 className='text-xl font-semibold text-[#082C14] mb-4'>
+                Resultados del análisis - Fincas
+              </h3>
               <FarmRiskTable data={filteredFarmData} />
             </div>
           </>
@@ -477,22 +552,84 @@ export default function Reporte() {
         {/* Enterprise Results */}
         {hasEnterpriseResults && !loading && (
           <>
-            <div className="mx-6 bg-white rounded-2xl shadow-md p-6 mt-8" id="report-results">
-              <h3 className="text-xl font-semibold text-[#082C14] mb-4">Resultados del análisis - Empresas</h3>
-              <EnterpriseRiskTable data={filteredEnterpriseData} isPrinting={isPrinting} />
+            <div
+              className='mx-6 bg-white rounded-2xl shadow-md p-6 mt-8'
+              id='report-results'
+            >
+              <h3 className='text-xl font-semibold text-[#082C14] mb-4'>
+                Resultados del análisis - Empresas
+              </h3>
+              <EnterpriseRiskTable data={filteredEnterpriseData} />
             </div>
-            <div className="mx-6 bg-white rounded-2xl shadow-md p-6 mt-8" id="detalle-predios">
-              <h3 className="text-xl font-semibold text-[#082C14] mb-4">Detalles Predios</h3>
-              {farmRiskDataForEnterprise && Object.keys(farmRiskDataForEnterprise).length > 0 && (
-                <FarmRiskTable data={farmRiskDataForEnterprise} paginated={true} />
-              )}
+            <div
+              className='mx-6 bg-white rounded-2xl shadow-md p-6 mt-8'
+              id='detalle-predios'
+            >
+              <h3 className='text-xl font-semibold text-[#082C14] mb-4'>
+                Detalles Predios
+              </h3>
+              {farmRiskDataForEnterprise &&
+                Object.keys(farmRiskDataForEnterprise).length > 0 && (
+                  <FarmRiskTable
+                    data={farmRiskDataForEnterprise}
+                    paginated={true}
+                  />
+                )}
             </div>
           </>
         )}
         {hasAnyResults && !loading && (
-          <FloatingDownloadMenu options={downloadOptions} position="bottom-right" />
+          <FloatingDownloadMenu 
+            options={downloadOptions}
+            position='bottom-right'
+          />
         )}
       </section>
+      <div
+        id='pdf-export-container'
+        style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          opacity: 0,
+          pointerEvents: 'none',
+          zIndex: -9999,
+          display: 'none',
+        }}
+      >
+        {hasVeredaResults && filteredVeredaAnalysis?.length > 0 && (
+          <Adm3RiskTable
+            data={filteredVeredaAnalysis}
+            isPrinting={true}
+            paginated={false}
+            tableId='pdf-vereda-table'
+          />
+        )}
+        {hasFarmResults && Object.keys(filteredFarmData).length > 0 && (
+          <FarmRiskTable
+            data={filteredFarmData}
+            isPrinting={true}
+            paginated={false}
+            tableId='pdf-finca-table'
+          />
+        )}
+        {enterpriseRiskData && Object.keys(enterpriseRiskData).length > 0 && (
+          <EnterpriseRiskTable
+            data={filteredEnterpriseData}
+            isPrinting={true}
+            paginated={false}
+            tableId='pdf-empresa-table'
+          />
+        )}
+        {farmRiskDataForEnterprise && Object.keys(farmRiskDataForEnterprise).length > 0 && (
+          <FarmRiskTable
+            data={farmRiskDataForEnterprise}
+            isPrinting={true}
+            paginated={false}
+            tableId='pdf-farmdetalle-table'
+          />
+        )}
+      </div>
     </main>
   );
 }

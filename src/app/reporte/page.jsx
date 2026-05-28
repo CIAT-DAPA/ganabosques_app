@@ -225,14 +225,78 @@ export default function Reporte() {
     data.cell.styles.valign = "middle";
   };
 
+  const loadLogoBase64 = async () => {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = "/logobyg.png";
+      img.onload = () => {
+        const canvas =
+          document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        const dataURL =
+          canvas.toDataURL("image/png");
+        resolve(dataURL);
+      };
+      img.onerror = reject;
+    });
+  };
+
+  const addPageNumbers = (pdf) => {
+    const totalPages = pdf.getNumberOfPages();
+    for (let i = 1; i <= totalPages; i++) {
+      pdf.setPage(i);
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      pdf.setFontSize(9);
+      pdf.setTextColor(120);
+      pdf.text(
+        `Página ${i} de ${totalPages}`,
+        pageWidth - 30,
+        pageHeight - 8
+      );
+    }
+  };
+
   const handleDownloadPdf = useCallback(async () => {
     try {
       setIsPrinting(true);
 
       await new Promise((resolve) => setTimeout(resolve, 100));
+      const logoBase64 = await loadLogoBase64();
       const {jsPDF} = await import('jspdf');
       const autoTable = (await import('jspdf-autotable')).default;
       const pdf = new jsPDF({ orientation: reportType === 'finca' ? 'landscape' : 'portrait', unit: 'mm', format: 'a4' });
+
+      const drawHeader = (pdf) => {
+        const pageWidth = pdf.internal.pageSize.getWidth();
+        const headerHeight = 11;
+        const logoHeight = 7;
+        const logoWidth = logoHeight * (1185 / 903);
+
+        pdf.setFillColor(8, 44, 20);
+        pdf.rect(0, 0, pageWidth, headerHeight, 'F');
+        pdf.addImage(
+          logoBase64,
+          'PNG',
+          8, // x
+          2, // y
+          logoWidth,
+          logoHeight,
+        );
+
+        pdf.setTextColor(255);
+        pdf.setFontSize(13);
+        pdf.setFont('helvetica', 'bold');
+        pdf.text(
+          'Ganabosques',
+          20, // x
+          7.3, // y
+        );
+      };
 
       const alertLabel =
         RISK_OPTIONS.find((r) => r.value === risk)?.label || risk;
@@ -269,6 +333,9 @@ export default function Reporte() {
         didParseCell: (data) => {
           formatRiskCells(data);
         },
+        didDrawPage: () => {
+          drawHeader(pdf);
+        },
       });
 
       if (reportType === 'empresa') {
@@ -301,8 +368,13 @@ export default function Reporte() {
           didParseCell: (data) => {
             formatRiskCells(data);
           },
+          didDrawPage: () => {
+            drawHeader(pdf);
+          },
         });
       }
+
+      addPageNumbers(pdf);
 
       pdf.save(`reporte_${reportType}.pdf`);
     } catch (err) {

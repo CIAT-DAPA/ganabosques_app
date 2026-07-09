@@ -1,0 +1,65 @@
+# Git
+
+.git
+.gitignore
+.gitattributes
+
+# Dependencies
+
+node_modules/
+npm-debug.log
+npm-error.log
+yarn-debug.log
+yarn-error.log
+pnpm-debug.log
+bun.lockb
+
+# Testing
+
+.test
+.spec
+coverage/
+**tests**/
+
+# Build
+
+.next/
+dist/
+out/
+build/
+
+# IDE
+
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.iml
+
+# Environment
+
+.env.local
+.env.*.local
+
+# CI/CD
+
+.github/
+.gitlab-ci.yml
+.circleci/
+Jenkinsfile
+
+# Documentation
+
+README.md
+STYLE_GUIDE.md
+
+# Misc
+
+.cache/
+.turbo/
+turbo.json
+
+Dockerfile
+docker-compose.yml

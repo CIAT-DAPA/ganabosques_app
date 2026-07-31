@@ -9,6 +9,7 @@ import {
 import L from "leaflet";
 import { useEffect, useRef } from "react";
 import "leaflet/dist/leaflet.css";
+import { GEOSERVER_URL } from "@/services/config";
 
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -133,7 +134,7 @@ const defLabel = hasPeriod
           >
             <WMSTileLayer
               key={`wms-${start ?? "na"}-${end ?? "na"}-${layersPath}`}
-              url="https://ganageo.alliance.cgiar.org/geoserver/deforestation/wms"
+              url={`${GEOSERVER_URL}/geoserver/deforestation/wms`}
               layers={layersPath}
               format="image/png"
               transparent
@@ -146,7 +147,7 @@ const defLabel = hasPeriod
 
         <LayersControl.Overlay name="Departamentos">
           <WMSTileLayer
-            url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+            url={`${GEOSERVER_URL}/geoserver/administrative/wms`}
             layers="administrative:admin_1"
             format="image/png"
             transparent={true}
@@ -157,7 +158,7 @@ const defLabel = hasPeriod
 
         <LayersControl.Overlay name="Municipios">
           <WMSTileLayer
-            url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+            url={`${GEOSERVER_URL}/geoserver/administrative/wms`}
             layers="administrative:admin_2"
             format="image/png"
             transparent={true}
@@ -168,7 +169,7 @@ const defLabel = hasPeriod
 
         <LayersControl.Overlay name="Veredas">
           <WMSTileLayer
-            url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+            url={`${GEOSERVER_URL}/geoserver/administrative/wms`}
             layers="administrative:admin_3"
             format="image/png"
             transparent={true}
@@ -179,7 +180,7 @@ const defLabel = hasPeriod
 
         <LayersControl.Overlay name="Áreas protegidas">
           <WMSTileLayer
-            url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+            url={`${GEOSERVER_URL}/geoserver/administrative/wms`}
             layers="administrative:pnn_areas"
             format="image/png"
             transparent={true}
@@ -190,7 +191,7 @@ const defLabel = hasPeriod
 
         <LayersControl.Overlay name="Frontera agrícola">
           <WMSTileLayer
-            url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+            url={`${GEOSERVER_URL}/geoserver/administrative/wms`}
             layers="administrative:upra_boundaries"
             format="image/png"
             transparent={true}

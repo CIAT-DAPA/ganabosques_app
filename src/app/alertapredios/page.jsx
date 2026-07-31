@@ -6,6 +6,7 @@ import "leaflet/dist/leaflet.css";
 import Banner from "@/components/Banner";
 import { useAuth } from "@/hooks/useAuth";
 import UnauthorizedPage from "@/components/Unauthorized";
+import { hasPermission } from "@/utils/permissions";
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
 });
@@ -28,7 +29,7 @@ export default function RiesgosPredios() {
 
 const { validatedPayload } = useAuth();
 
-if (!validatedPayload?.user_db?.admin) {
+if (!hasPermission(validatedPayload?.user_db, "front_farms", "read")) {
   return <UnauthorizedPage />;
 }
   return (

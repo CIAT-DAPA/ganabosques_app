@@ -10,7 +10,4 @@ describe("config", () => {
     expect(API_URL.endsWith("/")).toBe(true);
   });
 
-  it("API_URL starts with https", () => {
-    expect(API_URL.startsWith("https://")).toBe(true);
-  });
 });

@@ -2,6 +2,7 @@
 import React, { useState, useEffect, useRef, useContext, useMemo } from "react";
 import Keycloak from "keycloak-js";
 import { validateToken } from "@/services/tokenService";
+import { KEYCLOAK_URL, KEYCLOAK_REALM, KEYCLOAK_CLIENT_ID } from "@/services/config";
 
 const AuthContext = React.createContext();
 
@@ -18,9 +19,9 @@ export const AuthProvider = ({ children }) => {
     isRun.current = true;
 
     keycloak.current = new Keycloak({
-      url: "https://ganausers.alliance.cgiar.org",
-      realm: "GanaBosques",
-      clientId: "GanabosquesWeb",
+      url: KEYCLOAK_URL,
+      realm: KEYCLOAK_REALM,
+      clientId: KEYCLOAK_CLIENT_ID,
     });
 
     keycloak.current

@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "@/hooks/useAuth";
 import UnauthorizedPage from "@/components/Unauthorized";
+import { hasPermission } from "@/utils/permissions";
 
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
@@ -25,8 +26,8 @@ export default function Dashboard() {
     document.title = "Ganabosques - Dashboard";
   }, []);
 
-  const { validatedPayload } = useAuth();
-if (!validatedPayload?.user_db?.admin) {
+const { validatedPayload } = useAuth();
+if (!hasPermission(validatedPayload?.user_db, "front_report", "read")) {
   return <UnauthorizedPage />;
 }
 

@@ -167,10 +167,6 @@ export default function Reporte() {
           throw new Error("No se encontraron empresas seleccionadas.");
         }
         const data = await fetchRiskGlobal(token, "enterprise", enterpriseIds, { analysisIds });
-        const supplers = await fetchSuppliersByEnterpriseIds(token, enterpriseIds);
-        const farmIdsBySuppliers = Object.values(supplers).flatMap((farms) =>
-          farms.map((f) => f.farm_id)
-        );
         const farmIdsByEnterprise = [
           ...new Set(
             Object.values(data)
@@ -181,15 +177,7 @@ export default function Reporte() {
               ])
           ),
         ];
-
-        const allIds = [
-          ...new Set([
-            ...farmIdsByEnterprise,
-            ...farmIdsBySuppliers,
-          ]),
-        ];
-        
-        const data_farms = await fetchRiskGlobal(token, "farm", allIds, { analysisIds });
+        const data_farms = await fetchRiskGlobal(token, "farm", farmIdsByEnterprise, { analysisIds });
         setEnterpriseRiskData(data);
         setFarmRiskDataForEnterprise(data_farms);
 

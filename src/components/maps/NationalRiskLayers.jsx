@@ -2,6 +2,7 @@
 
 import { useRef } from "react";
 import { WMSTileLayer, useMapEvent } from "react-leaflet";
+import { GEOSERVER_URL } from "@/services/config";
 
 export default function NationalRiskLayers({ 
   foundAdms, 
@@ -41,7 +42,7 @@ export default function NationalRiskLayers({
         INFO_FORMAT: "application/json",
       });
 
-      const rawUrl = `https://ganageo.alliance.cgiar.org/geoserver/administrative/wms?${params.toString()}`;
+      const rawUrl = `${GEOSERVER_URL}/geoserver/administrative/wms?${params.toString()}`;
       const proxiedUrl = `https://corsproxy.io/?${encodeURIComponent(rawUrl)}`;
 
       try {
@@ -93,7 +94,7 @@ export default function NationalRiskLayers({
           return (
             <WMSTileLayer
               key={`wms-admin3-${detail.ext_id}-${styleName}`}
-              url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+              url={`${GEOSERVER_URL}/geoserver/administrative/wms`}
               layers="administrative:admin_3"
               format="image/png"
               transparent={true}

@@ -18,6 +18,7 @@ import { fetchAdm3RiskByAdm3AndType } from "@/services/apiService";
 import Adm3HistoricalRisk from "@/components/Adm3HistoricalRisk";
 import DownloadPdfButton from "@/components/DownloadPdfButton";
 import { RISK_OPTIONS } from "@/contexts/MapFiltersContext";
+import { GEOSERVER_URL } from "@/services/config";
 
 export default function NationalRiskMap() {
   const { mapRef, handleMapCreated } = useMapState();
@@ -166,7 +167,7 @@ export default function NationalRiskMap() {
           >
             <LayersControl.Overlay name="Veredas">
               <WMSTileLayer
-                url="https://ganageo.alliance.cgiar.org/geoserver/administrative/wms"
+                url={`${GEOSERVER_URL}/geoserver/administrative/wms`}
                 layers="administrative:admin_3"
                 format="image/png"
                 transparent={true}

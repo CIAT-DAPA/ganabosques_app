@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import "leaflet/dist/leaflet.css";
 import { useAuth } from "@/hooks/useAuth";
 import UnauthorizedPage from "@/components/Unauthorized";
+import { hasPermission } from "@/utils/permissions";
 
 const Map = dynamic(() => import("@/components/Map"), {
   ssr: false,
@@ -26,7 +27,7 @@ export default function RiesgosNacionales() {
   }, []);
 const { validatedPayload } = useAuth();
 
-if (!validatedPayload?.user_db?.admin) {
+if (!hasPermission(validatedPayload?.user_db, "front_adm", "read")) {
   return <UnauthorizedPage />;
 }
   return (

@@ -1,0 +1,28 @@
+pr:
+  branches:
+    include:
+      - preprod
+
+stages:
+- stage: Test
+  displayName: "Run Tests"
+  jobs:
+  - job: TestApp
+    displayName: "Test App"
+    pool:
+      vmImage: "ubuntu-latest"
+    steps:
+    - checkout: self
+
+    - task: NodeTool@0
+      displayName: "Use Node 18"
+      inputs:
+        versionSpec: "18.x"
+
+    - script: |
+        npm ci
+      displayName: "Install packages"
+
+    - script: |
+        npm test
+      displayName: "Run unit tests"

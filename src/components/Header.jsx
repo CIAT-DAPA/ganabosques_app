@@ -11,14 +11,15 @@ import {
   faChevronDown,
 } from "@fortawesome/free-solid-svg-icons";
 import Image from "next/image";
+import { hasPermission } from "@/utils/permissions";
 
 // Navigation items
 const NAV_ITEMS = [
-  { name: "Alertas nacionales", path: "/alertasnacionales", loginRequired: true },
-  { name: "Alertas de predio", path: "/alertapredios", loginRequired: true },
-  { name: "Alertas de empresa", path: "/alertaempresas", loginRequired: true },
-  { name: "Dashboard", path: "/dashboard", loginRequired: true },
-  { name: "Reporte", path: "/reporte", loginRequired: true }, 
+  { name: "Alertas nacionales", path: "/alertasnacionales", loginRequired: true, action: "front_adm", option: "read" },
+  { name: "Alertas de predio", path: "/alertapredios", loginRequired: true, action: "front_farms", option: "read" },
+  { name: "Alertas de empresa", path: "/alertaempresas", loginRequired: true, action: "front_enterprise", option: "read" },
+  { name: "Dashboard", path: "/dashboard", loginRequired: true, action: "front_report", option: "read" },
+  { name: "Reporte", path: "/reporte", loginRequired: true, action: "front_report", option: "read" }, 
   /*
   {
     name: "Metodología",
@@ -76,11 +77,10 @@ export default function Header() {
 
   const isAdmin = userDb?.admin === true;
 
-  const canAccess = (loginRequired) => {
-    if (!loginRequired) return true;   
-    if (!token) return false;          
-    if (!userDb) return false;         
-    return isAdmin;                    
+  const canAccess = (item) => {
+    if (!item.loginRequired) return true;
+    if (!token) return false;
+    return hasPermission(userDb, item.action, item.option);
   };
 
 
@@ -104,8 +104,8 @@ export default function Header() {
   };
 
   // Desktop links
-  const renderNavLink = ({ name, path, external, loginRequired }) => {
-    const allowed = canAccess(loginRequired);
+  const renderNavLink = ({ name, path, external, loginRequired, action, option }) => {
+    const allowed = canAccess({ loginRequired, action, option });
     const isActive = pathname === path;
 
     if (external) {
@@ -119,7 +119,7 @@ export default function Header() {
           {name}
         </a>
       ) : (
-        <span className={CSS_CLASSES.disabledLink} title="Requiere rol admin">
+        <span className={CSS_CLASSES.disabledLink} title="Requiere permisos">
           {name}
         </span>
       );
@@ -130,15 +130,15 @@ export default function Header() {
         {name}
       </Link>
     ) : (
-      <span className={CSS_CLASSES.disabledLink} title="Requiere rol admin">
+      <span className={CSS_CLASSES.disabledLink} title="Requiere permisos">
         {name}
       </span>
     );
   };
 
   // Mobile links
-  const renderMobileNavLink = ({ name, path, external, loginRequired }) => {
-    const allowed = canAccess(loginRequired);
+  const renderMobileNavLink = ({ name, path, external, loginRequired, action, option }) => {
+    const allowed = canAccess({ loginRequired, action, option });
     const isActive = pathname === path;
 
     if (external) {
@@ -153,7 +153,7 @@ export default function Header() {
           {name}
         </a>
       ) : (
-        <span className="block text-gray-400 cursor-not-allowed font-body" title="Requiere rol admin">
+        <span className="block text-gray-400 cursor-not-allowed font-body" title="Requiere permisos">
           {name}
         </span>
       );
@@ -168,7 +168,7 @@ export default function Header() {
         {name}
       </Link>
     ) : (
-      <span className="block text-gray-400 cursor-not-allowed font-body" title="Requiere rol admin">
+      <span className="block text-gray-400 cursor-not-allowed font-body" title="Requiere permisos">
         {name}
       </span>
     );

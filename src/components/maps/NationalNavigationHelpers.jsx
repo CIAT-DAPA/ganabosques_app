@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useMap } from "react-leaflet";
 import L from "leaflet";
+import { GEOSERVER_URL } from "@/services/config";
 
 export default function NationalNavigationHelpers({ 
   adm3Details, 
@@ -29,7 +30,7 @@ export default function NationalNavigationHelpers({
 
       setLastCenteredExtId(extId);
 
-      const wfsUrl = `https://ganageo.alliance.cgiar.org/geoserver/administrative/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=administrative:admin_3&outputFormat=application/json&CQL_FILTER=cod_ver='${extId}'&srsName=EPSG:4326`;
+      const wfsUrl = `${GEOSERVER_URL}/geoserver/administrative/ows?service=WFS&version=1.0.0&request=GetFeature&typeName=administrative:admin_3&outputFormat=application/json&CQL_FILTER=cod_ver='${extId}'&srsName=EPSG:4326`;
       const fullUrl = `https://corsproxy.io/?${encodeURIComponent(wfsUrl)}`;
 
       fetch(fullUrl)

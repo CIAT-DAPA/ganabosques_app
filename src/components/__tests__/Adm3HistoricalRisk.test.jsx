@@ -160,13 +160,8 @@ describe("Adm3HistoricalRisk", () => {
       expect(screen.getByText("Sin alerta")).toBeInTheDocument();
     });
 
-    // Known defect, documented rather than asserted as desirable: the filter
-    // year comes from toYear, which reads the leading four digits ("2023"),
-    // while each row's year comes from isoToYear, which parses the date and
-    // yields 2022 for "2023-01-01" west of Greenwich. Annual periods always
-    // start on January 1st, so the panel never finds its match and falls back
-    // to "Sin alerta" with zeroed metrics even though data exists.
-    it("fails to match an annual period that starts on January 1st", () => {
+    // Known defect: toYear reads the leading digits, isoToYear parses the date
+    it("fails to match an annual period that starts on January 1st in America/Bogota", () => {
       const data = [
         group({ items: [item({ period_start: "2023-01-01", period_end: "2024-01-01" })] }),
       ];

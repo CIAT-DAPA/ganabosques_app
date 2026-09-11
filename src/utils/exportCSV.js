@@ -2,9 +2,11 @@
 import { fmtProp } from "./formatUtils";
 
 export const formatSitCodes = (sitCodes = {}) => {
+  if (!sitCodes || typeof sitCodes !== "object") return "";
+
   return Object.entries(sitCodes)
     .map(([farmId, farmCodes]) => {
-      const codes = farmCodes
+      const codes = (Array.isArray(farmCodes) ? farmCodes : [])
         .filter((code) => code?.ext_code)
         .map((code) => `${code.source}: ${code.ext_code}`)
         .join(" | ");
@@ -50,8 +52,8 @@ export const exportEnterpriseToCSV = (data) => {
     const enterprise = enterpriseData.enterprise;
 
     enterpriseData.items?.forEach((item) => {
-      const startYear = new Date(item.period_start).getFullYear();
-      const endYear = new Date(item.period_end).getFullYear();
+      const startYear = new Date(item.period_start).getUTCFullYear();
+      const endYear = new Date(item.period_end).getUTCFullYear();
 
       const period = `${startYear} - ${endYear}`;
 
@@ -116,8 +118,8 @@ export const exportFarmToCSV = (data) => {
     const codes = formatFarmCodes(farm?.ext_id);
 
     farmData.items?.forEach((item) => {
-      const startYear = new Date(item.period_start).getFullYear();
-      const endYear = new Date(item.period_end).getFullYear();
+      const startYear = new Date(item.period_start).getUTCFullYear();
+      const endYear = new Date(item.period_end).getUTCFullYear();
 
       const period = `${startYear} - ${endYear}`;
 
@@ -174,8 +176,8 @@ export const exportVeredaToCSV = (data) => {
 
   Object.entries(data).forEach(([adm3Id, veredaData]) => {
     veredaData.items?.forEach((item) => {
-      const startYear = new Date(item.period_start).getFullYear();
-      const endYear = new Date(item.period_end).getFullYear();
+      const startYear = new Date(item.period_start).getUTCFullYear();
+      const endYear = new Date(item.period_end).getUTCFullYear();
 
       const period = `${startYear} - ${endYear}`;
 

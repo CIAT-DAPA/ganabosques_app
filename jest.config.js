@@ -1,3 +1,6 @@
+// Pin the timezone so date assertions do not depend on the runner
+process.env.TZ = "America/Bogota";
+
 /** @type {import('jest').Config} */
 module.exports = {
   testEnvironment: "jsdom",
@@ -22,9 +25,14 @@ module.exports = {
     }],
   },
 
+  // Page suites drive many interactions; the 5s default is too tight for them.
+  testTimeout: 30000,
+
   transformIgnorePatterns: [
     "/node_modules/",
   ],
+
+  testTimeout: 30000,
 
   // Coverage only runs with --coverage (npm run test:coverage).
   // CI runs plain `npm test`: no coverage, no thresholds.

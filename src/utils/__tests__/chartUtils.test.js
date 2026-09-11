@@ -414,3 +414,26 @@ describe("normalizeBubbleSeries", () => {
     expect(result.rows[0].label).toBe("Q1 2023");
   });
 });
+
+describe("formatNumber fallback", () => {
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  // The es-CO locale may be unavailable in a stripped-down ICU build, so the
+  // function guards toLocaleString with try/catch.
+  it("falls back to String when toLocaleString throws", () => {
+    jest.spyOn(Number.prototype, "toLocaleString").mockImplementation(() => {
+      throw new RangeError("locale not supported");
+    });
+    expect(formatNumber(1234)).toBe("1234");
+  });
+
+  it("still returns non-numbers untouched when toLocaleString throws", () => {
+    jest.spyOn(Number.prototype, "toLocaleString").mockImplementation(() => {
+      throw new RangeError("locale not supported");
+    });
+    expect(formatNumber("abc")).toBe("abc");
+    expect(formatNumber(null)).toBeNull();
+  });
+});

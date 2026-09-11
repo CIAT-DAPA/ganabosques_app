@@ -1,5 +1,5 @@
 // Filter bar logic hooks
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   fetchAnalysisYearRanges,
   fetchFarmBySITCode,
@@ -66,6 +66,17 @@ export const useYearRanges = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Parent callbacks live in refs so they are not effect dependencies
+  const setYearRef = useRef(setYear);
+  const setPeriodRef = useRef(setPeriod);
+  const onYearStartEndChangeRef = useRef(onYearStartEndChange);
+
+  useEffect(() => {
+    setYearRef.current = setYear;
+    setPeriodRef.current = setPeriod;
+    onYearStartEndChangeRef.current = onYearStartEndChange;
+  }, [setYear, setPeriod, onYearStartEndChange]);
+
   useEffect(() => {
     if (!token) return;
 
@@ -85,13 +96,16 @@ export const useYearRanges = (
         // Auto-select first period when yearRanges reload (activity/source/risk change)
         if (arr.length > 0) {
           const first = arr[0];
-          setYear?.(String(first.id));
-          setPeriod?.(first);
-          onYearStartEndChange?.(first.deforestation_period_start, first.deforestation_period_end);
+          setYearRef.current?.(String(first.id));
+          setPeriodRef.current?.(first);
+          onYearStartEndChangeRef.current?.(
+            first.deforestation_period_start,
+            first.deforestation_period_end
+          );
         } else {
-          setYear?.("");
-          setPeriod?.("");
-          onYearStartEndChange?.(null, null);
+          setYearRef.current?.("");
+          setPeriodRef.current?.("");
+          onYearStartEndChangeRef.current?.(null, null);
         }
       } catch (err) {
         if (!aborted) {
@@ -109,8 +123,7 @@ export const useYearRanges = (
     };
   // NOTE: `year` is intentionally excluded — this hook *sets* year, so including it
   // would cause a re-fetch loop (especially noticeable on first login).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, source, risk, activity, setYear, setPeriod, onYearStartEndChange]);
+  }, [token, source, risk, activity]);
 
   return { yearRanges, loading, error };
 };

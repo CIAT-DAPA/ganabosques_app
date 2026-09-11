@@ -28,7 +28,7 @@ export function useMovementStats(foundFarms, setOriginalMovement, setPendingTask
       if (!dateStr) return null;
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
-      return d.getFullYear();
+      return d.getUTCFullYear();
     };
 
     // Format date to ISO

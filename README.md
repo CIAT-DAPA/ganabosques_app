@@ -246,8 +246,6 @@ La cobertura funcional actual se concentra en pruebas para configuración, valid
 ## 👥 Mantenedores / Licencia
 Mantenedores: [CIAT-DAPA](https://github.com/CIAT-DAPA) / Alliance Bioversity-CIAT.
 
-- [CIAT-DAPA](https://github.com/CIAT-DAPA)
-- [Alliance Bioversity-CIAT](https://alliancebioversityciat.org/)
 - [stevensotelo](https://github.com/stevensotelo)
 - [victor-993](https://github.com/victor-993)
 

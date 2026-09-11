@@ -18,18 +18,41 @@ export default function CustomSelect({
   );
   const selectRef = useRef(null);
 
-  // Actualiza cuando cambian value u options
+  // Keep onChange in a ref so it is not an effect dependency
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
-    const option = options.find(opt => opt.value === value);
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Last fallback value already notified to the parent
+  const notifiedFallbackRef = useRef(null);
+
+  // Sync when value or options change
+  useEffect(() => {
+    const keep = (prev, next) =>
+      prev && prev.value === next.value && prev.label === next.label ? prev : next;
+
+    const option = options.find((opt) => opt.value === value);
+
     if (option) {
-      setSelectedOption(option);
-    } else if (options.length > 0) {
-      // 👈 si no hay value válido, ponemos el primero
-      setSelectedOption(options[0]);
-      onChange?.({ target: { value: options[0].value } });
-    } else {
-      setSelectedOption(null);
+      notifiedFallbackRef.current = null;
+      setSelectedOption((prev) => keep(prev, option));
+      return;
     }
+
+    if (options.length > 0) {
+      // No valid value: fall back to the first option
+      const fallback = options[0];
+      setSelectedOption((prev) => keep(prev, fallback));
+      if (notifiedFallbackRef.current !== fallback.value) {
+        notifiedFallbackRef.current = fallback.value;
+        onChangeRef.current?.({ target: { value: fallback.value } });
+      }
+      return;
+    }
+
+    notifiedFallbackRef.current = null;
+    setSelectedOption((prev) => (prev === null ? prev : null));
   }, [value, options]);
 
   useEffect(() => {

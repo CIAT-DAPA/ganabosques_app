@@ -1,5 +1,5 @@
 // Filter bar logic hooks
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   fetchAnalysisYearRanges,
   fetchFarmBySITCode,
@@ -66,6 +66,21 @@ export const useYearRanges = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  // Los callbacks del padre se guardan en refs y se excluyen de las
+  // dependencias del efecto. Antes estaban en el array de dependencias, asi
+  // que un padre que los recreara en cada render disparaba un refetch por
+  // render; y como el efecto llama a setYear/setPeriod, ese refetch realimenta
+  // el ciclo. Con refs, el efecto solo depende de los datos que consulta.
+  const setYearRef = useRef(setYear);
+  const setPeriodRef = useRef(setPeriod);
+  const onYearStartEndChangeRef = useRef(onYearStartEndChange);
+
+  useEffect(() => {
+    setYearRef.current = setYear;
+    setPeriodRef.current = setPeriod;
+    onYearStartEndChangeRef.current = onYearStartEndChange;
+  }, [setYear, setPeriod, onYearStartEndChange]);
+
   useEffect(() => {
     if (!token) return;
 
@@ -85,13 +100,16 @@ export const useYearRanges = (
         // Auto-select first period when yearRanges reload (activity/source/risk change)
         if (arr.length > 0) {
           const first = arr[0];
-          setYear?.(String(first.id));
-          setPeriod?.(first);
-          onYearStartEndChange?.(first.deforestation_period_start, first.deforestation_period_end);
+          setYearRef.current?.(String(first.id));
+          setPeriodRef.current?.(first);
+          onYearStartEndChangeRef.current?.(
+            first.deforestation_period_start,
+            first.deforestation_period_end
+          );
         } else {
-          setYear?.("");
-          setPeriod?.("");
-          onYearStartEndChange?.(null, null);
+          setYearRef.current?.("");
+          setPeriodRef.current?.("");
+          onYearStartEndChangeRef.current?.(null, null);
         }
       } catch (err) {
         if (!aborted) {
@@ -107,10 +125,11 @@ export const useYearRanges = (
     return () => {
       aborted = true;
     };
-  // NOTE: `year` is intentionally excluded — this hook *sets* year, so including it
-  // would cause a re-fetch loop (especially noticeable on first login).
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token, source, risk, activity, setYear, setPeriod, onYearStartEndChange]);
+  // NOTE: `year` no se incluye a proposito — este hook *asigna* year, de modo
+  // que depender de el provocaria un bucle de refetch (visible sobre todo en el
+  // primer login). Los setters viven en refs, asi que el array esta completo
+  // respecto de lo que el efecto realmente lee.
+  }, [token, source, risk, activity]);
 
   return { yearRanges, loading, error };
 };

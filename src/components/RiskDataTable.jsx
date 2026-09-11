@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { TABLE_CSS, SortIcon, InfoTooltip } from "./shared";
 
@@ -74,8 +74,10 @@ export default function RiskDataTable({
     ? (currentPage - 1) * pageSize + sortedData.length
     : Math.min(currentPage * pageSize, sortedData.length);
 
-  // Reset page when data changes (only for internal pagination)
-  useMemo(() => {
+  // Reset page when data changes (only for internal pagination).
+  // Debe ser useEffect: useMemo corre durante el render y actualizar
+  // estado ahi provoca una actualizacion en fase de render.
+  useEffect(() => {
     if (!isExternalPagination) {
       setInternalPage(1);
     }

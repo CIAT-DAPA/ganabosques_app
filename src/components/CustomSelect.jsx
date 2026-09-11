@@ -18,18 +18,47 @@ export default function CustomSelect({
   );
   const selectRef = useRef(null);
 
-  // Actualiza cuando cambian value u options
+  // Mantiene onChange en una ref: no debe ser dependencia del efecto de
+  // sincronizacion, porque un padre que pase una funcion nueva en cada
+  // render volveria a dispararlo y notificaria en bucle.
+  const onChangeRef = useRef(onChange);
   useEffect(() => {
-    const option = options.find(opt => opt.value === value);
+    onChangeRef.current = onChange;
+  }, [onChange]);
+
+  // Recuerda el value ya notificado al padre, para no avisar repetidamente
+  // del mismo fallback mientras el value siga siendo invalido.
+  const notifiedFallbackRef = useRef(null);
+
+  // Actualiza cuando cambian value u options.
+  // Los setState comparan por value/label y devuelven el estado previo si no
+  // hay cambio real, de modo que un `options` con identidad nueva en cada
+  // render no provoque el ciclo render -> efecto -> setState -> render.
+  useEffect(() => {
+    const keep = (prev, next) =>
+      prev && prev.value === next.value && prev.label === next.label ? prev : next;
+
+    const option = options.find((opt) => opt.value === value);
+
     if (option) {
-      setSelectedOption(option);
-    } else if (options.length > 0) {
-      // 👈 si no hay value válido, ponemos el primero
-      setSelectedOption(options[0]);
-      onChange?.({ target: { value: options[0].value } });
-    } else {
-      setSelectedOption(null);
+      notifiedFallbackRef.current = null;
+      setSelectedOption((prev) => keep(prev, option));
+      return;
     }
+
+    if (options.length > 0) {
+      // si no hay value valido, ponemos el primero
+      const fallback = options[0];
+      setSelectedOption((prev) => keep(prev, fallback));
+      if (notifiedFallbackRef.current !== fallback.value) {
+        notifiedFallbackRef.current = fallback.value;
+        onChangeRef.current?.({ target: { value: fallback.value } });
+      }
+      return;
+    }
+
+    notifiedFallbackRef.current = null;
+    setSelectedOption((prev) => (prev === null ? prev : null));
   }, [value, options]);
 
   useEffect(() => {

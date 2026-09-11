@@ -2,9 +2,13 @@
 import { fmtProp } from "./formatUtils";
 
 export const formatSitCodes = (sitCodes = {}) => {
+  // El default solo cubre undefined, y los valores vienen de la API:
+  // se valida objeto y array para no lanzar ante una respuesta inesperada.
+  if (!sitCodes || typeof sitCodes !== "object") return "";
+
   return Object.entries(sitCodes)
     .map(([farmId, farmCodes]) => {
-      const codes = farmCodes
+      const codes = (Array.isArray(farmCodes) ? farmCodes : [])
         .filter((code) => code?.ext_code)
         .map((code) => `${code.source}: ${code.ext_code}`)
         .join(" | ");

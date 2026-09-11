@@ -18,10 +18,6 @@ export default function FilterChips({
     setFoundFarms(prev => prev.filter(f => f.code !== farmCode));
   };
 
-  const handleRemoveEnterprise = () => {
-    setSelectedEnterprise(null);
-  };
-
   const handleRemoveAdm = (admId) => {
     setFoundAdms(prev => prev.filter(a => a.id !== admId));
   };
@@ -52,7 +48,6 @@ export default function FilterChips({
         </div>
       )}
 
-      {/* Chip empresa seleccionada para Enterprise Risk */}
       {/* Chips de empresas seleccionadas para Enterprise Risk */}
 {enterpriseRisk && Array.isArray(selectedEnterprise) && selectedEnterprise.length > 0 && (
   <div className="flex flex-wrap gap-2">

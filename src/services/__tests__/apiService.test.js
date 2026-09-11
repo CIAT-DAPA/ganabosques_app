@@ -231,6 +231,25 @@ describe("fetchFarmRiskByAnalysisId", () => {
       expect.stringContaining("page=2&page_size=50"), expect.any(Object)
     );
   });
+  it("appends farm_ids to the endpoint when the list is not empty", async () => {
+    mockFetchOk({ items: [], page: 1, page_size: 20 });
+    await fetchFarmRiskByAnalysisId(TOKEN, 7, [10, 20, 30]);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining("farm_ids=10,20,30"), expect.any(Object)
+    );
+  });
+  it("omits farm_ids from the endpoint when the list is empty", async () => {
+    mockFetchOk({ items: [], page: 1, page_size: 20 });
+    await fetchFarmRiskByAnalysisId(TOKEN, 7, []);
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.not.stringContaining("farm_ids"), expect.any(Object)
+    );
+  });
+  it("returns the default structure without calling fetch when analysisId is missing", async () => {
+    const result = await fetchFarmRiskByAnalysisId(TOKEN, undefined, [1], 15);
+    expect(result).toEqual({ items: [], page: 1, page_size: 15 });
+    expect(global.fetch).not.toHaveBeenCalled();
+  });
 });
 
 describe("fetchMovementStatisticsByFarmIds", () => {

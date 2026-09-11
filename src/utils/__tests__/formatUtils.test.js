@@ -217,3 +217,46 @@ describe("asYear", () => {
     expect(asYear(true)).toBeNaN();
   });
 });
+
+describe("formatPeriod single-sided and invalid ranges", () => {
+  it("returns just the start year when end is missing", () => {
+    expect(formatPeriod("2023-06-15", null)).toBe("2023");
+    expect(formatPeriod("2023-06-15", undefined)).toBe("2023");
+    expect(formatPeriod("2023-06-15", "")).toBe("2023");
+  });
+
+  it("returns just the end year when start is missing", () => {
+    expect(formatPeriod(null, "2024-06-15")).toBe("2024");
+    expect(formatPeriod("", "2024-06-15")).toBe("2024");
+  });
+
+  it("returns the dash when the only provided date is unparseable", () => {
+    expect(formatPeriod("not-a-date", null)).toBe("—");
+    expect(formatPeriod(null, "not-a-date")).toBe("—");
+  });
+
+  it("returns the dash when both dates are unparseable", () => {
+    expect(formatPeriod("not-a-date", "also-bad")).toBe("—");
+  });
+
+  it("falls back to the valid side when only one date parses", () => {
+    expect(formatPeriod("not-a-date", "2024-06-15")).toBe("2024");
+    expect(formatPeriod("2023-06-15", "also-bad")).toBe("2023");
+  });
+});
+
+describe("getCodes entries without a source", () => {
+  it("returns the bare ext_code when source is absent", () => {
+    expect(getCodes([{ ext_code: "111" }])).toBe("111");
+  });
+
+  it("mixes prefixed and bare codes in the same list", () => {
+    expect(getCodes([{ source: "SIT", ext_code: "111" }, { ext_code: "222" }])).toBe(
+      "SIT: 111, 222"
+    );
+  });
+
+  it("ignores an empty-string source and returns the bare code", () => {
+    expect(getCodes([{ source: "", ext_code: "333" }])).toBe("333");
+  });
+});

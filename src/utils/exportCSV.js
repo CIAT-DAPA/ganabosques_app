@@ -2,8 +2,6 @@
 import { fmtProp } from "./formatUtils";
 
 export const formatSitCodes = (sitCodes = {}) => {
-  // El default solo cubre undefined, y los valores vienen de la API:
-  // se valida objeto y array para no lanzar ante una respuesta inesperada.
   if (!sitCodes || typeof sitCodes !== "object") return "";
 
   return Object.entries(sitCodes)
@@ -54,8 +52,8 @@ export const exportEnterpriseToCSV = (data) => {
     const enterprise = enterpriseData.enterprise;
 
     enterpriseData.items?.forEach((item) => {
-      const startYear = new Date(item.period_start).getFullYear();
-      const endYear = new Date(item.period_end).getFullYear();
+      const startYear = new Date(item.period_start).getUTCFullYear();
+      const endYear = new Date(item.period_end).getUTCFullYear();
 
       const period = `${startYear} - ${endYear}`;
 
@@ -120,8 +118,8 @@ export const exportFarmToCSV = (data) => {
     const codes = formatFarmCodes(farm?.ext_id);
 
     farmData.items?.forEach((item) => {
-      const startYear = new Date(item.period_start).getFullYear();
-      const endYear = new Date(item.period_end).getFullYear();
+      const startYear = new Date(item.period_start).getUTCFullYear();
+      const endYear = new Date(item.period_end).getUTCFullYear();
 
       const period = `${startYear} - ${endYear}`;
 
@@ -178,8 +176,8 @@ export const exportVeredaToCSV = (data) => {
 
   Object.entries(data).forEach(([adm3Id, veredaData]) => {
     veredaData.items?.forEach((item) => {
-      const startYear = new Date(item.period_start).getFullYear();
-      const endYear = new Date(item.period_end).getFullYear();
+      const startYear = new Date(item.period_start).getUTCFullYear();
+      const endYear = new Date(item.period_end).getUTCFullYear();
 
       const period = `${startYear} - ${endYear}`;
 

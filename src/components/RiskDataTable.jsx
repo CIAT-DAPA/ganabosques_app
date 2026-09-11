@@ -74,9 +74,7 @@ export default function RiskDataTable({
     ? (currentPage - 1) * pageSize + sortedData.length
     : Math.min(currentPage * pageSize, sortedData.length);
 
-  // Reset page when data changes (only for internal pagination).
-  // Debe ser useEffect: useMemo corre durante el render y actualizar
-  // estado ahi provoca una actualizacion en fase de render.
+  // Reset page when data changes (only for internal pagination)
   useEffect(() => {
     if (!isExternalPagination) {
       setInternalPage(1);

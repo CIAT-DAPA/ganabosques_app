@@ -18,22 +18,16 @@ export default function CustomSelect({
   );
   const selectRef = useRef(null);
 
-  // Mantiene onChange en una ref: no debe ser dependencia del efecto de
-  // sincronizacion, porque un padre que pase una funcion nueva en cada
-  // render volveria a dispararlo y notificaria en bucle.
+  // Keep onChange in a ref so it is not an effect dependency
   const onChangeRef = useRef(onChange);
   useEffect(() => {
     onChangeRef.current = onChange;
   }, [onChange]);
 
-  // Recuerda el value ya notificado al padre, para no avisar repetidamente
-  // del mismo fallback mientras el value siga siendo invalido.
+  // Last fallback value already notified to the parent
   const notifiedFallbackRef = useRef(null);
 
-  // Actualiza cuando cambian value u options.
-  // Los setState comparan por value/label y devuelven el estado previo si no
-  // hay cambio real, de modo que un `options` con identidad nueva en cada
-  // render no provoque el ciclo render -> efecto -> setState -> render.
+  // Sync when value or options change
   useEffect(() => {
     const keep = (prev, next) =>
       prev && prev.value === next.value && prev.label === next.label ? prev : next;
@@ -47,7 +41,7 @@ export default function CustomSelect({
     }
 
     if (options.length > 0) {
-      // si no hay value valido, ponemos el primero
+      // No valid value: fall back to the first option
       const fallback = options[0];
       setSelectedOption((prev) => keep(prev, fallback));
       if (notifiedFallbackRef.current !== fallback.value) {

@@ -66,11 +66,7 @@ export const useYearRanges = (
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  // Los callbacks del padre se guardan en refs y se excluyen de las
-  // dependencias del efecto. Antes estaban en el array de dependencias, asi
-  // que un padre que los recreara en cada render disparaba un refetch por
-  // render; y como el efecto llama a setYear/setPeriod, ese refetch realimenta
-  // el ciclo. Con refs, el efecto solo depende de los datos que consulta.
+  // Parent callbacks live in refs so they are not effect dependencies
   const setYearRef = useRef(setYear);
   const setPeriodRef = useRef(setPeriod);
   const onYearStartEndChangeRef = useRef(onYearStartEndChange);
@@ -125,10 +121,8 @@ export const useYearRanges = (
     return () => {
       aborted = true;
     };
-  // NOTE: `year` no se incluye a proposito — este hook *asigna* year, de modo
-  // que depender de el provocaria un bucle de refetch (visible sobre todo en el
-  // primer login). Los setters viven en refs, asi que el array esta completo
-  // respecto de lo que el efecto realmente lee.
+  // NOTE: `year` is intentionally excluded — this hook *sets* year, so including it
+  // would cause a re-fetch loop (especially noticeable on first login).
   }, [token, source, risk, activity]);
 
   return { yearRanges, loading, error };

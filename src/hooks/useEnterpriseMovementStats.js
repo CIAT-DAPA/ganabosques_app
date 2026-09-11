@@ -29,7 +29,7 @@ export function useEnterpriseMovementStats(enterpriseIds, period, risk, setPendi
       if (!dateStr) return null;
       const d = new Date(dateStr);
       if (isNaN(d.getTime())) return null;
-      return d.getFullYear();
+      return d.getUTCFullYear();
     };
 
     // Format date to ISO

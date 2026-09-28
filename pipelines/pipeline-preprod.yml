@@ -1,0 +1,119 @@
+# ============================================================
+# Azure DevOps Pipeline - Preprod
+# ============================================================
+
+# Run pipeline when changes are pushed/merged into preprod
+trigger:
+  branches:
+    include:
+      - preprod
+
+# Run validation when a Pull Request targets preprod
+pr:
+  branches:
+    include:
+      - preprod
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  imageName: ganabosques-app
+  imageTag: preprod-$(Build.BuildId)
+  tarName: $(imageName)-$(imageTag).tar
+
+  sshServiceConnection: ganabosques-preprod
+  targetPath: /home/admin/deployment
+
+
+# ============================================================
+# STAGE 1 - TEST
+# Runs for PRs and pushes to preprod
+# ============================================================
+
+stages:
+
+- stage: Test
+  displayName: "Run Tests"
+
+  jobs:
+
+  - job: TestApp
+    displayName: "Test App"
+
+    steps:
+
+    - checkout: self
+
+    - task: NodeTool@0
+      displayName: "Use Node 18"
+      inputs:
+        versionSpec: "18.x"
+
+    - script: |
+        npm ci
+      displayName: "Install packages"
+
+    - script: |
+        npm test
+      displayName: "Run unit tests"
+
+
+# ============================================================
+# STAGE 2 - BUILD & PUBLISH
+# Only runs for pushes/merges to preprod
+# and only if tests pass
+# ============================================================
+
+- stage: Build
+  displayName: "Build and Publish - Preprod"
+
+  dependsOn:
+    - Test
+
+  condition: |
+    and(
+      succeeded(),
+      eq(variables['Build.SourceBranch'], 'refs/heads/preprod'),
+      ne(variables['Build.Reason'], 'PullRequest')
+    )
+
+  jobs:
+
+  - job: BuildImage
+    displayName: "Build Docker Image"
+
+    steps:
+
+    - checkout: self
+
+    - task: Docker@2
+      displayName: "Build Docker image"
+      inputs:
+        command: build
+        Dockerfile: Dockerfile
+        tags: |
+          $(imageName):$(imageTag)
+          $(imageName):preprod
+          $(imageName):latest
+
+    - script: |
+        docker save \
+          -o $(Build.ArtifactStagingDirectory)/$(tarName) \
+          $(imageName):$(imageTag)
+      displayName: "Export Docker image to tar"
+
+    - task: CopyFilesOverSSH@0
+      displayName: "Copy image to preprod server"
+      inputs:
+        sshEndpoint: $(sshServiceConnection)
+        sourceFolder: "$(Build.ArtifactStagingDirectory)"
+        contents: "$(tarName)"
+        targetFolder: "$(targetPath)"
+        overwriteExisting: true
+
+    - task: PublishPipelineArtifact@1
+      displayName: "Publish tar image as artifact"
+      inputs:
+        targetPath: "$(Build.ArtifactStagingDirectory)"
+        artifact: "docker-image"

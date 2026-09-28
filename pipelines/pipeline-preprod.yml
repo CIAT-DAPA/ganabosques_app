@@ -1,3 +1,9 @@
+parameters:
+- name: sshMoveEnabled
+  displayName: "Move file to path (requiere Service Connection SSH ya creado)"
+  type: boolean
+  default: false
+
 # ============================================================
 # Azure DevOps Pipeline - Preprod
 # ============================================================
@@ -103,14 +109,16 @@ stages:
           $(imageName):$(imageTag)
       displayName: "Export Docker image to tar"
 
-    - task: CopyFilesOverSSH@0
-      displayName: "Copy image to preprod server"
-      inputs:
-        sshEndpoint: $(sshServiceConnection)
-        sourceFolder: "$(Build.ArtifactStagingDirectory)"
-        contents: "$(tarName)"
-        targetFolder: "$(targetPath)"
-        overwriteExisting: true
+    - ${{ if eq(parameters.sshMoveEnabled, true) }}:
+
+      - task: CopyFilesOverSSH@0
+        displayName: "Copy image to preprod server"
+        inputs:
+          sshEndpoint: $(sshServiceConnection)
+          sourceFolder: "$(Build.ArtifactStagingDirectory)"
+          contents: "$(tarName)"
+          targetFolder: "$(targetPath)"
+          overwriteExisting: true
 
     - task: PublishPipelineArtifact@1
       displayName: "Publish tar image as artifact"

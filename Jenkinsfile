@@ -30,7 +30,7 @@ pipeline {
                     sshCommand remote: remote, command: '''
                         export PATH="/home/ganabosques/.miniforge3/envs/ganabosques/bin:$PATH"
                         echo "Verificando carpeta y deteniendo pm2..."
-                        pm2 stop gana || true
+                        pm2 stop gana || pm2 delete gana
                         cd /opt/ganabosques/front/ganabosques_app
                         git pull origin main
                     '''
